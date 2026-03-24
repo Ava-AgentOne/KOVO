@@ -9,7 +9,7 @@ trigger: security, audit, scan, vulnerability, ports, malware, rootkit, packages
 
 ## Purpose
 
-Perform a comprehensive security audit of the MiniClaw VM. Maintains a baseline of system state and alerts on unauthorized changes. Escalates suspicious findings via Telegram voice call.
+Perform a comprehensive security audit of the Kovo VM. Maintains a baseline of system state and alerts on unauthorized changes. Escalates suspicious findings via Telegram voice call.
 
 ## Audit Categories
 
@@ -22,7 +22,7 @@ Perform a comprehensive security audit of the MiniClaw VM. Maintains a baseline 
 
 ## Baseline
 
-Stored at: /opt/miniclaw/data/security_baseline.json
+Stored at: /opt/kovo/data/security_baseline.json
 - First run creates baseline (no alerts)
 - Subsequent runs compare and report changes only
 - Reset with: /audit reset

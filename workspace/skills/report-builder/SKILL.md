@@ -11,7 +11,7 @@ trigger: report, dashboard, health report, status page, weekly report, generate 
 
 Generate stunning, single-file HTML reports from any structured data. The output is self-contained (inline CSS/JS, no external dependencies except Google Fonts) and can be:
 
-- Served on the MiniClaw dashboard at port 8080
+- Served on the Kovo dashboard at port 8080
 - Attached to emails via Gmail
 - Sent as a file via Telegram
 - Opened directly in any browser
@@ -93,8 +93,8 @@ Score metrics (higher=better): 90-100 green, 70-89 cyan, 50-69 yellow, 0-49 red
 5. Inject live data from shell commands (df, free, systemctl, etc.)
 6. Calculate derived values: score ring offsets, color assignments
 7. Set footer date
-8. Save to /opt/miniclaw/data/documents/Report_Name_YYYYMMDD.html
+8. Save to /opt/kovo/data/documents/Report_Name_YYYYMMDD.html
 
 ## Template Location
 
-/opt/miniclaw/workspace/skills/report-builder/templates/report-template.html
+/opt/kovo/workspace/skills/report-builder/templates/report-template.html
