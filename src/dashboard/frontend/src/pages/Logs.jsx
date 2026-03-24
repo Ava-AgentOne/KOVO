@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { RefreshCw } from 'lucide-react'
 
 const LEVEL_COLOR = {
-  ERROR: 'text-red-400',
-  WARNING: 'text-yellow-400',
-  WARN: 'text-yellow-400',
-  INFO: 'text-blue-300',
-  DEBUG: 'text-gray-500',
+  ERROR: 'text-red-500 dark:text-red-400',
+  WARNING: 'text-yellow-600 dark:text-yellow-400',
+  WARN: 'text-yellow-600 dark:text-yellow-400',
+  INFO: 'text-blue-600 dark:text-blue-300',
+  DEBUG: 'text-gray-400 dark:text-gray-500',
 }
 
 function colorize(line) {
@@ -14,7 +15,7 @@ function colorize(line) {
       return <span className={cls}>{line}</span>
     }
   }
-  return <span className="text-gray-400">{line}</span>
+  return <span className="text-gray-600 dark:text-gray-400">{line}</span>
 }
 
 export default function Logs() {
@@ -48,15 +49,15 @@ export default function Logs() {
   return (
     <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col">
       <div className="flex items-center justify-between flex-shrink-0">
-        <h1 className="text-2xl font-bold text-white">Logs</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Logs</h1>
         <div className="flex items-center gap-3">
           <input
             placeholder="Filter…"
             value={filter}
             onChange={e => setFilter(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-500 w-48"
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-brand-500 w-48"
           />
-          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer">
             <input
               type="checkbox"
               checked={autoScroll}
@@ -67,29 +68,29 @@ export default function Logs() {
           </label>
           <button
             onClick={loadLogs}
-            className="text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded"
+            className="flex items-center gap-1 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
           >
-            ↺ Refresh
+            <RefreshCw size={12} /> Refresh
           </button>
         </div>
       </div>
 
-      <div className="flex-1 bg-gray-900 border border-gray-800 rounded-lg overflow-auto p-3">
+      <div className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-auto p-3">
         <div className="font-mono text-xs leading-5 space-y-0.5">
           {filtered.map((line, i) => (
-            <div key={i} className="hover:bg-gray-800 px-1 rounded">
+            <div key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800 px-1 rounded">
               {colorize(line)}
             </div>
           ))}
           <div ref={bottomRef} />
         </div>
         {filtered.length === 0 && (
-          <p className="text-gray-600 italic text-sm p-2">
+          <p className="text-gray-400 italic text-sm p-2">
             {filter ? 'No lines match filter.' : 'No log entries.'}
           </p>
         )}
       </div>
-      <p className="text-xs text-gray-600 flex-shrink-0">
+      <p className="text-xs text-gray-400 flex-shrink-0">
         {filtered.length} lines · refreshes every 5s
       </p>
     </div>
