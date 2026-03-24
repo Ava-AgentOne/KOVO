@@ -23,10 +23,12 @@ SSH_ROOT=$(grep -i "^PermitRootLogin" /etc/ssh/sshd_config 2>/dev/null | awk '{p
 SSH_PASSWD=$(grep -i "^PasswordAuthentication" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' || echo "unknown")
 
 # --- Failed logins (last 7 days) ---
-FAILED_LOGINS=$(grep "Failed password" /var/log/auth.log 2>/dev/null | wc -l || echo "0")
+FAILED_LOGINS=$(grep "Failed password" /var/log/auth.log 2>/dev/null | wc -l | tr -d "\n " || true)
+FAILED_LOGINS=${FAILED_LOGINS:-0}
 
 # --- Security updates ---
-SEC_UPDATES=$(apt list --upgradable 2>/dev/null | grep -c "security" || echo "0")
+SEC_UPDATES=$(apt list --upgradable 2>/dev/null | grep -ci security 2>/dev/null | tr -d "\n " || true)
+SEC_UPDATES=${SEC_UPDATES:-0}
 
 # --- SUID binaries ---
 SUID_COUNT=$(find / -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null | wc -l)
@@ -65,13 +67,13 @@ if [ -n "$SUSP_TMP" ]; then
 fi
 
 # --- Failed logins threshold ---
-if [ "$FAILED_LOGINS" -gt 20 ]; then
+if [ "${FAILED_LOGINS:-0}" -gt 20 ] 2>/dev/null; then
     STATUS="warning"
     FINDINGS+=("$FAILED_LOGINS failed login attempts detected")
 fi
 
 # --- Security updates threshold ---
-if [ "$SEC_UPDATES" -gt 5 ]; then
+if [ "${SEC_UPDATES:-0}" -gt 5 ] 2>/dev/null; then
     if [ "$STATUS" = "clean" ]; then STATUS="warning"; fi
     FINDINGS+=("$SEC_UPDATES security updates available")
 fi
