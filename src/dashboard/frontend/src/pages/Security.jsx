@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
+import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle, Info } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 
 function useApi(url, interval = 0) {
@@ -21,18 +21,23 @@ function useApi(url, interval = 0) {
 
 function StatusBadge({ status }) {
   if (status === 'clean') return (
-    <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+    <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
       <CheckCircle size={14} /> Clean
     </span>
   )
   if (status === 'warning') return (
-    <span className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+    <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
       <AlertTriangle size={14} /> Warning
     </span>
   )
+  if (status === 'critical') return (
+    <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+      <XCircle size={14} /> Critical
+    </span>
+  )
   return (
-    <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-      <XCircle size={14} /> Alert
+    <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+      <Info size={14} /> No data
     </span>
   )
 }
@@ -59,6 +64,7 @@ export default function Security() {
   }
 
   const l = latest.data
+  const hasData = l && l.status && l.status !== 'unknown'
 
   return (
     <div className="space-y-6">
@@ -88,7 +94,7 @@ export default function Security() {
           <Shield size={18} className="text-brand-500" />
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Latest Audit</h2>
         </div>
-        {l ? (
+        {hasData ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium"><StatusBadge status={l.status} /></div>
@@ -102,22 +108,24 @@ export default function Security() {
                 <p className="text-xs font-medium text-gray-500 uppercase">Findings</p>
                 {l.findings.map((f, i) => (
                   <div key={i} className="flex items-start gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <AlertTriangle size={14} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700 dark:text-gray-300">{f}</span>
                   </div>
                 ))}
               </div>
             )}
             {(!l.findings || l.findings.length === 0) && l.status === 'clean' && (
-              <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+              <p className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                 <CheckCircle size={14} /> No issues found
               </p>
             )}
           </div>
-        ) : latest.loading ? (
-          <p className="text-sm text-gray-400">Loading…</p>
         ) : (
-          <p className="text-sm text-gray-400 italic">No audit data yet. Run your first audit above.</p>
+          <div className="text-center py-8">
+            <Shield size={32} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">No scans yet</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Run your first audit to establish a security baseline.</p>
+          </div>
         )}
       </div>
 
@@ -145,15 +153,16 @@ export default function Security() {
         )}
       </div>
 
-      <ConfirmModal
-        open={resetOpen}
-        title="Reset Security Baseline"
-        message="This will recapture the current system state as the new baseline. Any existing deviations will be forgiven."
-        confirmLabel="Reset Baseline"
-        confirmColor="brand"
-        onConfirm={resetBaseline}
-        onCancel={() => setResetOpen(false)}
-      />
+      {resetOpen && (
+        <ConfirmModal
+          title="Reset Security Baseline?"
+          message="This will recapture the current system state as the new baseline. Any existing deviations will be forgiven."
+          confirmLabel="Reset Baseline"
+          confirmColor="brand"
+          onConfirm={resetBaseline}
+          onCancel={() => setResetOpen(false)}
+        />
+      )}
     </div>
   )
 }

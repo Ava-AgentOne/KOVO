@@ -27,6 +27,6 @@ Use `search_drive(query)` — returns list of files with id, name, webViewLink.
 Use `list_emails(max_results=10)` for recent messages.
 
 ## Setup
-Google OAuth2 credentials must be in `/opt/miniclaw/config/google-credentials.json`.
+Google OAuth2 credentials must be in `/opt/kovo/config/google-credentials.json`.
 Run `/auth_google` in Telegram to complete the first-time auth flow.
-Tokens are stored in `/opt/miniclaw/config/google-token.json`.
+Tokens are stored in `/opt/kovo/config/google-token.json`.

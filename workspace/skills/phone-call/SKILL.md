@@ -8,7 +8,7 @@ trigger: call, voice call, ring, phone, urgent call, speak to me, talk to me, vo
 # Phone Call Skill
 
 ## Capabilities
-- **Real Telegram calls**: Places actual voice calls using the MiniClaw userbot account
+- **Real Telegram calls**: Places actual voice calls using the Kovo userbot account
 - **TTS audio**: Converts text to speech (edge-tts, Microsoft voices)
 - **Voice message fallback**: If call not answered in 30s, sends a voice message instead
 - **Urgency levels**: Normal (voice message) vs Urgent (attempt call first)
