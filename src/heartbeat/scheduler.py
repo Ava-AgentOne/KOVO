@@ -26,7 +26,7 @@ from src.tools.ollama import OllamaClient
 log = logging.getLogger(__name__)
 
 # Tracking file for the 80-day SIM reminder
-_SIM_REMINDER_FILE = Path("/opt/miniclaw/data/.sim_reminder_sent")
+_SIM_REMINDER_FILE = Path("/opt/kovo/data/.sim_reminder_sent")
 
 
 class HeartbeatScheduler:

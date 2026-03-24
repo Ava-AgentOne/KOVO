@@ -12,7 +12,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_AUDIO_DIR = Path("/opt/miniclaw/data/audio")
+_AUDIO_DIR = Path("/opt/kovo/data/audio")
 _AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 # Default voices per backend
@@ -87,7 +87,7 @@ class TTSEngine:
     async def _piper(self, text: str, output_path: str) -> str:
         """Piper TTS — runs piper binary as subprocess."""
         wav_path = output_path.replace(".mp3", ".wav")
-        model_dir = Path("/opt/miniclaw/data/piper-models")
+        model_dir = Path("/opt/kovo/data/piper-models")
         model_file = next(model_dir.glob("*.onnx"), None) if model_dir.exists() else None
 
         if not model_file:

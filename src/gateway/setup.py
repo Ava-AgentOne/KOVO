@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/setup")
 
-_BASE = Path(__file__).resolve().parents[2]  # /opt/miniclaw
+_BASE = Path(__file__).resolve().parents[2]  # /opt/kovo
 _ENV_FILE = _BASE / "config" / ".env"
 _GOOGLE_CREDS_FILE = _BASE / "config" / "google-credentials.json"
 

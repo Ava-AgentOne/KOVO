@@ -9,7 +9,7 @@ from pathlib import Path
 import yaml
 from dotenv import load_dotenv
 
-_BASE = Path(__file__).resolve().parents[2]  # /opt/miniclaw
+_BASE = Path(__file__).resolve().parents[2]  # /opt/kovo
 _ENV_FILE = _BASE / "config" / ".env"
 _SETTINGS_FILE = _BASE / "config" / "settings.yaml"
 
@@ -86,7 +86,7 @@ def validate_env() -> None:
         msg = (
             "MiniClaw startup aborted — fix your config/.env file:\n"
             + "\n".join(problems)
-            + "\n\nRun:  nano /opt/miniclaw/config/.env"
+            + "\n\nRun:  nano /opt/kovo/config/.env"
         )
         raise EnvValidationError(msg)
 
