@@ -20,7 +20,7 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-_AUDIO_DIR = Path("/opt/miniclaw/data/audio")
+_AUDIO_DIR = Path("/opt/kovo/data/audio")
 _AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 _GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions"

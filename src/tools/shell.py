@@ -26,7 +26,7 @@ _SAFE_PATTERNS = re.compile(
     r"systemctl status|systemctl is-active|systemctl list-units|"
     r"journalctl |dmesg |last |lastlog |who |w |"
     r"git status|git log|git diff|git show|git branch|git remote|"
-    r"python3? |pip |/opt/miniclaw/venv/bin/|"
+    r"python3? |pip |/opt/kovo/venv/bin/|"
     r"cat /proc/|cat /sys/|"
     r"less |more |file |stat |readlink |realpath |"
     r"tar |zip |unzip |gzip |gunzip |"
@@ -126,7 +126,7 @@ def classify(command: str) -> str:
 def run(
     command: str,
     timeout: int = 30,
-    cwd: str = "/opt/miniclaw",
+    cwd: str = "/opt/kovo",
     allow_caution: bool = True,
 ) -> dict:
     """

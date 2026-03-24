@@ -355,7 +355,7 @@ class MiniClawAgent:
             prefix = "Urgent message from MiniClaw: " if urgent else ""
             mp3_path = await self.tts.speak(
                 prefix + message,
-                output_path="/opt/miniclaw/data/audio/call_audio.mp3",
+                output_path="/opt/kovo/data/audio/call_audio.mp3",
             )
         except Exception as e:
             log.error("TTS failed: %s", e)

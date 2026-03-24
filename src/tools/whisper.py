@@ -15,7 +15,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_AUDIO_DIR = Path("/opt/miniclaw/data/audio")
+_AUDIO_DIR = Path("/opt/kovo/data/audio")
 _AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 

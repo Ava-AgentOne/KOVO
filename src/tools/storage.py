@@ -20,9 +20,9 @@ from typing import Optional
 log = logging.getLogger(__name__)
 
 _DUBAI_TZ = timezone(timedelta(hours=4))
-_BASE = Path("/opt/miniclaw/data")
-_SRC  = Path("/opt/miniclaw/src")
-_LOGS = Path("/opt/miniclaw/logs")
+_BASE = Path("/opt/kovo/data")
+_SRC  = Path("/opt/kovo/src")
+_LOGS = Path("/opt/kovo/logs")
 
 # name → (path, retention_days, tier)  tier=None means "keep, no auto-purge"
 _DIR_CONFIG: dict[str, tuple[Path, int, Optional[int]]] = {
