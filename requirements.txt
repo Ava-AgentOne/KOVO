@@ -1,0 +1,45 @@
+# Core
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+httpx>=0.27.0
+pydantic>=2.0
+python-dotenv>=1.0
+PyYAML>=6.0
+
+# Telegram
+python-telegram-bot[webhooks]>=21.0
+pyrogram
+tgcrypto
+py-tgcalls
+
+# AI / Claude
+# claude-code is installed via npm, not pip
+
+# Voice — Speech-to-Text
+faster-whisper                   # preferred STT backend
+openai-whisper                   # fallback STT backend; install with: pip install openai-whisper --no-deps
+
+# Voice — Text-to-Speech
+edge-tts
+
+# Browser
+playwright                       # after install run: playwright install chromium
+
+# Google Workspace
+google-api-python-client
+google-auth-oauthlib
+
+# GitHub
+PyGithub
+
+# Monitoring & Scheduling
+APScheduler>=3.10.0
+psutil>=5.9.0
+
+# Utilities
+duckduckgo-search                # web image search (src/tools/image.py)
+Pillow                           # image processing (src/tools/vision.py)
+
+# ML (CPU only)
+# Install separately to avoid pulling 3GB of NVIDIA drivers:
+# pip install torch --index-url https://download.pytorch.org/whl/cpu
