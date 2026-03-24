@@ -14,7 +14,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 _DUBAI_TZ = timezone(timedelta(hours=4))
-_DB_PATH = Path("/opt/miniclaw/data/miniclaw.db")
+_DB_PATH = Path("/opt/kovo/data/miniclaw.db")
 
 _SCHEMA = """\
 PRAGMA journal_mode=WAL;

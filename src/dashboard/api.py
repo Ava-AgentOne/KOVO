@@ -117,9 +117,9 @@ async def get_agents(request: Request):
     state = _app_state(request)
     sub_agent_runner = getattr(state, "sub_agent_runner", None)
     if not sub_agent_runner:
-        return {"main_agent": "miniclaw", "sub_agents": []}
+        return {"main_agent": "kovo", "sub_agents": []}
     return {
-        "main_agent": "miniclaw",
+        "main_agent": "kovo",
         "sub_agents": [
             {
                 "name": a.name,
@@ -371,7 +371,7 @@ async def run_full_report(request: Request):
 
 @router.get("/logs")
 async def get_logs(lines: int = 200):
-    log_file = Path("/opt/miniclaw/logs/gateway.log")
+    log_file = Path("/opt/kovo/logs/gateway.log")
     if not log_file.exists():
         return {"lines": []}
     try:
@@ -406,7 +406,7 @@ async def update_tool(request: Request, name: str, payload: UpdateToolRequest):
 
 # ── Workspace file save ────────────────────────────────────────────────────────
 
-_WORKSPACE_ROOT = Path("/opt/miniclaw/workspace")
+_WORKSPACE_ROOT = Path("/opt/kovo/workspace")
 _WORKSPACE_WRITEABLE = {
     "MEMORY.md", "SOUL.md", "USER.md", "IDENTITY.md",
     "AGENTS.md", "TOOLS.md", "HEARTBEAT.md",
@@ -458,8 +458,8 @@ async def save_workspace_file(filepath: str, payload: SaveFileRequest):
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 
-_SETTINGS_PATH = Path("/opt/miniclaw/config/settings.yaml")
-_ENV_PATH = Path("/opt/miniclaw/config/.env")
+_SETTINGS_PATH = Path("/opt/kovo/config/settings.yaml")
+_ENV_PATH = Path("/opt/kovo/config/.env")
 
 
 @router.get("/settings")
@@ -508,7 +508,7 @@ async def get_env():
 @router.post("/service/restart")
 async def restart_service():
     """Attempt to restart the miniclaw systemd service."""
-    for svc in ("miniclaw", "miniclaw.service"):
+    for svc in ("kovo", "kovo.service"):
         try:
             r = subprocess.run(
                 ["systemctl", "restart", svc],
@@ -523,7 +523,7 @@ async def restart_service():
 
 @router.get("/service/status")
 async def service_status():
-    for svc in ("miniclaw", "miniclaw.service"):
+    for svc in ("kovo", "kovo.service"):
         try:
             r = subprocess.run(
                 ["systemctl", "is-active", svc],
@@ -548,7 +548,7 @@ async def system_info():
     except Exception:
         info["node"] = "unavailable"
     try:
-        usage = shutil.disk_usage("/opt/miniclaw")
+        usage = shutil.disk_usage("/opt/kovo")
         info["disk_total_gb"] = round(usage.total / 1e9, 1)
         info["disk_used_gb"] = round(usage.used / 1e9, 1)
         info["disk_free_gb"] = round(usage.free / 1e9, 1)

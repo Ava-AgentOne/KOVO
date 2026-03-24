@@ -27,8 +27,8 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 
 log = logging.getLogger(__name__)
 
-_SETTINGS_FILE = Path("/opt/miniclaw/.claude/settings.local.json")
-_MEMORY_DIR = Path("/opt/miniclaw/workspace/memory")
+_SETTINGS_FILE = Path("/opt/kovo/.claude/settings.local.json")
+_MEMORY_DIR = Path("/opt/kovo/workspace/memory")
 _DUBAI_TZ = timezone(timedelta(hours=4))
 
 # Optional StructuredStore reference — set by gateway after init

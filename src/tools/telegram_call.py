@@ -16,7 +16,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_SESSION_DIR = Path("/opt/miniclaw/data")
+_SESSION_DIR = Path("/opt/kovo/data")
 _SESSION_DIR.mkdir(parents=True, exist_ok=True)
 
 

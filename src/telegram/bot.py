@@ -157,7 +157,7 @@ async def _handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     user_id = update.effective_user.id
     agent = context.bot_data["agent"]
-    audio_dir = Path("/opt/miniclaw/data/audio")
+    audio_dir = Path("/opt/kovo/data/audio")
 
     try:
         # ── 1. Download OGG ───────────────────────────────────────────────────
@@ -406,7 +406,7 @@ async def _handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         photo = msg.photo[-1]  # highest resolution
         tg_file = await context.bot.get_file(photo.file_id)
-        data_dir = Path("/opt/miniclaw/data/photos")
+        data_dir = Path("/opt/kovo/data/photos")
         data_dir.mkdir(parents=True, exist_ok=True)
         user_id = update.effective_user.id
         photo_path = str(data_dir / f"photo_{user_id}_{photo.file_id[:8]}.jpg")
@@ -469,7 +469,7 @@ async def _handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         user_id = update.effective_user.id
         agent = context.bot_data["agent"]
 
-        docs_dir = Path("/opt/miniclaw/data/documents")
+        docs_dir = Path("/opt/kovo/data/documents")
         docs_dir.mkdir(parents=True, exist_ok=True)
         tg_file = await context.bot.get_file(doc.file_id)
         file_path = docs_dir / f"{user_id}_{filename}"

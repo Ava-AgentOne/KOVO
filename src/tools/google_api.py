@@ -17,8 +17,8 @@ _SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
-_CREDS_FILE = Path("/opt/miniclaw/config/google-credentials.json")
-_TOKEN_FILE = Path("/opt/miniclaw/config/google-token.json")
+_CREDS_FILE = Path("/opt/kovo/config/google-credentials.json")
+_TOKEN_FILE = Path("/opt/kovo/config/google-token.json")
 
 
 class GoogleAPIError(Exception):
