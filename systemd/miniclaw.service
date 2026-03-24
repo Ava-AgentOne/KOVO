@@ -1,0 +1,20 @@
+[Unit]
+Description=MiniClaw AI Agent Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=esam
+WorkingDirectory=/opt/miniclaw
+EnvironmentFile=/opt/miniclaw/config/.env
+ExecStart=/opt/miniclaw/venv/bin/python -m src.gateway.main
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=miniclaw
+
+[Install]
+WantedBy=multi-user.target

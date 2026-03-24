@@ -1,0 +1,331 @@
+"""
+Live voice conversation session on a Telegram call.
+
+Turn loop (repeats until call ends or idle timeout):
+  1. play() TTS response → StreamEnded(Device.MICROPHONE) signals TTS done
+  2. record() incoming audio continuously to a single MP3 file
+  3. After SPEAK_WINDOW_SECS, copy (snapshot) the recording → Groq transcription
+  4. agent.handle() → new TTS → back to 1
+
+Call-to-Task (after hang-up):
+  - Full transcript → Claude extracts action items
+  - Each task executed via agent.handle()
+  - Progress updates sent to Esam via tg_bot
+"""
+from __future__ import annotations
+
+import asyncio
+import logging
+import shutil
+import time
+from pathlib import Path
+
+log = logging.getLogger(__name__)
+
+_AUDIO_DIR = Path("/opt/miniclaw/data/audio")
+_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+
+# ── Tuning constants ──────────────────────────────────────────────────────────
+_SPEAK_WINDOW_SECS = 12       # How long we listen per turn
+_IDLE_LIMIT_SECS   = 300      # End call after 5 min total inactivity
+_MAX_CALL_SECS     = 600      # Hard cap: 10 minutes
+_MAX_RESPONSE_CHARS = 500     # Cap TTS response length on a live call
+_SILENCE_RETRIES   = 2        # Prompt before ending on repeated silence
+
+
+class LiveCallSession:
+    """
+    Manages one live voice conversation on an active Telegram call.
+    Instantiated per-call by TelegramCaller.live_call().
+    """
+
+    def __init__(
+        self,
+        pytgcalls,
+        user_id: int,
+        agent,
+        transcriber,
+        tts,
+        tg_bot,
+    ):
+        self._pytgcalls   = pytgcalls
+        self._user_id     = user_id
+        self._agent       = agent
+        self._transcriber = transcriber
+        self._tts         = tts
+        self._tg_bot      = tg_bot
+
+        self._transcript: list[dict] = []   # [{role, text}, …]
+        self._tts_done   = asyncio.Event()
+        self._call_ended = asyncio.Event()
+
+        self._rec_file    = str(_AUDIO_DIR / f"live_rec_{user_id}.mp3")
+        self._turn        = 0
+
+        # Register event handler immediately so StreamEnded for the very
+        # first play() (fired before run() is called) is not missed.
+        self._handler = self._make_handler()
+        self._pytgcalls.add_handler(self._handler)
+
+    def _make_handler(self):
+        from pytgcalls.types import ChatUpdate, Device, StreamEnded
+
+        async def _on_update(client, update):
+            if isinstance(update, StreamEnded):
+                if update.chat_id == self._user_id:
+                    if update.device == Device.MICROPHONE:
+                        self._tts_done.set()
+                    elif update.device == Device.SPEAKER:
+                        self._call_ended.set()
+            elif isinstance(update, ChatUpdate):
+                if update.chat_id == self._user_id:
+                    if update.status & (
+                        ChatUpdate.Status.DISCARDED_CALL |
+                        ChatUpdate.Status.LEFT_GROUP |
+                        ChatUpdate.Status.KICKED
+                    ):
+                        self._call_ended.set()
+
+        return _on_update
+
+    # ── Public entry point ────────────────────────────────────────────────────
+
+    async def run(self, initial_text: str = "") -> None:
+        """
+        Run the full live-call session.
+        If initial_text is non-empty, plays it as the opening message.
+        If empty, assumes the caller already played the opening audio and
+        the StreamEnded handler (registered in __init__) will set _tts_done.
+        Loops listening ↔ responding until the call ends or idle timeout.
+        Runs post-call task extraction when done.
+        """
+        from pytgcalls.types.stream import RecordStream, AudioQuality
+        from pytgcalls.types.calls import CallConfig
+
+        try:
+            # ── Start continuous recording ────────────────────────────────────
+            await self._pytgcalls.record(
+                self._user_id,
+                RecordStream(
+                    audio=self._rec_file,
+                    audio_parameters=AudioQuality.MEDIUM,  # 36 kHz mono
+                ),
+                CallConfig(),
+            )
+
+            # ── Initial greeting (skip if already played by caller) ───────────
+            if initial_text:
+                await self._speak(initial_text)
+            # If initial_text is empty the caller already called play() before
+            # run() — the StreamEnded(MICROPHONE) handler set above will catch
+            # that stream's end and set _tts_done automatically.
+
+            last_activity = time.time()
+            silence_count = 0
+            deadline = time.time() + _MAX_CALL_SECS
+
+            # ── Main loop ─────────────────────────────────────────────────────
+            while not self._call_ended.is_set():
+                if time.time() > deadline:
+                    log.info("Live call: hard time limit reached")
+                    break
+
+                # Wait for TTS to finish (or call ended)
+                await self._wait_tts_done()
+                if self._call_ended.is_set():
+                    break
+
+                # Listen window
+                log.info("Live call: listening (turn %d)…", self._turn + 1)
+                try:
+                    await asyncio.wait_for(
+                        self._call_ended.wait(),
+                        timeout=_SPEAK_WINDOW_SECS,
+                    )
+                    break  # call_ended fired during listen window
+                except asyncio.TimeoutError:
+                    pass
+
+                # Snapshot + transcribe
+                text = await self._snapshot_and_transcribe()
+
+                if not text:
+                    silence_count += 1
+                    if time.time() - last_activity > _IDLE_LIMIT_SECS:
+                        await self._speak(
+                            "I haven't heard anything for a while — ending the call. Goodbye!"
+                        )
+                        await self._wait_tts_done()
+                        break
+                    if silence_count >= _SILENCE_RETRIES:
+                        await self._speak(
+                            "I couldn't hear you clearly. Are you still there?"
+                        )
+                    continue
+
+                silence_count = 0
+                last_activity = time.time()
+                self._turn += 1
+
+                # End-of-call keywords
+                if any(w in text.lower() for w in ("bye", "goodbye", "end call", "hang up", "stop")):
+                    await self._speak("Okay, goodbye!")
+                    await self._wait_tts_done()
+                    break
+
+                self._transcript.append({"role": "user", "text": text})
+                log.info("Live call turn %d: %r", self._turn, text[:80])
+
+                # Agent
+                result = await self._agent.handle(
+                    message=text, user_id=self._user_id
+                )
+                response = result.get("text", "(no response)")
+                self._transcript.append({"role": "assistant", "text": response})
+
+                # Cap response for voice
+                voice_response = response[:_MAX_RESPONSE_CHARS]
+                if len(response) > _MAX_RESPONSE_CHARS:
+                    voice_response += " … I'll send you the full answer as a text message."
+                    asyncio.create_task(
+                        self._tg_bot.send_message(self._user_id, f"Full answer:\n\n{response}")
+                    )
+
+                await self._speak(voice_response)
+
+        finally:
+            self._pytgcalls.remove_handler(self._handler)
+
+        # ── Post-call ─────────────────────────────────────────────────────────
+        if self._transcript:
+            asyncio.create_task(self._run_post_call_tasks())
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    async def _speak(self, text: str) -> None:
+        """Generate TTS and play it on the call. Resets _tts_done."""
+        from pytgcalls.types import MediaStream
+        from pytgcalls.types.calls import CallConfig
+
+        self._tts_done.clear()
+        turn = self._turn
+        mp3 = await self._tts.speak(
+            text,
+            output_path=str(_AUDIO_DIR / f"live_tts_{self._user_id}_{turn}.mp3"),
+        )
+        await self._pytgcalls.play(
+            self._user_id,
+            MediaStream(mp3),
+            CallConfig(),
+        )
+
+    async def _wait_tts_done(self, extra_secs: float = 0.5) -> None:
+        """Wait for StreamEnded(MICROPHONE) or call ended, whichever is first."""
+        try:
+            done, _ = await asyncio.wait(
+                [
+                    asyncio.create_task(self._tts_done.wait()),
+                    asyncio.create_task(self._call_ended.wait()),
+                ],
+                timeout=60,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+        except Exception:
+            pass
+        if extra_secs:
+            await asyncio.sleep(extra_secs)
+
+    async def _snapshot_and_transcribe(self) -> str:
+        """
+        Copy the in-progress recording MP3 and transcribe it.
+        RecordStream writes with -flush_packets 1 so the file is safe to copy
+        at any time — all flushed frames are decodable.
+        Returns the transcribed text, or empty string on failure/silence.
+        """
+        snap = str(_AUDIO_DIR / f"live_snap_{self._user_id}_{self._turn}.mp3")
+        try:
+            shutil.copy2(self._rec_file, snap)
+        except Exception as e:
+            log.warning("Snapshot copy failed: %s", e)
+            return ""
+
+        try:
+            text = await self._transcriber.transcribe(snap)
+            return text.strip()
+        except Exception as e:
+            log.warning("Transcription failed: %s", e)
+            return ""
+
+    # ── Post-call task extraction ─────────────────────────────────────────────
+
+    async def _run_post_call_tasks(self) -> None:
+        """
+        Analyze the call transcript for action items.
+        Execute each task via the agent and send progress via tg_bot.
+        """
+        if not self._transcript:
+            return
+
+        log.info("Live call: running post-call task extraction (%d turns)", self._turn)
+
+        transcript_text = "\n".join(
+            f"{m['role'].upper()}: {m['text']}" for m in self._transcript
+        )
+
+        extract_prompt = (
+            "The following is a transcript of a voice call.\n"
+            "List any concrete action items or tasks that were mentioned or requested.\n"
+            "Return them as a numbered list. If there are none, reply with 'No tasks.'\n\n"
+            f"{transcript_text[:3000]}"
+        )
+
+        try:
+            tasks_result = await self._agent.handle(
+                message=extract_prompt,
+                user_id=self._user_id,
+                force_complexity="medium",
+            )
+            tasks_text = tasks_result.get("text", "").strip()
+        except Exception as e:
+            log.error("Task extraction failed: %s", e)
+            return
+
+        if not tasks_text or "no tasks" in tasks_text.lower():
+            return
+
+        await self._tg_bot.send_message(
+            self._user_id,
+            f"📋 *Call summary — tasks detected:*\n\n{tasks_text}",
+            parse_mode="Markdown",
+        )
+
+        # Parse and execute individual tasks
+        tasks = [
+            line.strip().lstrip("0123456789.)- ").strip()
+            for line in tasks_text.splitlines()
+            if line.strip() and line.strip()[0].isdigit()
+        ]
+
+        for i, task in enumerate(tasks, 1):
+            if not task:
+                continue
+            await self._tg_bot.send_message(
+                self._user_id,
+                f"⚙️ Executing task {i}/{len(tasks)}: _{task}_",
+                parse_mode="Markdown",
+            )
+            try:
+                result = await self._agent.handle(
+                    message=task,
+                    user_id=self._user_id,
+                )
+                reply = result.get("text", "(done)")[:1000]
+                await self._tg_bot.send_message(
+                    self._user_id,
+                    f"✅ Task {i} done:\n{reply}",
+                )
+            except Exception as e:
+                await self._tg_bot.send_message(
+                    self._user_id,
+                    f"❌ Task {i} failed: {e}",
+                )
