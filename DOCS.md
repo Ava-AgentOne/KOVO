@@ -1050,7 +1050,7 @@ After migration, update your `.env` file: rename `OWNER_TELEGRAM_ID` → `OWNER_
 
 ## 22. Changelog
 
-### v2.0 (2026-03-24)
+### v0.1 (2026-03-24)
 
 - **Renamed MiniClaw → Kovo** — new name, new identity. `OWNER_TELEGRAM_ID` replaces `OWNER_TELEGRAM_ID` so every install is generic and friend-ready.
 - **GitHub-based install** — bootstrap now clones source code from `github.com/Ava-AgentOne/kovo` instead of generating it with Claude Code. Every friend gets the identical codebase, dashboard, and logo. `bootstrap.sh` v4.0 with 16 steps including git clone, requirements.txt install, and dashboard build.

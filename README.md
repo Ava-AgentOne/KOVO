@@ -16,7 +16,7 @@ Bootstrap clones the source code from GitHub, installs all dependencies, and set
 - **Technical spec**: [CLAUDE.md](CLAUDE.md)
 
 ## Status
-v2.0 — 18 build phases. GitHub-based install for consistent deployments across all installs.
+v0.1 — 18 build phases. GitHub-based install for consistent deployments across all installs.
 
 ## Cost
 ~$100-200/month (Claude Max subscription). Everything else is free.
