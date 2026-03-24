@@ -17,3 +17,21 @@ venv/
 logs/
 *.log
 .DS_Store
+
+# Secrets & config (never commit)
+config/.env
+config/.env.template
+config/google-credentials.json
+config/google-token.json
+.claude/settings.local.json
+
+# Database
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# Temp data
+data/tmp/
+data/documents/
+data/.sim_reminder_sent
+data/.storage_state.json

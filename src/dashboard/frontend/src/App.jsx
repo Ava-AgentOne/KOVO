@@ -6,6 +6,7 @@ import Tools from './pages/Tools'
 import Agents from './pages/Agents'
 import Memory from './pages/Memory'
 import Skills from './pages/Skills'
+import Security from './pages/Security'
 import Logs from './pages/Logs'
 import Heartbeat from './pages/Heartbeat'
 import Settings from './pages/Settings'
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/agents" element={<Agents />} />
             <Route path="/memory" element={<Memory />} />
             <Route path="/skills" element={<Skills />} />
+            <Route path="/security" element={<Security />} />
             <Route path="/heartbeat" element={<Heartbeat />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/settings" element={<Settings />} />

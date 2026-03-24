@@ -668,3 +668,153 @@ async def chat_websocket(websocket: WebSocket):
             await websocket.close()
         except Exception:
             pass
+
+
+# ── Security ──────────────────────────────────────────────────────────────────
+
+_SEC_DIR = Path("/opt/kovo/data/security")
+_SEC_LATEST = _SEC_DIR / "latest.json"
+_SEC_HISTORY = _SEC_DIR / "history.json"
+_SEC_BASELINE = _SEC_DIR / "baseline.json"
+
+
+def _sec_read(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return {}
+
+
+def _sec_append_history(entry: dict) -> None:
+    _SEC_DIR.mkdir(parents=True, exist_ok=True)
+    hist = _sec_read(_SEC_HISTORY).get("history", [])
+    hist.insert(0, entry)
+    hist = hist[:50]  # keep last 50
+    _SEC_HISTORY.write_text(json.dumps({"history": hist}, indent=2))
+
+
+@router.get("/security/latest")
+async def security_latest():
+    data = _sec_read(_SEC_LATEST)
+    if not data:
+        return {}
+    return data
+
+
+@router.get("/security/history")
+async def security_history():
+    return _sec_read(_SEC_HISTORY) or {"history": []}
+
+
+@router.post("/security/run")
+async def security_run():
+    """Trigger the security audit skill via subprocess (non-blocking)."""
+    script = Path("/opt/kovo/workspace/skills/security-audit/run.sh")
+    if script.exists():
+        try:
+            subprocess.Popen(
+                ["bash", str(script)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return {"started": True}
+        except Exception as e:
+            return {"started": False, "error": str(e)}
+    return {"started": False, "error": "security-audit run.sh not found"}
+
+
+@router.post("/security/baseline")
+async def security_reset_baseline():
+    """Reset the security baseline to the current system state."""
+    _SEC_DIR.mkdir(parents=True, exist_ok=True)
+    entry = {"reset_at": datetime.now().isoformat(), "note": "Baseline reset via dashboard"}
+    _SEC_BASELINE.write_text(json.dumps(entry, indent=2))
+    return {"reset": True}
+
+
+# ── Metrics ───────────────────────────────────────────────────────────────────
+
+@router.get("/metrics")
+async def get_metrics():
+    """Return basic system metrics (CPU, RAM, disk, uptime)."""
+    try:
+        import psutil, time
+        cpu = psutil.cpu_percent(interval=0.2)
+        vm = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
+        boot = psutil.boot_time()
+        uptime_sec = int(time.time() - boot)
+        days, rem = divmod(uptime_sec, 86400)
+        hours, rem = divmod(rem, 3600)
+        mins = rem // 60
+        if days:
+            uptime_str = f"{days}d {hours}h {mins}m"
+        elif hours:
+            uptime_str = f"{hours}h {mins}m"
+        else:
+            uptime_str = f"{mins}m"
+        return {
+            "cpu_percent": round(cpu, 1),
+            "cpu_cores": psutil.cpu_count(),
+            "ram_percent": round(vm.percent, 1),
+            "ram_used_gb": round(vm.used / 1e9, 1),
+            "ram_total_gb": round(vm.total / 1e9, 1),
+            "disk_percent": round(disk.percent, 1),
+            "disk_used_gb": round(disk.used / 1e9, 1),
+            "disk_total_gb": round(disk.total / 1e9, 1),
+            "uptime": uptime_str,
+        }
+    except Exception as e:
+        log.warning("Metrics error: %s", e)
+        return {}
+
+
+# ── ClawHub ───────────────────────────────────────────────────────────────────
+
+@router.get("/skills/clawhub/search")
+async def clawhub_search(q: str = ""):
+    """Search ClawHub skill marketplace via CLI."""
+    if not shutil.which("clawhub"):
+        return {"error": "clawhub CLI not installed", "results": []}
+    try:
+        out = subprocess.check_output(
+            ["clawhub", "search", q, "--json"],
+            timeout=10,
+        )
+        data = json.loads(out)
+        return {"results": data if isinstance(data, list) else data.get("results", [])}
+    except subprocess.TimeoutExpired:
+        return {"error": "clawhub search timed out", "results": []}
+    except subprocess.CalledProcessError as e:
+        return {"error": f"clawhub error: {e}", "results": []}
+    except Exception as e:
+        return {"error": str(e), "results": []}
+
+
+class _ClawHubInstallReq(BaseModel):
+    name: str
+
+
+@router.post("/skills/clawhub/install")
+async def clawhub_install(body: _ClawHubInstallReq, request: Request):
+    if not shutil.which("clawhub"):
+        return {"ok": False, "error": "clawhub CLI not installed"}
+    try:
+        subprocess.check_call(
+            ["clawhub", "install", body.name],
+            timeout=30,
+        )
+        # Reload skill registry
+        state = _app_state(request)
+        tg_app = getattr(state, "tg_app", None)
+        if tg_app:
+            skills = tg_app.bot_data.get("skills")
+            if skills and hasattr(skills, "reload"):
+                skills.reload()
+        return {"ok": True}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "Install timed out"}
+    except subprocess.CalledProcessError as e:
+        return {"ok": False, "error": f"clawhub error: {e}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}

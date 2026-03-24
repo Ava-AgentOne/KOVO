@@ -3,9 +3,48 @@
 @tailwind utilities;
 
 body {
-  @apply bg-gray-950 text-gray-100 font-mono;
+  @apply bg-gray-50 text-gray-900 font-mono transition-colors duration-200;
 }
 
+.dark body {
+  @apply bg-gray-950 text-gray-100;
+}
+
+/* Smooth theme transitions */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { @apply bg-gray-900; }
-::-webkit-scrollbar-thumb { @apply bg-gray-700 rounded; }
+::-webkit-scrollbar-track { @apply bg-gray-100; }
+::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded; }
+.dark ::-webkit-scrollbar-track { @apply bg-gray-900; }
+.dark ::-webkit-scrollbar-thumb { @apply bg-gray-700 rounded; }
+
+/* Kovo logo breathing animation */
+@keyframes breathe {
+  0%, 100% { transform: scale(1.0); }
+  50%       { transform: scale(1.03); }
+}
+
+.kovo-logo {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kovo-logo { animation: none; }
+  .kovo-blink { animation: none; }
+}
+
+/* Antenna blink */
+@keyframes blink {
+  0%, 90%, 100% { opacity: 1; }
+  95%           { opacity: 0.1; }
+}
+
+.kovo-blink {
+  animation: blink 5s ease-in-out infinite;
+}

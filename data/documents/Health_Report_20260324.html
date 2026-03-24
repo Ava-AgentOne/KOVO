@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kovo — System Health Report — 2026-03-24</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset ────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Theme Variables ──────────────────────────────────────── */
+    :root {
+      --bg:            #0d1117;
+      --bg2:           #161b24;
+      --bg3:           #1c2333;
+      --border:        rgba(255,255,255,0.07);
+      --border-hover:  rgba(255,255,255,0.14);
+      --text:          #e6edf3;
+      --text-dim:      #8b949e;
+      --text-muted:    #484f58;
+      --shadow:        0 4px 24px rgba(0,0,0,0.45);
+      --shadow-sm:     0 2px 10px rgba(0,0,0,0.3);
+
+      --cyan:          #22d3ee;
+      --cyan-dim:      rgba(34,211,238,0.12);
+      --green:         #4ade80;
+      --green-dim:     rgba(74,222,128,0.12);
+      --yellow:        #fbbf24;
+      --yellow-dim:    rgba(251,191,36,0.12);
+      --red:           #f87171;
+      --red-dim:       rgba(248,113,113,0.12);
+      --purple:        #a78bfa;
+      --purple-dim:    rgba(167,139,250,0.12);
+      --orange:        #fb923c;
+      --orange-dim:    rgba(251,146,60,0.12);
+    }
+
+    [data-theme="light"] {
+      --bg:            #f6f8fc;
+      --bg2:           #ffffff;
+      --bg3:           #eef2f8;
+      --border:        rgba(0,0,0,0.08);
+      --border-hover:  rgba(0,0,0,0.16);
+      --text:          #1c2333;
+      --text-dim:      #57606a;
+      --text-muted:    #a0aabb;
+      --shadow:        0 4px 24px rgba(0,0,0,0.08);
+      --shadow-sm:     0 2px 10px rgba(0,0,0,0.05);
+
+      --cyan:          #0284c7;
+      --cyan-dim:      rgba(2,132,199,0.10);
+      --green:         #16a34a;
+      --green-dim:     rgba(22,163,74,0.10);
+      --yellow:        #b45309;
+      --yellow-dim:    rgba(180,83,9,0.10);
+      --red:           #dc2626;
+      --red-dim:       rgba(220,38,38,0.10);
+      --purple:        #7c3aed;
+      --purple-dim:    rgba(124,58,237,0.10);
+      --orange:        #c2410c;
+      --orange-dim:    rgba(194,65,12,0.10);
+    }
+
+    /* ── Body & Layout ────────────────────────────────────────── */
+    body {
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+      transition: background 0.25s, color 0.25s;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 5% 0%,   rgba(34,211,238,0.04)  0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 95% 100%, rgba(167,139,250,0.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .top-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--purple), var(--orange), var(--cyan));
+      background-size: 300% 100%;
+      animation: shimmer 4s linear infinite;
+      z-index: 100;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 18px; right: 18px;
+      z-index: 200;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 50%;
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 17px;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .theme-toggle:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes ringFill {
+      from { stroke-dashoffset: 439.82; }
+    }
+    @keyframes barGrow {
+      from { width: 0; }
+    }
+
+    .anim   { animation: fadeInUp 0.5s ease both; }
+    .anim-1 { animation-delay: 0.05s; }
+    .anim-2 { animation-delay: 0.12s; }
+    .anim-3 { animation-delay: 0.20s; }
+    .anim-4 { animation-delay: 0.28s; }
+    .anim-5 { animation-delay: 0.36s; }
+    .anim-6 { animation-delay: 0.44s; }
+    .anim-7 { animation-delay: 0.52s; }
+
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── HEADER ───────────────────────────────────────────────── */
+    .report-header { margin-bottom: 48px; }
+    .report-header-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .report-eyebrow {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .report-title {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .report-subtitle {
+      font-size: 15px;
+      color: var(--text-dim);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .status-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .badge-green  { background: var(--green-dim);  color: var(--green); }
+    .badge-yellow { background: var(--yellow-dim); color: var(--yellow); }
+    .badge-red    { background: var(--red-dim);    color: var(--red); }
+    .badge-cyan   { background: var(--cyan-dim);   color: var(--cyan); }
+
+    /* ── HERO ─────────────────────────────────────────────────── */
+    .hero {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    /* ── SCORE RING ───────────────────────────────────────────── */
+    .score-ring-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      box-shadow: var(--shadow);
+    }
+    .score-ring-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .score-ring-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 140px; height: 140px;
+    }
+    .score-ring-svg {
+      width: 140px; height: 140px;
+      transform: rotate(-90deg);
+    }
+    .score-ring-track {
+      fill: none;
+      stroke: var(--bg3);
+      stroke-width: 12;
+    }
+    .score-ring-fill {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 439.82;
+      animation: ringFill 1.3s cubic-bezier(0.4, 0, 0.2, 1) both 0.3s;
+    }
+    .score-ring-value {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-ring-number {
+      font-size: 34px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      line-height: 1;
+    }
+    .score-ring-unit {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .score-ring-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ── STAT CARDS ───────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent, var(--cyan));
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+    [data-theme="dark"] .stat-card::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--accent, var(--cyan));
+      filter: blur(8px);
+      opacity: 0.45;
+    }
+    .stat-card-value {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .stat-card-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 3px;
+    }
+    .stat-card-sub {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* ── INFO GRID ────────────────────────────────────────────── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+      gap: 10px;
+    }
+    .info-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    .info-item-key {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 4px;
+    }
+    .info-item-value {
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ── METRIC CARDS WITH PROGRESS ───────────────────────────── */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .metric-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+    .metric-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+    .metric-pct {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .progress-track {
+      height: 6px;
+      background: var(--bg3);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      animation: barGrow 1s cubic-bezier(0.4, 0, 0.2, 1) both 0.4s;
+    }
+    .metric-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+    .metric-detail-row { display: flex; flex-direction: column; gap: 2px; }
+    .metric-detail-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .metric-detail-val {
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+    }
+
+    /* ── DATA TABLE ───────────────────────────────────────────── */
+    .data-table-wrap {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th {
+      padding: 11px 18px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover td { background: var(--bg3); transition: background 0.15s; }
+    .data-table .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .pill-green  { background: var(--green-dim);  color: var(--green); }
+    .pill-yellow { background: var(--yellow-dim); color: var(--yellow); }
+    .pill-red    { background: var(--red-dim);    color: var(--red); }
+    .pill-cyan   { background: var(--cyan-dim);   color: var(--cyan); }
+    .pill-orange { background: var(--orange-dim); color: var(--orange); }
+    .pill-purple { background: var(--purple-dim); color: var(--purple); }
+
+    /* ── RECOMMENDATIONS ──────────────────────────────────────── */
+    .rec-list { display: flex; flex-direction: column; gap: 12px; }
+    .rec-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      box-shadow: var(--shadow-sm);
+    }
+    .rec-number {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      flex-shrink: 0;
+      background: var(--rec-bg, var(--yellow-dim));
+      color: var(--rec-color, var(--yellow));
+    }
+    .rec-content { flex: 1; }
+    .rec-title  { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .rec-body   { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+    .rec-priority { font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 600; flex-shrink: 0; align-self: flex-start; }
+
+    /* ── DIVIDER ──────────────────────────────────────────────── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 36px 0 28px;
+    }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ── FOOTER ───────────────────────────────────────────────── */
+    .report-footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .report-footer-brand {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .report-footer-ts {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .score-ring-card {
+        flex-direction: row;
+        padding: 20px 24px;
+        justify-content: flex-start;
+        gap: 24px;
+      }
+      .score-ring-desc { text-align: left; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .container        { padding: 48px 16px 60px; }
+      .report-title     { font-size: 26px; }
+      .stat-grid        { grid-template-columns: repeat(2, 1fr); }
+      .metric-grid      { grid-template-columns: 1fr; }
+      .info-grid        { grid-template-columns: repeat(2, 1fr); }
+      .data-table th,
+      .data-table td    { padding: 10px 12px; }
+      .rec-item         { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar"></div>
+  <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle theme">🌙</button>
+
+  <div class="container">
+
+    <!-- ══════════════════════════════════════════════════════════
+         HEADER
+         ══════════════════════════════════════════════════════════ -->
+    <header class="report-header anim anim-1">
+      <div class="report-header-meta">
+        <span class="report-eyebrow">System Health</span>
+        <span class="status-badge badge-green">Healthy</span>
+      </div>
+      <h1 class="report-title">System Health Report</h1>
+      <p class="report-subtitle">ubuntuserver &middot; 10.0.1.133 &middot; Tuesday, 24 March 2026 &middot; 12:13 GST</p>
+    </header>
+
+    <!-- ══════════════════════════════════════════════════════════
+         HERO: SCORE RING + STAT CARDS
+         ══════════════════════════════════════════════════════════ -->
+    <div class="hero anim anim-2">
+
+      <!-- SCORE RING -->
+      <!-- Score: 90 → offset = 439.82 - (439.82 × 90/100) = 439.82 - 395.84 = 43.98 -->
+      <div class="score-ring-card">
+        <span class="score-ring-label">Health Score</span>
+        <div class="score-ring-wrapper">
+          <svg class="score-ring-svg" viewBox="0 0 160 160">
+            <defs>
+              <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stop-color="#22d3ee"/>
+                <stop offset="100%" stop-color="#4ade80"/>
+              </linearGradient>
+            </defs>
+            <circle class="score-ring-track" cx="80" cy="80" r="70"/>
+            <circle class="score-ring-fill"  cx="80" cy="80" r="70"
+              stroke="url(#ringGrad)" stroke-dashoffset="43.98"/>
+          </svg>
+          <div class="score-ring-value">
+            <span class="score-ring-number" style="color:var(--green)">90</span>
+            <span class="score-ring-unit">/100</span>
+          </div>
+        </div>
+        <span class="score-ring-desc">All resources healthy.<br>1 minor advisory.</span>
+      </div>
+
+      <!-- STAT CARDS -->
+      <div class="stat-grid">
+        <div class="stat-card" style="--accent:var(--green)">
+          <div class="stat-card-value">21%</div>
+          <div class="stat-card-label">RAM Usage</div>
+          <div class="stat-card-sub">1.5 GB used &middot; 7.4 GB total</div>
+        </div>
+        <div class="stat-card" style="--accent:var(--cyan)">
+          <div class="stat-card-value">42%</div>
+          <div class="stat-card-label">Root Disk Usage</div>
+          <div class="stat-card-sub">11 GB used &middot; 28 GB total</div>
+        </div>
+        <div class="stat-card" style="--accent:var(--green)">
+          <div class="stat-card-value">1.10</div>
+          <div class="stat-card-label">CPU Load (1m avg)</div>
+          <div class="stat-card-sub">~5% on 22 vCPUs</div>
+        </div>
+        <div class="stat-card" style="--accent:var(--purple)">
+          <div class="stat-card-value">2d 6h</div>
+          <div class="stat-card-label">System Uptime</div>
+          <div class="stat-card-sub">since boot &middot; 2 users</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SYSTEM INFO
+         ══════════════════════════════════════════════════════════ -->
+    <div class="divider anim anim-3">
+      <div class="divider-line"></div>
+      <span class="divider-label">System Info</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="section anim anim-3">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-item-key">Hostname</div>
+          <div class="info-item-value">ubuntuserver</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-key">IP Address</div>
+          <div class="info-item-value">10.0.1.133</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-key">OS</div>
+          <div class="info-item-value">Ubuntu 25.10</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-key">vCPUs</div>
+          <div class="info-item-value">22 cores</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-key">Load (1m / 5m / 15m)</div>
+          <div class="info-item-value">1.10 / 1.04 / 1.01</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-key">Ollama NUC</div>
+          <div class="info-item-value">10.0.1.212:11434</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-key">Kovo Service</div>
+          <div class="info-item-value">unknown</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-key">Docker</div>
+          <div class="info-item-value">not installed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         RESOURCE METRICS
+         ══════════════════════════════════════════════════════════ -->
+    <div class="divider anim anim-3">
+      <div class="divider-line"></div>
+      <span class="divider-label">Resources</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="section anim anim-4">
+      <div class="metric-grid">
+
+        <!-- CPU Load: ~5% effective — green -->
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-name">CPU Load</span>
+            <span class="metric-pct" style="color:var(--green)">5%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:5%; background:linear-gradient(90deg,var(--green),var(--cyan))"></div>
+          </div>
+          <div class="metric-details">
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">vCPUs</span>
+              <span class="metric-detail-val">22</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Load 1m</span>
+              <span class="metric-detail-val">1.10</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Load 5m</span>
+              <span class="metric-detail-val">1.04</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Load 15m</span>
+              <span class="metric-detail-val">1.01</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memory: 21% — green -->
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-name">Memory (RAM)</span>
+            <span class="metric-pct" style="color:var(--green)">21%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:21%; background:linear-gradient(90deg,var(--green),var(--cyan))"></div>
+          </div>
+          <div class="metric-details">
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Used</span>
+              <span class="metric-detail-val">1.5 GB</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Total</span>
+              <span class="metric-detail-val">7.4 GB</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Buff/Cache</span>
+              <span class="metric-detail-val">5.5 GB</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Available</span>
+              <span class="metric-detail-val">5.8 GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Swap: 0% — green -->
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-name">Swap</span>
+            <span class="metric-pct" style="color:var(--green)">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:0.5%; background:linear-gradient(90deg,var(--green),var(--cyan))"></div>
+          </div>
+          <div class="metric-details">
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Used</span>
+              <span class="metric-detail-val">0 MB</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Total</span>
+              <span class="metric-detail-val">4.0 GB</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Free</span>
+              <span class="metric-detail-val">4.0 GB</span>
+            </div>
+            <div class="metric-detail-row">
+              <span class="metric-detail-label">Status</span>
+              <span class="metric-detail-val">Idle</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         DISK MOUNTS
+         ══════════════════════════════════════════════════════════ -->
+    <div class="divider anim anim-4">
+      <div class="divider-line"></div>
+      <span class="divider-label">Disk Mounts</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="section anim anim-5">
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Filesystem</th>
+              <th>Mount</th>
+              <th>Size</th>
+              <th>Used</th>
+              <th>Avail</th>
+              <th>Use%</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">/dev/mapper/ubuntu--vg-ubuntu--lv</td>
+              <td class="mono">/</td>
+              <td class="mono">28G</td>
+              <td class="mono">11G</td>
+              <td class="mono">16G</td>
+              <td class="mono">42%</td>
+              <td><span class="pill pill-cyan">Normal</span></td>
+            </tr>
+            <tr>
+              <td class="mono">/dev/vda2</td>
+              <td class="mono">/boot</td>
+              <td class="mono">2.0G</td>
+              <td class="mono">125M</td>
+              <td class="mono">1.7G</td>
+              <td class="mono">7%</td>
+              <td><span class="pill pill-green">Healthy</span></td>
+            </tr>
+            <tr>
+              <td class="mono">/dev/vda1</td>
+              <td class="mono">/boot/efi</td>
+              <td class="mono">1.1G</td>
+              <td class="mono">6.3M</td>
+              <td class="mono">1.1G</td>
+              <td class="mono">1%</td>
+              <td><span class="pill pill-green">Healthy</span></td>
+            </tr>
+            <tr>
+              <td class="mono">tmpfs</td>
+              <td class="mono">/run</td>
+              <td class="mono">742M</td>
+              <td class="mono">1.2M</td>
+              <td class="mono">741M</td>
+              <td class="mono">1%</td>
+              <td><span class="pill pill-green">Healthy</span></td>
+            </tr>
+            <tr>
+              <td class="mono">tmpfs</td>
+              <td class="mono">/tmp</td>
+              <td class="mono">3.7G</td>
+              <td class="mono">6.1M</td>
+              <td class="mono">3.7G</td>
+              <td class="mono">1%</td>
+              <td><span class="pill pill-green">Healthy</span></td>
+            </tr>
+            <tr>
+              <td class="mono">efivarfs</td>
+              <td class="mono">/sys/firmware/efi/efivars</td>
+              <td class="mono">56K</td>
+              <td class="mono">27K</td>
+              <td class="mono">25K</td>
+              <td class="mono">52%</td>
+              <td><span class="pill pill-cyan">Normal</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SERVICES
+         ══════════════════════════════════════════════════════════ -->
+    <div class="divider anim anim-5">
+      <div class="divider-line"></div>
+      <span class="divider-label">Services</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="section anim anim-5">
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Kovo Gateway</strong></td>
+              <td><span class="pill pill-yellow">Unknown</span></td>
+              <td class="mono">systemd unit not registered yet</td>
+            </tr>
+            <tr>
+              <td><strong>Docker</strong></td>
+              <td><span class="pill pill-orange">Not Installed</span></td>
+              <td class="mono">not present on this host</td>
+            </tr>
+            <tr>
+              <td><strong>Ollama (NUC)</strong></td>
+              <td><span class="pill pill-cyan">Remote</span></td>
+              <td class="mono">10.0.1.212:11434</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         RECOMMENDATIONS
+         ══════════════════════════════════════════════════════════ -->
+    <div class="divider anim anim-6">
+      <div class="divider-line"></div>
+      <span class="divider-label">Recommendations</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="section anim anim-6">
+      <div class="rec-list">
+
+        <div class="rec-item">
+          <div class="rec-number" style="--rec-bg:var(--yellow-dim);--rec-color:var(--yellow)">1</div>
+          <div class="rec-content">
+            <div class="rec-title">Register Kovo as a systemd service</div>
+            <div class="rec-body">
+              The kovo service is not yet registered with systemd, so it won't auto-start after a reboot.
+              Run <code>sudo systemctl enable --now kovo</code> after placing the unit file at
+              <code>/etc/systemd/system/kovo.service</code>. A template is available at
+              <code>/opt/miniclaw/systemd/kovo.service</code>.
+            </div>
+          </div>
+          <span class="rec-priority pill-yellow pill">Low</span>
+        </div>
+
+        <div class="rec-item">
+          <div class="rec-number" style="--rec-bg:var(--cyan-dim);--rec-color:var(--cyan)">2</div>
+          <div class="rec-content">
+            <div class="rec-title">Root LV uses only 28 GB of 50 GB disk</div>
+            <div class="rec-body">
+              The logical volume <code>ubuntu--vg-ubuntu--lv</code> is 28 GB but the physical disk is 50 GB.
+              Consider expanding with <code>lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv &amp;&amp; resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv</code>
+              to claim the remaining ~22 GB of free space.
+            </div>
+          </div>
+          <span class="rec-priority pill-cyan pill">Info</span>
+        </div>
+
+        <div class="rec-item">
+          <div class="rec-number" style="--rec-bg:var(--green-dim);--rec-color:var(--green)">3</div>
+          <div class="rec-content">
+            <div class="rec-title">All critical metrics are healthy — no immediate action required</div>
+            <div class="rec-body">
+              RAM is at 21% (5.8 GB available), CPU load is very low at ~5% effective utilisation across
+              22 vCPUs, and no swap is in use. Root disk is at 42% with 16 GB free. System has been running
+              stably for 2 days 6 hours 51 minutes.
+            </div>
+          </div>
+          <span class="rec-priority pill-green pill">Good</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         FOOTER
+         ══════════════════════════════════════════════════════════ -->
+    <footer class="report-footer anim anim-7">
+      <span class="report-footer-brand">Kovo &mdash; AI Agent System</span>
+      <span class="report-footer-ts">Generated: 2026-03-24 12:13 GST &middot; ubuntuserver (10.0.1.133)</span>
+    </footer>
+
+  </div><!-- /container -->
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const btn  = document.getElementById('themeBtn');
+      if (html.getAttribute('data-theme') === 'dark') {
+        html.setAttribute('data-theme', 'light');
+        btn.textContent = '🌙';
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        btn.textContent = '☀️';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Zap, BarChart2, HeartPulse, HeartCrack } from 'lucide-react'
 
 export default function Heartbeat() {
   const [status, setStatus] = useState(null)
@@ -27,19 +28,23 @@ export default function Heartbeat() {
     setLoading(false)
   }
 
+  const running = status?.running
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Heartbeat</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Heartbeat</h1>
 
       {/* Scheduler status */}
-      <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
         <div className="flex items-center gap-3 mb-4">
-          <span className={`text-2xl ${status?.running ? 'animate-pulse' : ''}`}>
-            {status?.running ? '💓' : '💔'}
-          </span>
+          {running ? (
+            <HeartPulse size={28} className="text-red-500 animate-pulse" />
+          ) : (
+            <HeartCrack size={28} className="text-gray-400" />
+          )}
           <div>
-            <p className="font-semibold text-white">
-              Scheduler {status?.running ? 'running' : 'stopped'}
+            <p className="font-semibold text-gray-900 dark:text-white">
+              Scheduler {running ? 'running' : 'stopped'}
             </p>
             <p className="text-xs text-gray-500">{status?.jobs?.length ?? 0} jobs scheduled</p>
           </div>
@@ -48,9 +53,9 @@ export default function Heartbeat() {
         {status?.jobs?.length > 0 && (
           <div className="space-y-2">
             {status.jobs.map(job => (
-              <div key={job.id} className="flex justify-between items-center text-sm">
-                <span className="text-gray-400 font-mono">{job.id}</span>
-                <span className="text-gray-600">
+              <div key={job.id} className="flex justify-between items-center text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-gray-600 dark:text-gray-400 font-mono">{job.id}</span>
+                <span className="text-gray-400 text-xs">
                   next: {job.next_run ? new Date(job.next_run).toLocaleString('en-AE', { timeZone: 'Asia/Dubai' }) : '—'}
                 </span>
               </div>
@@ -64,27 +69,27 @@ export default function Heartbeat() {
         <button
           onClick={() => runCheck('/api/heartbeat/check')}
           disabled={loading}
-          className="bg-green-800 hover:bg-green-700 text-white text-sm px-4 py-2 rounded disabled:opacity-50"
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
         >
-          ⚡ Quick Check
+          <Zap size={14} /> Quick Check
         </button>
         <button
           onClick={() => runCheck('/api/heartbeat/full')}
           disabled={loading}
-          className="bg-blue-800 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded disabled:opacity-50"
+          className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
         >
-          📊 Full Report
+          <BarChart2 size={14} /> Full Report
         </button>
       </div>
 
       {/* Report output */}
       {(loading || report) && (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-          <h2 className="text-xs text-gray-500 uppercase tracking-wide mb-3">Report Output</h2>
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <h2 className="text-xs text-gray-400 uppercase tracking-wide mb-3">Report Output</h2>
           {loading ? (
-            <p className="text-gray-500 italic text-sm animate-pulse">Running…</p>
+            <p className="text-gray-400 italic text-sm animate-pulse">Running…</p>
           ) : (
-            <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">{report}</pre>
+            <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">{report}</pre>
           )}
         </div>
       )}

@@ -1,0 +1,66 @@
+miniclaw:
+  workspace: /opt/miniclaw/workspace
+  data_dir: /opt/miniclaw/data
+  log_dir: /opt/miniclaw/logs
+
+telegram:
+  token: ${TELEGRAM_BOT_TOKEN}
+  allowed_users:
+    - ${ESAM_TELEGRAM_ID}
+
+ollama:
+  url: http://10.0.1.212:11434
+  default_model: llama3.1:8b
+
+claude:
+  default_model: sonnet
+  memory_flush_model: sonnet
+  timeout: 300
+
+telegram_call:
+  api_id: ${TELEGRAM_API_ID}
+  api_hash: ${TELEGRAM_API_HASH}
+  session_name: miniclaw_caller
+  esam_user_id: ${ESAM_TELEGRAM_ID}
+  call_timeout: 30
+  tts:
+    backend: edge-tts
+    voice: en-US-AriaNeural
+
+google:
+  credentials_file: /opt/miniclaw/config/google-credentials.json
+  scopes:
+    - https://www.googleapis.com/auth/drive
+    - https://www.googleapis.com/auth/documents
+    - https://www.googleapis.com/auth/gmail.modify
+    - https://www.googleapis.com/auth/calendar
+    - https://www.googleapis.com/auth/spreadsheets
+
+heartbeat:
+  quick_interval: 30   # minutes
+  full_interval: 6     # hours
+  morning_time: "08:00"
+  use_ollama: true
+
+transcription:
+  groq_api_key: ${GROQ_API_KEY}
+  whisper_model: base   # fallback local model: tiny, base, small, medium
+
+dashboard:
+  port: 3000
+  host: 0.0.0.0
+
+gateway:
+  port: 8080
+  host: 0.0.0.0
+
+memory:
+  auto_extract:
+    enabled: true
+    schedule: "23:00"        # daily extraction time (Asia/Dubai)
+    input_cap_chars: 3200    # ~4000 tokens of log context
+    dedup_threshold: 0.8     # difflib ratio to consider duplicate
+  structured_store:
+    db_path: /opt/miniclaw/data/miniclaw.db
+    memory_budget_lines: 500 # archive MEMORY.md when it exceeds this
+    consolidation_schedule: "sun 03:30"  # weekly archival
