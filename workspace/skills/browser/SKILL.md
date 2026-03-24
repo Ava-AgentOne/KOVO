@@ -33,4 +33,4 @@ trigger: browse, website, web, url, scrape, screenshot, open page, click, fill f
 - Runs headless Chromium
 - Times out after 30s per action
 - JavaScript-heavy pages may need a short wait
-- Screenshots saved to /opt/miniclaw/data/screenshots/
+- Screenshots saved to /opt/kovo/data/screenshots/

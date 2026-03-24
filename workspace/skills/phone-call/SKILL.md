@@ -1,6 +1,6 @@
 ---
 name: phone-call
-description: Place real Telegram voice calls to Esam with TTS audio, or send voice messages
+description: Place real Telegram voice calls to the owner with TTS audio, or send voice messages
 tools: [telegram_call, tts]
 trigger: call, voice call, ring, phone, urgent call, speak to me, talk to me, voice message, call me, tgcall
 ---
@@ -8,7 +8,7 @@ trigger: call, voice call, ring, phone, urgent call, speak to me, talk to me, vo
 # Phone Call Skill
 
 ## Capabilities
-- **Real Telegram calls**: Places actual voice calls using the MiniClaw userbot account
+- **Real Telegram calls**: Places actual voice calls using the Kovo userbot account
 - **TTS audio**: Converts text to speech (edge-tts, Microsoft voices)
 - **Voice message fallback**: If call not answered in 30s, sends a voice message instead
 - **Urgency levels**: Normal (voice message) vs Urgent (attempt call first)
