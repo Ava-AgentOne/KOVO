@@ -30,7 +30,7 @@ class TelegramCaller:
         self,
         api_id: int,
         api_hash: str,
-        session_name: str = "miniclaw_caller",
+        session_name: str = "kovo_caller",
         call_timeout: int = 30,
     ):
         self.api_id = api_id

@@ -1,5 +1,5 @@
 """
-MiniClaw Gateway — FastAPI application.
+Kovo Gateway — FastAPI application.
 
 Start modes:
   Webhook: WEBHOOK_URL env var set → registers webhook with Telegram, serves /webhook
@@ -39,7 +39,7 @@ _FRONTEND_DIST = Path(__file__).resolve().parents[2] / "src/dashboard/frontend/d
 
 def _build_deps():
     """Instantiate all shared dependencies."""
-    from src.agents.miniclaw import MiniClawAgent
+    from src.agents.kovo import KovoAgent
     from src.agents.sub_agent import SubAgentRunner
     from src.memory.auto_extract import AutoMemoryExtractor
     from src.memory.manager import MemoryManager
@@ -70,7 +70,7 @@ def _build_deps():
 
     sub_agent_runner = SubAgentRunner(workspace_dir=workspace, tool_registry=tool_registry)
 
-    agent = MiniClawAgent(
+    agent = KovoAgent(
         memory=memory,
         router=router,
         skills=skills,
@@ -106,7 +106,7 @@ def _build_deps():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── startup ──────────────────────────────────────────────────────────────
-    log.info("Starting MiniClaw gateway...")
+    log.info("Starting Kovo gateway...")
 
     # Validate environment before touching any external service
     from src.gateway.config import EnvValidationError, validate_env, check_env_permissions
@@ -205,7 +205,7 @@ async def lifespan(app: FastAPI):
         heartbeat._caller = agent.caller
         heartbeat._reporter = reporter
 
-    log.info("MiniClaw fully started (1 main agent, %d sub-agents, %d skills, %d tools)",
+    log.info("Kovo fully started (1 main agent, %d sub-agents, %d skills, %d tools)",
              len(deps["sub_agent_runner"].all()),
              len(deps["skills"].all()),
              len(deps["tool_registry"].all()))
@@ -213,17 +213,17 @@ async def lifespan(app: FastAPI):
     yield
 
     # ── shutdown ─────────────────────────────────────────────────────────────
-    log.info("Shutting down MiniClaw...")
+    log.info("Shutting down Kovo...")
     heartbeat.stop()
     if tg_app.updater and tg_app.updater.running:
         await tg_app.updater.stop()
     await tg_app.stop()
     await tg_app.shutdown()
-    log.info("MiniClaw shutdown complete")
+    log.info("Kovo shutdown complete")
 
 
 def _init_phone_tools(agent, tg_app, transcriber=None):
-    """Wire TTS + Telegram caller + transcriber into MiniClawAgent."""
+    """Wire TTS + Telegram caller + transcriber into KovoAgent."""
     try:
         from src.tools.tts import TTSEngine
         from src.tools.telegram_call import TelegramCaller
@@ -237,7 +237,7 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
         agent.caller = TelegramCaller(
             api_id=int(call_cfg.get("api_id", 0)),
             api_hash=str(call_cfg.get("api_hash", "")),
-            session_name=call_cfg.get("session_name", "miniclaw_caller"),
+            session_name=call_cfg.get("session_name", "kovo_caller"),
             call_timeout=int(call_cfg.get("call_timeout", 30)),
         )
         agent.tg_bot = tg_app.bot
@@ -248,7 +248,7 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
         log.warning("Phone tools init failed (telegram_call may not be configured): %s", e)
 
 
-app = FastAPI(title="MiniClaw Gateway", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Kovo Gateway", version="0.3.0", lifespan=lifespan)
 
 # API routes
 app.include_router(api_router)
