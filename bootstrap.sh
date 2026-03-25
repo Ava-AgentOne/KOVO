@@ -61,7 +61,6 @@ else
     BOLD='' DIM='' BLUE='' CYAN='' GREEN='' YELLOW='' RED='' PINK='' GRAY='' WHITE='' NC=''
 fi
 
-exec 3<&0
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
@@ -94,8 +93,8 @@ progress_bar() {
 confirm() {
     local prompt="$1"
     if $AUTO_YES; then return 0; fi
-    echo -en "  ${PINK}?${NC} ${prompt} ${DIM}[Y/n]${NC}: "
-    read -r answer <&3
+    echo -en "  ${PINK}?${NC} ${prompt} ${DIM}[Y/n]${NC}: " > /dev/tty
+    read -r answer < /dev/tty
     [[ "${answer,,}" != "n" ]]
 }
 
@@ -356,11 +355,11 @@ configure_network() {
         GATEWAY_PORT="8080"
         DASHBOARD_PORT="3000"
     else
-        echo -en "  ${PINK}?${NC} Gateway port ${DIM}[8080]${NC}: "
-        read -r gp <&3
+        echo -en "  ${PINK}?${NC} Gateway port ${DIM}[8080]${NC}: " > /dev/tty
+        read -r gp < /dev/tty
         GATEWAY_PORT="${gp:-8080}"
-        echo -en "  ${PINK}?${NC} Dashboard dev port ${DIM}[3000]${NC}: "
-        read -r dp <&3
+        echo -en "  ${PINK}?${NC} Dashboard dev port ${DIM}[3000]${NC}: " > /dev/tty
+        read -r dp < /dev/tty
         DASHBOARD_PORT="${dp:-3000}"
     fi
 
