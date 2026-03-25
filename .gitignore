@@ -35,3 +35,6 @@ data/tmp/
 data/documents/
 data/.sim_reminder_sent
 data/.storage_state.json
+
+# Runtime security audit data
+data/security/

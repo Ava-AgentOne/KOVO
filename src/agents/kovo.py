@@ -1,5 +1,5 @@
 """
-MiniClaw — the one and only agent the owner talks to.
+Kovo — the one and only agent the owner talks to.
 
 Handles everything directly. Has access to ALL tools.
 Reads SOUL.md, USER.md, IDENTITY.md always; loads MEMORY.md, daily logs,
@@ -84,10 +84,10 @@ _STORAGE_KW = frozenset([
 ])
 
 
-class MiniClawAgent:
+class KovoAgent:
     """Main agent — single entry point for all of the owner's requests."""
 
-    name = "miniclaw"
+    name = "kovo"
 
     def __init__(
         self,
@@ -352,7 +352,7 @@ class MiniClawAgent:
         if self.tts is None or self.caller is None:
             return {"text": "Phone tool not configured. Check TOOLS.md.", "method": "error"}
         try:
-            prefix = "Urgent message from MiniClaw: " if urgent else ""
+            prefix = "Urgent message from Kovo: " if urgent else ""
             mp3_path = await self.tts.speak(
                 prefix + message,
                 output_path="/opt/kovo/data/audio/call_audio.mp3",

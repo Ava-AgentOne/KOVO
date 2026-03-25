@@ -4,7 +4,7 @@
 
 ## Overview
 
-Kovo is a self-hosted personal AI agent inspired by OpenClaw and GoBot. It runs on an Ubuntu 25.10 (Questing) VM (8GB RAM, 50GB disk) on an Unraid server. It uses the **Claude Code CLI as a subprocess** (`claude -p`) for complex tasks and **Ollama** (running on a NUC at `192.168.1.212:11434`) for cheap/simple tasks like heartbeats and quick answers.
+Kovo is a self-hosted personal AI agent inspired by OpenClaw and GoBot. It runs on an Ubuntu 25.10 (Questing) VM (8GB RAM, 50GB disk) on an Unraid server. It uses the **Claude Code CLI as a subprocess** (`claude -p`) for complex tasks and **Ollama** (running on a NUC — see `ollama.url` in settings.yaml) for cheap/simple tasks like heartbeats and quick answers.
 
 The owner's name is the owner. He is based in Al Ain, UAE.
 
@@ -170,7 +170,7 @@ Simple tasks go to Ollama on the NUC to save Claude usage:
 ```python
 import httpx
 
-OLLAMA_URL = "http://192.168.1.212:11434"
+OLLAMA_URL = "http://{YOUR_OLLAMA_IP}:11434"  # from settings.yaml
 
 async def call_ollama(prompt: str, model: str = "llama3.1:8b") -> str:
     async with httpx.AsyncClient() as client:
@@ -842,7 +842,7 @@ telegram:
     - ${OWNER_TELEGRAM_ID}
 
 ollama:
-  url: http://192.168.1.212:11434
+  url: http://{YOUR_OLLAMA_IP}:11434  # your Ollama server IP
   default_model: llama3.1:8b
   # NOTE: no classifier_model — Ollama is used only for heartbeats, not message routing
 
