@@ -7,8 +7,8 @@
 **Your Self-Hosted AI Agent for Linux**
 
 [![GitHub release](https://img.shields.io/github/v/release/Ava-AgentOne/kovo?color=378ADD&label=Release)](https://github.com/Ava-AgentOne/kovo/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-Powered-DA7756?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
 
@@ -22,7 +22,7 @@
 
 **KOVO** is a self-hosted AI agent powered by **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** that runs on a Linux VM and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, and learn new skills — all while keeping your data private on your own hardware.
 
-Unlike other open-source agents, KOVO uses **Claude Code CLI as its backbone** — giving it access to Claude Sonnet and Opus for real reasoning, not just basic LLM completions. It optionally uses a **local LLM** (like [Ollama](https://ollama.com)) for cheap tasks like heartbeats and quick classification.
+Inspired by **[OpenClaw](https://github.com/openclaw)**, KOVO takes a different approach to the AI backbone — it uses **Claude Code CLI as a subprocess** (`claude -p`), powered by your Claude Max subscription. This gives it access to Claude Sonnet and Opus for real multi-step reasoning, not pay-per-token API calls. It optionally uses a **local LLM** (like [Ollama](https://ollama.com)) for cheap tasks like heartbeats and quick classification.
 
 ### 🧠 Why Claude Code?
 
@@ -79,7 +79,7 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO is different —
 | Component | Technology |
 |-----------|-----------|
 | **Brain** | Claude Code CLI (`claude -p`) — Sonnet & Opus |
-| **Gateway** | Python 3.11, FastAPI, Uvicorn |
+| **Gateway** | Python 3.13, FastAPI, Uvicorn |
 | **Telegram** | python-telegram-bot |
 | **Local LLM** | Ollama, LM Studio, or any OpenAI-compatible endpoint (optional) |
 | **Dashboard** | React, Vite, Tailwind CSS, Lucide Icons |
@@ -132,7 +132,7 @@ curl -fsSL https://raw.githubusercontent.com/Ava-AgentOne/kovo/main/bootstrap.sh
 
 This will:
 1. Clone the repo to `/opt/kovo`
-2. Install Python 3.11+, Node 22, system dependencies
+2. Install Python 3.13+, Node 22, system dependencies
 3. Create a Python virtual environment with all packages
 4. Build the dashboard frontend
 5. Set up Claude Code permissions
@@ -177,7 +177,7 @@ Open the dashboard at `http://<YOUR-VM-IP>:8080/dashboard`
 
 ```bash
 sudo apt update && sudo apt install -y \
-  python3.11 python3.11-venv python3-pip \
+  python3.13 python3.13-venv python3-pip \
   git curl ffmpeg redis-server \
   clamav chkrootkit rkhunter
 ```
@@ -201,7 +201,7 @@ claude auth login
 ```bash
 sudo git clone https://github.com/Ava-AgentOne/kovo.git /opt/kovo
 cd /opt/kovo
-python3.11 -m venv venv
+python3.13 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -392,16 +392,18 @@ KOVO includes built-in security features:
 
 ## 🆚 KOVO vs OpenClaw
 
-| Feature | KOVO | OpenClaw |
-|---------|------|----------|
-| **Brain** | Claude Code (Sonnet/Opus) | Ollama only |
-| **Reasoning** | Multi-step, tool use, code editing | Basic completions |
-| **Smart Routing** | Local LLM + Claude (best of both) | Local LLM only |
-| **Voice Calls** | Real Telegram calls | ❌ |
-| **Security Audits** | Built-in with baseline tracking | ❌ |
-| **Self-Evolving** | Can install packages, create services | Limited |
-| **Dashboard** | React with dark/light mode | Basic |
-| **Workspace Format** | Compatible with OpenClaw | ✅ |
+KOVO is inspired by [OpenClaw](https://github.com/openclaw) and uses a compatible workspace format. The key difference is how they connect to AI:
+
+| | KOVO | OpenClaw |
+|---|------|----------|
+| **AI connection** | Claude Code CLI (`claude -p`) | Direct API calls (OpenAI, Anthropic, etc.) |
+| **Billing** | Flat rate — Claude Max subscription (~$100-200/mo) | Pay per token — costs vary with usage |
+| **Models** | Claude Sonnet & Opus via Claude Code | Any provider (OpenAI, Anthropic, Groq, local) |
+| **Local LLM** | Optional — for heartbeats & cheap tasks | Core — primary model for many setups |
+| **Workspace format** | SOUL.md, MEMORY.md, SKILL.md — compatible | ✅ Same format |
+| **Platform** | Linux VM (self-hosted) | Linux VM (self-hosted) |
+
+KOVO's approach means predictable monthly costs and access to Claude's full reasoning capabilities through Claude Code, while OpenClaw offers more flexibility in model choice and provider.
 
 ## 🔍 Troubleshooting
 
@@ -446,7 +448,7 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 
 ## 📜 License
 
-[MIT](LICENSE) — Use it, modify it, share it.
+[GNU AGPLv3](LICENSE) — Free to use, modify, and share. Derivative works must remain open source.
 
 ---
 
