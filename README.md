@@ -2,58 +2,108 @@
 
 <img src="https://raw.githubusercontent.com/Ava-AgentOne/kovo/main/kovo-mascot.png" alt="Kovo" width="280">
 
-# 👾 Kovo
+# <span style="color:#378ADD">KOVO</span>
 
-**Your Self-Hosted AI Agent for Ubuntu**
+**Your Self-Hosted AI Agent for Linux**
 
 [![GitHub release](https://img.shields.io/github/v/release/Ava-AgentOne/kovo?color=378ADD&label=Release)](https://github.com/Ava-AgentOne/kovo/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Ubuntu](https://img.shields.io/badge/Ubuntu-24.04+-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-Powered-DA7756?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
 
-*A personal AI assistant that lives on your VM — chat via Telegram, monitor via dashboard, extend with skills.*
+*A personal AI agent powered by Claude Code — chat via Telegram, monitor via dashboard, extend with skills.*
 
 ---
 
 </div>
 
-## 📖 What Is Kovo?
+## 📖 What Is KOVO?
 
-**Kovo** is a self-hosted AI agent that runs on an Ubuntu VM and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, and learn new skills — all while keeping your data private on your own hardware.
+**KOVO** is a self-hosted AI agent powered by **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** that runs on a Linux VM and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, and learn new skills — all while keeping your data private on your own hardware.
 
-Think of it as your own AI assistant that lives on your home lab, with a clean web dashboard to monitor everything.
+Unlike other open-source agents, KOVO uses **Claude Code CLI as its backbone** — giving it access to Claude Sonnet and Opus for real reasoning, not just basic LLM completions. It optionally uses a **local LLM** (like [Ollama](https://ollama.com)) for cheap tasks like heartbeats and quick classification.
+
+### 🧠 Why Claude Code?
+
+Most self-hosted agents rely on basic API calls to an LLM. KOVO is different — it uses **Claude Code as a subprocess** (`claude -p`), which means:
+
+- **Full Claude reasoning** — Sonnet for medium tasks, Opus for complex ones
+- **Smart model routing** — local LLM handles simple tasks (free), Claude handles the rest
+- **Tool use** — Claude Code can execute shell commands, edit files, and reason about code
+- **No API key management** — uses your Claude Max/Pro subscription directly
+- **Self-evolving** — the agent can install packages, create services, and write new skills
 
 ### 🎯 Who Is This For?
 
 - **Home lab enthusiasts** who want a personal AI agent on their own hardware
-- **Developers** looking for an extensible, self-hosted AI platform
-- **Privacy-conscious users** who want AI without cloud dependencies
+- **Developers** looking for an extensible, Claude-powered AI platform
+- **Privacy-conscious users** who want AI without cloud data storage
 - Anyone who wants to **automate** server management via natural language
 
 ## ✨ Features
 
 | Feature | Description |
 |---------|-------------|
-| 💬 **Telegram Chat** | Talk to Kovo through Telegram with persistent keyboard buttons |
+| 🧠 **Claude Code Backbone** | Full Claude Sonnet/Opus reasoning via `claude -p` subprocess |
+| 💬 **Telegram Chat** | Talk to KOVO through Telegram with persistent keyboard buttons |
 | 🖥️ **Web Dashboard** | Real-time system monitoring with dark/light mode |
 | 🛡️ **Security Audits** | Automated port scanning, malware checks, rootkit detection |
 | 🧠 **Memory System** | Daily logs, learnings, and long-term memory across sessions |
 | ⚡ **Skill System** | Modular skills — browse web, shell commands, phone calls, reports |
 | 🤖 **Sub-Agents** | Spawn specialized agents for recurring tasks |
 | 📊 **Health Monitoring** | CPU, RAM, disk, uptime — all visible from dashboard and Telegram |
-| 🔧 **Tool Registry** | Ollama, Google Drive, Gmail, shell, browser — all managed centrally |
-| 💾 **Heartbeat** | Scheduled checks: morning briefing, evening summary, weekly audit |
+| 🔧 **Smart Model Router** | Local LLM for simple tasks, Claude for complex ones |
 | 📞 **Voice Calls** | Real Telegram voice calls for critical alerts |
+
+## 🏗️ Architecture
+
+```
+                    ┌──────────────────┐
+                    │   Claude Code    │  ← The Brain
+                    │  (claude -p CLI) │
+                    │  Sonnet / Opus   │
+                    └────────┬─────────┘
+                             │
+┌─────────────┐     ┌───────┴────────┐     ┌──────────────┐
+│  Telegram   │────▶│    Gateway     │────▶│  Local LLM   │
+│  (Mobile)   │◀────│   (FastAPI)    │◀────│  (Optional)  │
+└─────────────┘     └───────┬────────┘     └──────────────┘
+                            │
+                     ┌──────┴───────┐
+                     │  Dashboard   │
+                     │  (React UI)  │
+                     └──────────────┘
+```
+
+| Component | Technology |
+|-----------|-----------|
+| **Brain** | Claude Code CLI (`claude -p`) — Sonnet & Opus |
+| **Gateway** | Python 3.11, FastAPI, Uvicorn |
+| **Telegram** | python-telegram-bot |
+| **Local LLM** | Ollama, LM Studio, or any OpenAI-compatible endpoint (optional) |
+| **Dashboard** | React, Vite, Tailwind CSS, Lucide Icons |
+| **Database** | SQLite (sessions, audit logs, memory) |
+| **Voice** | py-tgcalls + FFmpeg for Telegram calls |
+
+### Smart Model Router
+
+KOVO intelligently routes messages to the right model:
+
+| Complexity | Routed To | Use Case |
+|------------|-----------|----------|
+| **Simple** | Local LLM | Heartbeats, quick Q&A, classification |
+| **Medium** | Claude Sonnet | Most tasks, code, analysis |
+| **Complex** | Claude Opus | Deep reasoning, architecture, planning |
 
 ## 🖥️ Dashboard
 
-The built-in web dashboard gives you full visibility into Kovo's state:
+The built-in web dashboard gives you full visibility into KOVO's state:
 
 | Section | What It Shows |
 |---------|---------------|
 | 📡 **Overview** | CPU, RAM, disk metrics + service status dots + quick actions |
-| 💬 **Chat** | Talk to Kovo from the browser (WebSocket) |
+| 💬 **Chat** | Talk to KOVO from the browser (WebSocket) |
 | 🔧 **Tools** | All registered tools with status and install commands |
 | 🤖 **Agents** | Main agent + any sub-agents with their tools |
 | 🧠 **Memory** | Browse daily logs and workspace files |
@@ -67,10 +117,12 @@ The built-in web dashboard gives you full visibility into Kovo's state:
 
 ### Prerequisites
 
-- Ubuntu 24.04+ VM (tested on Unraid)
-- 4GB+ RAM, 20GB+ disk
-- Telegram Bot Token ([create one](https://t.me/BotFather))
-- Your Telegram User ID ([find yours](https://t.me/userinfobot))
+- **Linux VM** — Ubuntu 24.04+, Debian 12+, or similar (tested on Unraid)
+- **4GB+ RAM**, **40GB+ disk**
+- **Claude Code CLI** — installed and authenticated ([install guide](https://docs.anthropic.com/en/docs/claude-code))
+- **Telegram Bot Token** — [create one via @BotFather](https://t.me/BotFather)
+- **Your Telegram User ID** — [find yours via @userinfobot](https://t.me/userinfobot)
+- **Local LLM** *(optional)* — [Ollama](https://ollama.com), [LM Studio](https://lmstudio.ai), or any OpenAI-compatible endpoint
 
 ### One-Line Install
 
@@ -83,7 +135,8 @@ This will:
 2. Install Python 3.11+, Node 22, system dependencies
 3. Create a Python virtual environment with all packages
 4. Build the dashboard frontend
-5. Set up the systemd service
+5. Set up Claude Code permissions
+6. Set up the systemd service
 
 ### Configure
 
@@ -96,9 +149,15 @@ nano .env
 Fill in your credentials:
 
 ```env
+# Required
 TELEGRAM_BOT_TOKEN=your-bot-token
 OWNER_TELEGRAM_ID=your-telegram-id
-OLLAMA_HOST=http://192.168.1.212:11434
+
+# Optional — local LLM for cheap tasks
+OLLAMA_HOST=http://localhost:11434
+
+# Optional — Groq for fast voice transcription
+GROQ_API_KEY=your-groq-key
 ```
 
 ### Start
@@ -109,9 +168,132 @@ sudo systemctl enable --now kovo
 
 Open the dashboard at `http://<YOUR-VM-IP>:8080/dashboard`
 
+## 📦 Detailed Installation
+
+<details>
+<summary><strong>Step-by-step manual installation</strong></summary>
+
+### 1. System packages
+
+```bash
+sudo apt update && sudo apt install -y \
+  python3.11 python3.11-venv python3-pip \
+  git curl ffmpeg redis-server \
+  clamav chkrootkit rkhunter
+```
+
+### 2. Node.js 22
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+### 3. Claude Code CLI
+
+```bash
+npm install -g @anthropic-ai/claude-code
+claude auth login
+```
+
+### 4. Clone and setup
+
+```bash
+sudo git clone https://github.com/Ava-AgentOne/kovo.git /opt/kovo
+cd /opt/kovo
+python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 5. Dashboard frontend
+
+```bash
+cd src/dashboard/frontend
+npm install && npm run build
+cd /opt/kovo
+```
+
+### 6. Configure
+
+```bash
+cp config/.env.example config/.env
+chmod 600 config/.env
+nano config/.env  # Add your tokens
+```
+
+### 7. Systemd service
+
+```bash
+sudo cp systemd/kovo.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now kovo
+```
+
+### 8. Verify
+
+```bash
+sudo systemctl status kovo
+curl http://localhost:8080/api/status
+```
+
+</details>
+
+<details>
+<summary><strong>Setting up a Local LLM (optional)</strong></summary>
+
+KOVO can use any local LLM for cheap tasks (heartbeats, classification). This saves Claude usage for complex work.
+
+### Option A: Ollama
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull a model
+ollama pull llama3.1:8b
+
+# Set in .env
+echo "OLLAMA_HOST=http://localhost:11434" >> /opt/kovo/config/.env
+```
+
+### Option B: LM Studio or other OpenAI-compatible endpoint
+
+Set the endpoint URL in your `.env`:
+
+```env
+OLLAMA_HOST=http://localhost:1234/v1
+```
+
+KOVO uses the `/api/generate` endpoint (Ollama format). Any compatible server works.
+
+</details>
+
+<details>
+<summary><strong>Setting up Telegram Voice Calls (optional)</strong></summary>
+
+For real Telegram voice calls (urgent alerts, wake-up calls):
+
+1. Get a second Telegram account (eSIM or prepaid SIM)
+2. Get API credentials from [my.telegram.org](https://my.telegram.org)
+3. Add to `.env`:
+
+```env
+TELEGRAM_API_ID=your-api-id
+TELEGRAM_API_HASH=your-api-hash
+```
+
+4. Authenticate the userbot:
+
+```bash
+cd /opt/kovo && python -m src.tools.telegram_call --auth
+```
+
+</details>
+
 ## 📱 Telegram Commands
 
-Kovo uses a persistent reply keyboard with emoji buttons:
+KOVO uses a persistent reply keyboard with emoji buttons:
 
 | Button | Command | What It Does |
 |--------|---------|--------------|
@@ -122,11 +304,11 @@ Kovo uses a persistent reply keyboard with emoji buttons:
 | 📚 Skills | `/skills` | List all loaded skills |
 | 🔧 Tools | `/tools` | Tool registry with status |
 
-Plus: `/agents`, `/permissions`, `/purge`, and natural language for everything else.
+Plus: `/agents`, `/permissions`, `/purge`, `/audit`, and natural language for everything else.
 
 ## ⚡ Skills
 
-Kovo ships with built-in skills and supports custom ones:
+KOVO ships with built-in skills and supports custom ones:
 
 | Skill | Description |
 |-------|-------------|
@@ -141,7 +323,7 @@ Kovo ships with built-in skills and supports custom ones:
 
 ### Create Custom Skills
 
-Drop a `SKILL.md` file in `workspace/skills/<name>/` with frontmatter:
+Drop a `SKILL.md` file in `workspace/skills/<name>/`:
 
 ```yaml
 ---
@@ -153,31 +335,8 @@ trigger: keyword1, keyword2, keyword3
 
 # My Skill
 
-Instructions for how Kovo should use this skill...
+Instructions for how KOVO should use this skill...
 ```
-
-## 🏗️ Architecture
-
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  Telegram    │────▶│   Gateway    │────▶│   Ollama    │
-│  (Mobile)    │◀────│  (FastAPI)   │◀────│  (NUC LLM)  │
-└─────────────┘     └──────┬───────┘     └─────────────┘
-                           │
-                    ┌──────┴───────┐
-                    │  Dashboard   │
-                    │  (React UI)  │
-                    └──────────────┘
-```
-
-| Component | Technology |
-|-----------|-----------|
-| **Gateway** | Python 3.11, FastAPI, Uvicorn |
-| **Telegram** | python-telegram-bot |
-| **LLM** | Ollama (Llama, Qwen, etc.) |
-| **Dashboard** | React, Vite, Tailwind CSS, Lucide Icons |
-| **Database** | SQLite (sessions, audit logs) |
-| **Voice** | py-tgcalls + FFmpeg for Telegram calls |
 
 ## ⚙️ Environment Variables
 
@@ -185,19 +344,22 @@ Instructions for how Kovo should use this skill...
 |----------|----------|-------------|
 | `TELEGRAM_BOT_TOKEN` | ✅ | Bot token from @BotFather |
 | `OWNER_TELEGRAM_ID` | ✅ | Your Telegram user ID |
-| `OLLAMA_HOST` | ❌ | Ollama URL (default: `http://localhost:11434`) |
-| `GROQ_API_KEY` | ❌ | Groq cloud API for fast inference |
+| `OLLAMA_HOST` | ❌ | Local LLM URL (default: `http://localhost:11434`) |
+| `GROQ_API_KEY` | ❌ | Groq cloud API for fast voice transcription |
 | `GITHUB_TOKEN` | ❌ | GitHub access for ClawHub skill marketplace |
+| `TELEGRAM_API_ID` | ❌ | For voice calls (from my.telegram.org) |
+| `TELEGRAM_API_HASH` | ❌ | For voice calls (from my.telegram.org) |
 
 ## 🛡️ Security
 
-Kovo includes built-in security features:
+KOVO includes built-in security features:
 
 - **Token masking** — all API keys masked in log output
 - **`.env` validation** — fails fast if required vars are missing or placeholder
 - **File permissions** — `.env`, credentials, and DB set to `chmod 600`
 - **Shell blocklist** — dangerous commands blocked or require confirmation
 - **Security audits** — automated port scan, user check, ClamAV, chkrootkit
+- **Claude Code sandbox** — pre-approved command allowlist, runtime approval via Telegram
 
 ## 📁 Project Structure
 
@@ -209,10 +371,14 @@ Kovo includes built-in security features:
 ├── src/
 │   ├── agents/      # Main agent + sub-agent runner
 │   ├── dashboard/   # FastAPI API + React frontend
-│   ├── heartbeat/   # Scheduled tasks
-│   ├── memory/      # Memory system
+│   ├── gateway/     # FastAPI app, startup, config
+│   ├── heartbeat/   # Scheduled tasks (APScheduler)
+│   ├── memory/      # Memory system (MD + SQLite)
+│   ├── onboarding/  # First-run guided setup
+│   ├── router/      # Smart model router (local LLM / Claude)
 │   ├── skills/      # Skill registry + loader
-│   └── tools/       # Tool registry (Ollama, Google, Shell, etc.)
+│   ├── telegram/    # Bot, commands, formatting
+│   └── tools/       # Tool registry (Claude CLI, shell, browser, etc.)
 ├── workspace/
 │   ├── memory/      # Daily log files (YYYY-MM-DD.md)
 │   ├── skills/      # Skill definitions (SKILL.md per skill)
@@ -223,6 +389,19 @@ Kovo includes built-in security features:
 ├── requirements.txt # Python dependencies
 └── README.md        # You are here
 ```
+
+## 🆚 KOVO vs OpenClaw
+
+| Feature | KOVO | OpenClaw |
+|---------|------|----------|
+| **Brain** | Claude Code (Sonnet/Opus) | Ollama only |
+| **Reasoning** | Multi-step, tool use, code editing | Basic completions |
+| **Smart Routing** | Local LLM + Claude (best of both) | Local LLM only |
+| **Voice Calls** | Real Telegram calls | ❌ |
+| **Security Audits** | Built-in with baseline tracking | ❌ |
+| **Self-Evolving** | Can install packages, create services | Limited |
+| **Dashboard** | React with dark/light mode | Basic |
+| **Workspace Format** | Compatible with OpenClaw | ✅ |
 
 ## 🔍 Troubleshooting
 
@@ -241,11 +420,20 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 </details>
 
 <details>
-<summary><strong>Ollama shows "Offline" in dashboard</strong></summary>
+<summary><strong>Claude Code not working</strong></summary>
 
-- Verify `OLLAMA_HOST` points to your running Ollama instance
-- Test connectivity: `curl http://<OLLAMA_IP>:11434/api/tags`
-- Ensure the VM can reach the Ollama host (check firewall/network)
+- Verify Claude Code is installed: `claude --version`
+- Check authentication: `claude auth status`
+- Ensure you have an active Claude Max or Pro subscription
+- Check the sandbox permissions: `cat /opt/kovo/.claude/settings.local.json`
+</details>
+
+<details>
+<summary><strong>Local LLM shows "Offline" in dashboard</strong></summary>
+
+- Verify your LLM server is running and reachable
+- Test connectivity: `curl http://<LLM-HOST>:11434/api/tags`
+- Check `OLLAMA_HOST` in your `.env` file
 </details>
 
 <details>
@@ -264,7 +452,7 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 
 <div align="center">
 
-**Built for home labs** · Powered by [Ollama](https://ollama.com) + [FastAPI](https://fastapi.tiangolo.com/) · Chat via [Telegram](https://telegram.org)
+**Built for home labs** · Powered by [Claude Code](https://docs.anthropic.com/en/docs/claude-code) + [FastAPI](https://fastapi.tiangolo.com/) · Chat via [Telegram](https://telegram.org)
 
 Made with 💙 by [Ava-AgentOne](https://github.com/Ava-AgentOne)
 
