@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
-import { Sun, Moon, RefreshCw, ChevronDown, ChevronUp, Save, Download, Trash2, Archive } from 'lucide-react'
+import { Sun, Moon, RefreshCw, ChevronDown, ChevronUp, Save, Download, Upload, Trash2, Archive, Loader2, AlertTriangle } from 'lucide-react'
 
 function Section({ title, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -64,7 +64,6 @@ function StructuredConfig() {
       .then(d => {
         setRaw(d.content || '')
         try {
-          // Parse YAML-like content into structured fields
           const lines = (d.content || '').split('\n')
           const parsed = {}
           let currentSection = null
@@ -90,9 +89,6 @@ function StructuredConfig() {
   }, [])
 
   const updateField = (section, key, value) => {
-    // Update the raw YAML string
-    const regex = new RegExp(`(^\\s+${key}\\s*:\\s*)(.+)$`, 'm')
-    // Find the section first, then the key within it
     const lines = raw.split('\n')
     let inSection = false
     const newLines = lines.map(line => {
@@ -128,7 +124,6 @@ function StructuredConfig() {
 
   return (
     <div className="space-y-4">
-      {/* Ollama */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-gray-400 uppercase">Ollama (Local LLM)</p>
         <FieldRow label="URL" hint="Ollama API endpoint">
@@ -145,7 +140,6 @@ function StructuredConfig() {
         </FieldRow>
       </div>
 
-      {/* Claude */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-gray-400 uppercase">Claude</p>
         <FieldRow label="Default model">
@@ -160,7 +154,6 @@ function StructuredConfig() {
         </FieldRow>
       </div>
 
-      {/* Heartbeat */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-gray-400 uppercase">Heartbeat</p>
         <FieldRow label="Quick check" hint="Minutes between health checks">
@@ -174,7 +167,6 @@ function StructuredConfig() {
         </FieldRow>
       </div>
 
-      {/* Gateway */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-gray-400 uppercase">Gateway</p>
         <FieldRow label="Port">
@@ -182,7 +174,6 @@ function StructuredConfig() {
         </FieldRow>
       </div>
 
-      {/* Save + Raw toggle */}
       <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
         <button onClick={save} disabled={saving}
           className="flex items-center gap-2 text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-40 transition-colors">
@@ -195,7 +186,6 @@ function StructuredConfig() {
         </button>
       </div>
 
-      {/* Raw YAML editor (advanced) */}
       {showRaw && (
         <div className="space-y-2">
           <p className="text-xs text-amber-600 dark:text-amber-400">Be careful with indentation. Invalid YAML will be rejected.</p>
@@ -215,7 +205,10 @@ function StructuredConfig() {
 function BackupManager() {
   const [backups, setBackups] = useState(null)
   const [running, setRunning] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState('')
+  const [restoreResult, setRestoreResult] = useState(null)
+  const fileInputRef = useRef(null)
 
   const loadBackups = () =>
     fetch('/api/backup/list')
@@ -246,32 +239,111 @@ function BackupManager() {
     } catch {}
   }
 
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.name.endsWith('.tar.gz') && !file.name.endsWith('.tgz')) {
+      setRestoreResult({ ok: false, output: 'Only .tar.gz backup files are accepted.' })
+      return
+    }
+    if (!confirm(`Restore from "${file.name}"? This will overwrite current workspace, config, and database. The service will restart.`)) {
+      fileInputRef.current.value = ''
+      return
+    }
+    setUploading(true)
+    setRestoreResult(null)
+    setMsg('')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const r = await fetch('/api/backup/restore', {
+        method: 'POST',
+        body: formData,
+      })
+      const d = await r.json()
+      setRestoreResult(d)
+      if (d.ok) loadBackups()
+    } catch (e) {
+      setRestoreResult({ ok: false, output: `Upload failed: ${e.message}` })
+    }
+    setUploading(false)
+    fileInputRef.current.value = ''
+  }
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3">
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 flex-wrap">
         <button onClick={runBackup} disabled={running}
           className="flex items-center gap-2 text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
           <Archive size={14} /> {running ? 'Backing up\u2026' : 'Backup Now'}
         </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".tar.gz,.tgz"
+          className="hidden"
+          onChange={handleUpload}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+        >
+          {uploading ? (
+            <><Loader2 size={14} className="animate-spin" /> Restoring...</>
+          ) : (
+            <><Upload size={14} /> Restore from File</>
+          )}
+        </button>
+
         {msg && <span className="text-xs text-gray-500">{msg}</span>}
       </div>
 
+      {/* Restore result */}
+      {restoreResult && (
+        <div className={`rounded-lg p-3 text-sm ${
+          restoreResult.ok
+            ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40'
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40'
+        }`}>
+          <p className={`text-xs font-semibold mb-1 ${restoreResult.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+            {restoreResult.ok ? 'Restore Complete \u2014 service restarting...' : 'Restore Failed'}
+          </p>
+          <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
+            {restoreResult.output}
+          </pre>
+        </div>
+      )}
+
+      {/* Backup list */}
       {backups && (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <p className="text-xs text-gray-400">
-            {backups.backups?.length || 0} backups \u00b7 {backups.total_size || '0B'} total
+            {backups.backups?.length || 0} backups {'\u00b7'} {backups.total_size || '0B'} total
           </p>
           {backups.backups?.length > 0 && (
-            <div className="max-h-48 overflow-y-auto space-y-1">
+            <div className="max-h-56 overflow-y-auto space-y-1">
               {backups.backups.map(b => (
-                <div key={b.name} className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div key={b.name} className="flex items-center justify-between text-sm p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Archive size={12} className="text-gray-400 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300 font-mono text-xs truncate">{b.name}</span>
+                    <Archive size={14} className="text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-gray-700 dark:text-gray-300 font-mono text-xs truncate">{b.name}</p>
+                      {b.date && <p className="text-[10px] text-gray-400">{new Date(b.date).toLocaleString()}</p>}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-gray-400">{b.size}</span>
-                    <button onClick={() => deleteBackup(b.name)} className="text-gray-400 hover:text-red-500 transition-colors p-0.5">
+                    <a
+                      href={`/api/backup/download/${b.name}`}
+                      download
+                      className="flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 transition-colors px-2 py-1 rounded hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                    >
+                      <Download size={12} /> Download
+                    </a>
+                    <button onClick={() => deleteBackup(b.name)} className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -474,7 +546,7 @@ export default function Settings() {
         <StructuredConfig />
       </Section>
 
-      <Section title="Backup">
+      <Section title="Backup & Restore">
         <BackupManager />
       </Section>
 
