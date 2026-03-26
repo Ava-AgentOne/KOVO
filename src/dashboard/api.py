@@ -885,29 +885,35 @@ async def delete_backup(filename: str):
         raise HTTPException(404, "Backup not found")
     target.unlink()
     return {"deleted": True, "filename": filename}
-# Append to api.py after the existing security endpoints
+
+
+# ── Security Fix (direct commands) ────────────────────────────────────────────
 
 class SecurityFixRequest(BaseModel):
-    finding: str
-    prompt: str
+    command: str
+    dry_run: bool = False
 
 
 @router.post("/security/fix")
-async def security_fix(request: Request, payload: SecurityFixRequest):
-    """Ask the Kovo agent to fix a security finding inline."""
-    state = _app_state(request)
-    agent = getattr(state, "agent", None)
-    if not agent:
-        return {"ok": False, "text": "Agent not available — system still starting up."}
+async def security_fix(payload: SecurityFixRequest):
+    """Run a security fix command directly. Fast and deterministic."""
+    ALLOWED_PREFIXES = [
+        "find /tmp", "find /dev/shm",
+        "grep ", "apt list", "apt-get",
+        "systemctl", "clamscan", "sudo chkrootkit",
+        "sudo apt", "which ", "echo ",
+    ]
+    cmd = payload.command.strip()
+    if not any(cmd.startswith(p) for p in ALLOWED_PREFIXES):
+        return {"ok": False, "output": f"Command not allowed: {cmd[:50]}"}
 
     try:
-        result = await agent.handle(
-            message=payload.prompt,
-            user_id=0,
-            force_complexity="medium",
+        result = subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, timeout=30,
         )
-        text = result.get("text", "(no response)")
-        return {"ok": True, "text": text, "model": result.get("model_used", "?")}
+        output = (result.stdout.strip() + "\n" + result.stderr.strip()).strip()
+        return {"ok": result.returncode == 0, "output": output or "(no output)"}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "output": "Command timed out (30s)"}
     except Exception as e:
-        log.error("Security fix failed: %s", e)
-        return {"ok": False, "text": f"Fix failed: {e}"}
+        return {"ok": False, "output": f"Error: {e}"}
