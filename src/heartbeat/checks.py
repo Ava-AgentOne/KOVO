@@ -105,7 +105,7 @@ def fetch_weather(location: str = "Al Ain, UAE", timeout: int = 10) -> str:
     """
     try:
         url = f"https://wttr.in/{urllib.request.quote(location)}?format=j1"
-        req = urllib.request.Request(url, headers={"User-Agent": "MiniClaw/1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Kovo/1.0"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read())
 
