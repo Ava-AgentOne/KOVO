@@ -1,5 +1,5 @@
 """
-Kovo — the one and only agent the owner talks to.
+Kovo — the one and only main agent.
 
 Handles everything directly. Has access to ALL tools.
 Reads SOUL.md, USER.md, IDENTITY.md always; loads MEMORY.md, daily logs,
@@ -85,7 +85,7 @@ _STORAGE_KW = frozenset([
 
 
 class KovoAgent:
-    """Main agent — single entry point for all of the owner's requests."""
+    """Main agent — single entry point for all owner requests."""
 
     name = "kovo"
 
