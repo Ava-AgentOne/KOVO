@@ -36,52 +36,59 @@ body {
   animation: breathe 3s ease-in-out infinite;
 }
 
-/* Antenna glow blink */
-@keyframes antennaBlink {
+/* Antenna glow pulse */
+@keyframes antennaGlow {
   0%, 85%, 100% { opacity: 1; }
   90%           { opacity: 0.2; }
   92%           { opacity: 1; }
   94%           { opacity: 0.2; }
 }
 
-.kovo-blink {
-  animation: antennaBlink 3.5s ease-in-out infinite;
+.kovo-antenna-glow {
+  animation: antennaGlow 3.5s ease-in-out infinite;
 }
 
-/* Pupil drift — slow look left, center, right, center */
+/* Pupil drift — slow look left, pause, center, right, pause, center */
 @keyframes pupilDrift {
   0%, 100% { transform: translateX(0); }
-  20%      { transform: translateX(-3px); }
+  15%      { transform: translateX(-3px); }
   30%      { transform: translateX(-3px); }
-  50%      { transform: translateX(0); }
-  70%      { transform: translateX(3px); }
-  80%      { transform: translateX(3px); }
+  45%      { transform: translateX(0); }
+  60%      { transform: translateX(3px); }
+  75%      { transform: translateX(3px); }
+  90%      { transform: translateX(0); }
 }
 
 .kovo-pupil {
-  animation: pupilDrift 5s ease-in-out infinite;
+  animation: pupilDrift 6s ease-in-out infinite;
 }
 
-/* Eyelid blink — slides down briefly to cover the eye */
-@keyframes eyelidBlink {
-  0%, 90%, 100% { transform: translateY(-38px); }
-  93%           { transform: translateY(0); }
-  96%           { transform: translateY(0); }
+/* Eye blink — squish the whole eye flat vertically */
+@keyframes eyeBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.05); }
+  97%           { transform: scaleY(0.05); }
 }
 
-.kovo-eyelid-left {
-  transform: translateY(-38px);
-  animation: eyelidBlink 4.5s ease-in-out infinite;
+.kovo-eye {
+  animation: eyeBlink 4s ease-in-out infinite;
 }
 
-.kovo-eyelid-right {
-  transform: translateY(-38px);
-  animation: eyelidBlink 4.5s ease-in-out 0.05s infinite;
+/* Thin line that appears during blink */
+@keyframes blinkLine {
+  0%, 92%, 100% { opacity: 0; }
+  95%           { opacity: 1; }
+  97%           { opacity: 1; }
+}
+
+.kovo-blink-line {
+  animation: blinkLine 4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .kovo-logo { animation: none; }
-  .kovo-blink { animation: none; }
+  .kovo-antenna-glow { animation: none; }
   .kovo-pupil { animation: none; }
-  .kovo-eyelid-left, .kovo-eyelid-right { animation: none; transform: translateY(-38px); }
+  .kovo-eye { animation: none; }
+  .kovo-blink-line { animation: none; }
 }
