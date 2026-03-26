@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle, Info, MessageSquare, Wrench } from 'lucide-react'
+import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle, Info, Wrench, Loader2 } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 
 function useApi(url, interval = 0) {
@@ -43,32 +42,31 @@ function StatusBadge({ status }) {
   )
 }
 
-// Map common security findings to fix suggestions
 const FIX_HINTS = {
   'Executable files found in /tmp': {
     hint: 'Remove executable files from /tmp and /dev/shm that shouldn\'t be there.',
     command: 'find /tmp /dev/shm -type f -executable -not -path "*/systemd*" 2>/dev/null',
-    autofix: 'Find and review executable files in /tmp. Remove anything suspicious.',
+    prompt: 'Security issue: Executable files found in /tmp or /dev/shm. Please investigate what executable files exist in /tmp and /dev/shm, determine which are safe to remove (not systemd related), remove the suspicious ones, and report what you found and what you did.',
   },
   'open port': {
     hint: 'Review unexpected open ports and close them with firewall rules.',
     command: 'ss -tlnp',
-    autofix: 'Check for unexpected open ports and suggest firewall rules.',
+    prompt: 'Security issue: Unexpected open ports detected. Please run ss -tlnp to check all listening ports, identify any that should not be open, and suggest or apply firewall rules to close them. Report your findings.',
   },
   'Failed systemd': {
     hint: 'Restart or disable failed services.',
     command: 'systemctl --failed',
-    autofix: 'Check failed systemd services and attempt to restart them.',
+    prompt: 'Security issue: Failed systemd services detected. Please check which services have failed using systemctl --failed, attempt to restart them, and if they keep failing, investigate the logs and report what happened.',
   },
   'SUID': {
-    hint: 'Review SUID binaries. Non-standard SUID files may be a security risk.',
+    hint: 'Review SUID binaries for anything unusual.',
     command: 'find / -perm -4000 -type f 2>/dev/null',
-    autofix: 'Review SUID binaries and flag any unusual ones.',
+    prompt: 'Security issue: SUID binary check needed. Please find all SUID binaries on the system, compare against the expected list for Ubuntu, and flag any unusual ones. Report your findings.',
   },
   'failed login': {
-    hint: 'Review failed login attempts and consider adding fail2ban.',
+    hint: 'Review failed login attempts and harden SSH.',
     command: 'journalctl -u ssh --since "1 hour ago" | grep "Failed"',
-    autofix: 'Check failed login attempts and recommend security hardening.',
+    prompt: 'Security issue: Failed login attempts detected. Please check recent failed SSH login attempts, identify if any IPs are brute-forcing, and recommend security hardening steps like fail2ban. Report your findings.',
   },
 }
 
@@ -79,46 +77,90 @@ function getFix(finding) {
   return null
 }
 
-function FindingRow({ finding }) {
+function FindingRow({ finding, onFixComplete }) {
   const [expanded, setExpanded] = useState(false)
-  const navigate = useNavigate()
+  const [fixing, setFixing] = useState(false)
+  const [fixResult, setFixResult] = useState(null)
   const fix = getFix(finding)
 
-  const askKovo = () => {
-    // Navigate to chat — the agent will see this as a message
-    navigate('/chat')
-    // Store the fix request so chat can pick it up
-    sessionStorage.setItem('kovo-chat-prefill', `Fix this security issue: ${finding}`)
+  const runFix = async () => {
+    setFixing(true)
+    setFixResult(null)
+    try {
+      const r = await fetch('/api/security/fix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finding, prompt: fix.prompt }),
+      })
+      const d = await r.json()
+      setFixResult(d)
+      if (d.ok && onFixComplete) onFixComplete()
+    } catch (e) {
+      setFixResult({ ok: false, text: `Request failed: ${e.message}` })
+    }
+    setFixing(false)
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-      <div className="flex items-start gap-2 p-3">
-        <AlertTriangle size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
+    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="flex items-center gap-3 p-3">
+        <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />
         <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{finding}</span>
         {fix && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs text-brand-500 hover:text-brand-600 flex-shrink-0"
+            className="flex items-center gap-1.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700/50 px-3 py-1.5 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors flex-shrink-0"
           >
+            <Wrench size={12} />
             {expanded ? 'Hide' : 'Fix'}
           </button>
         )}
       </div>
+
       {expanded && fix && (
-        <div className="px-3 pb-3 pt-0 border-t border-gray-100 dark:border-gray-700 mt-0">
-          <div className="mt-2 space-y-2">
-            <p className="text-xs text-gray-500">{fix.hint}</p>
+        <div className="px-3 pb-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400">{fix.hint}</p>
+
             {fix.command && (
-              <div className="text-xs font-mono bg-white dark:bg-gray-900 rounded px-2 py-1.5 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                $ {fix.command}
+              <div className="text-xs font-mono bg-white dark:bg-gray-900 rounded-lg px-3 py-2 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                <span className="text-gray-400">$</span> {fix.command}
               </div>
             )}
+
+            {/* Fix result */}
+            {fixResult && (
+              <div className={`rounded-lg p-3 text-sm ${
+                fixResult.ok
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40'
+                  : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40'
+              }`}>
+                <p className={`text-xs font-semibold mb-1 ${fixResult.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                  {fixResult.ok ? 'Fix Applied' : 'Fix Failed'}
+                </p>
+                <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">
+                  {fixResult.text}
+                </pre>
+              </div>
+            )}
+
+            {/* Action button */}
             <button
-              onClick={askKovo}
-              className="flex items-center gap-1.5 text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg transition-colors"
+              onClick={runFix}
+              disabled={fixing}
+              className="flex items-center gap-2 text-sm font-medium bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
             >
-              <MessageSquare size={12} /> Ask Kovo to fix
+              {fixing ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Kovo is fixing...
+                </>
+              ) : (
+                <>
+                  <Wrench size={14} />
+                  {fixResult ? 'Run Again' : 'Fix with Kovo'}
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -173,7 +215,6 @@ export default function Security() {
         </div>
       </div>
 
-      {/* Latest result */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <Shield size={18} className="text-brand-500" />
@@ -185,14 +226,14 @@ export default function Security() {
               <div className="text-sm font-medium"><StatusBadge status={l.status} /></div>
               <p className="text-xs text-gray-400">{l.timestamp ? new Date(l.timestamp).toLocaleString() : '\u2014'}</p>
             </div>
-            {l.summary && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">{l.summary}</p>
-            )}
+            {l.summary && <p className="text-sm text-gray-600 dark:text-gray-400">{l.summary}</p>}
             {l.findings && l.findings.length > 0 && (
               <div className="space-y-2 mt-2">
-                <p className="text-xs font-medium text-gray-500 uppercase">Findings &mdash; {l.findings.length} issue{l.findings.length > 1 ? 's' : ''}</p>
+                <p className="text-xs font-medium text-gray-500 uppercase">
+                  Findings {'\u2014'} {l.findings.length} issue{l.findings.length > 1 ? 's' : ''}
+                </p>
                 {l.findings.map((f, i) => (
-                  <FindingRow key={i} finding={f} />
+                  <FindingRow key={i} finding={f} onFixComplete={() => { setTimeout(() => { latest.reload(); history.reload() }, 3000) }} />
                 ))}
               </div>
             )}
@@ -211,7 +252,6 @@ export default function Security() {
         )}
       </div>
 
-      {/* Audit history */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Audit History</h2>
         {history.data?.history?.length > 0 ? (
@@ -220,9 +260,7 @@ export default function Security() {
               <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
                   <StatusBadge status={entry.status} />
-                  {entry.summary && (
-                    <span className="text-xs text-gray-500">{entry.summary}</span>
-                  )}
+                  {entry.summary && <span className="text-xs text-gray-500">{entry.summary}</span>}
                 </div>
                 <span className="text-xs text-gray-400">
                   {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '\u2014'}
