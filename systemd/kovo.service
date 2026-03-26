@@ -1,0 +1,20 @@
+[Unit]
+Description=KOVO AI Agent
+After=network.target redis.service
+Wants=redis.service
+
+[Service]
+Type=simple
+User=esam
+WorkingDirectory=/opt/kovo
+EnvironmentFile=/opt/kovo/config/.env
+ExecStart=/opt/kovo/venv/bin/python -m src.gateway.main
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+StandardOutput=append:/opt/kovo/logs/gateway.log
+StandardError=append:/opt/kovo/logs/gateway.log
+SyslogIdentifier=kovo
+
+[Install]
+WantedBy=multi-user.target

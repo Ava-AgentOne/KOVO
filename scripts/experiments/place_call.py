@@ -1,6 +1,6 @@
 import asyncio
 import sys
-sys.path.insert(0, '/opt/miniclaw')
+sys.path.insert(0, '/opt/kovo')
 from src.tools.telegram_call import TelegramCaller
 
 caller = TelegramCaller(
@@ -11,6 +11,6 @@ caller = TelegramCaller(
 
 result = asyncio.run(caller.call_user(
     user_id=8339361967,
-    audio_path='/opt/miniclaw/data/wakeup_call.mp3'
+    audio_path='/opt/kovo/data/wakeup_call.mp3'
 ))
 print('Result:', result)

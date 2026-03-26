@@ -1,6 +1,6 @@
 # Kovo — User Documentation
 
-**Version**: 1.5
+**Version**: 0.3
 **Last Updated**: 2026-03-24
 **Platform**: Ubuntu 25.10, Python 3.13, Claude Max subscription
 
@@ -33,7 +33,7 @@
 22. [Changelog](#22-changelog)
 23. [Security](#23-security)
 24. [Security Audit](#24-security-audit)
-25. [Migration: MiniClaw → Kovo](#25-migration-miniclaw--kovo)
+25. [Migration: KOVO → Kovo](#25-migration-kovo--kovo)
 
 ---
 
@@ -1010,34 +1010,34 @@ sudo systemctl start clamav-freshclam
 
 ---
 
-## 25. Migration: MiniClaw → Kovo
+## 25. Migration: KOVO → Kovo
 
-If you have an existing `/opt/miniclaw` install, migrate with these steps:
+If you have an existing `/opt/kovo` install, migrate with these steps:
 
 ```bash
 # 1. Stop the service
-sudo systemctl stop miniclaw
+sudo systemctl stop kovo
 
 # 2. Rename the directory
-sudo mv /opt/miniclaw /opt/kovo
-sudo ln -s /opt/kovo /opt/miniclaw   # optional symlink for scripts in flight
+sudo mv /opt/kovo /opt/kovo
+sudo ln -s /opt/kovo /opt/kovo   # optional symlink for scripts in flight
 
 # 3. Rename the service file
-sudo mv /etc/systemd/system/miniclaw.service /etc/systemd/system/kovo.service
-# Edit the service: update all /opt/miniclaw → /opt/kovo and Description
-sudo sed -i 's|/opt/miniclaw|/opt/kovo|g; s|MiniClaw|Kovo|g' \
+sudo mv /etc/systemd/system/kovo.service /etc/systemd/system/kovo.service
+# Edit the service: update all /opt/kovo → /opt/kovo and Description
+sudo sed -i 's|/opt/kovo|/opt/kovo|g; s|KOVO|Kovo|g' \
     /etc/systemd/system/kovo.service
 sudo systemctl daemon-reload
 
 # 4. Rename the database
-mv /opt/kovo/data/miniclaw.db /opt/kovo/data/kovo.db
+mv /opt/kovo/data/kovo.db /opt/kovo/data/kovo.db
 
 # 5. Update logrotate
-sudo mv /etc/logrotate.d/miniclaw /etc/logrotate.d/kovo
-sudo sed -i 's|/opt/miniclaw|/opt/kovo|g' /etc/logrotate.d/kovo
+sudo mv /etc/logrotate.d/kovo /etc/logrotate.d/kovo
+sudo sed -i 's|/opt/kovo|/opt/kovo|g' /etc/logrotate.d/kovo
 
 # 6. Update sudoers
-sudo mv /etc/sudoers.d/miniclaw /etc/sudoers.d/kovo 2>/dev/null || true
+sudo mv /etc/sudoers.d/kovo /etc/sudoers.d/kovo 2>/dev/null || true
 
 # 7. Start the renamed service
 sudo systemctl enable --now kovo
@@ -1052,10 +1052,10 @@ After migration, update your `.env` file: rename `ESAM_TELEGRAM_ID` → `OWNER_T
 
 ### v0.1 (2026-03-24)
 
-- **Renamed MiniClaw → Kovo** — new name, new identity. `OWNER_TELEGRAM_ID` replaces `ESAM_TELEGRAM_ID` so every install is generic and friend-ready.
+- **Renamed KOVO → Kovo** — new name, new identity. `OWNER_TELEGRAM_ID` replaces `ESAM_TELEGRAM_ID` so every install is generic and friend-ready.
 - **GitHub-based install** — bootstrap now clones source code from `github.com/Ava-AgentOne/kovo` instead of generating it with Claude Code. Every friend gets the identical codebase, dashboard, and logo. `bootstrap.sh` v4.0 with 16 steps including git clone, requirements.txt install, and dashboard build.
 - **Kovo branding** — Kovo Blue (#378ADD), logo SVGs (square, circle), friendly blue alien mascot with antennae and rosy cheeks. IDENTITY.md template updated.
-- **Migration** — existing `/opt/miniclaw` installs: rename directory, update service file, rename database. See migration script in `scripts/`.
+- **Migration** — existing `/opt/kovo` installs: rename directory, update service file, rename database. See migration script in `scripts/`.
 
 ### v1.5 (2026-03-24)
 

@@ -1,6 +1,6 @@
 # Kovo — Personal AI Agent System
 
-> **Document version**: 1.5 (2026-03-24)
+> **Document version**: 0.3 (2026-03-24)
 
 ## Overview
 
@@ -987,7 +987,7 @@ Rewrote `build_system_prompt(user_message)` with pure-Python keyword classifiers
 `workspace/skills/security-audit/SKILL.md` — built-in skill for deep VM security auditing. `src/tools/security_audit.py` — SecurityAuditor class with baseline tracking (`data/security_baseline.json`), 6 audit categories (network, packages, users, files, processes, malware), three-tier escalation (call/warning/clean). SQLite `security_audit_log` table. Heartbeat schedule: Sunday 7:00 AM. Commands: `/audit`, `/audit reset`, `/audit baseline`, `/audit ports`, `/audit packages`. Bootstrap installs ClamAV, chkrootkit, rkhunter automatically.
 
 ### Phase 19: Rename + GitHub Install ✅
-MiniClaw renamed to **Kovo**. `ESAM_TELEGRAM_ID` → `OWNER_TELEGRAM_ID` for generic installs. Bootstrap v4.0 (16 steps) clones source from `github.com/Ava-AgentOne/kovo`, installs Python deps from `requirements.txt`, builds dashboard frontend via npm — no "build with Claude" step needed. Every friend gets identical code, dashboard, and logo. Kovo brand: #378ADD blue alien mascot with antennae and rosy cheeks.
+KOVO renamed to **Kovo**. `ESAM_TELEGRAM_ID` → `OWNER_TELEGRAM_ID` for generic installs. Bootstrap v4.0 (16 steps) clones source from `github.com/Ava-AgentOne/kovo`, installs Python deps from `requirements.txt`, builds dashboard frontend via npm — no "build with Claude" step needed. Every friend gets identical code, dashboard, and logo. Kovo brand: #378ADD blue alien mascot with antennae and rosy cheeks.
 
 ## Environment Variables (.env)
 ```
