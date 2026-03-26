@@ -277,11 +277,18 @@ function GooglePage({ form, set }) {
       </div>
 
       <HelpBox>
-        <p><strong>Step 1:</strong> Go to <ExtLink href="https://console.cloud.google.com/apis/credentials">Google Cloud Console → Credentials</ExtLink></p>
-        <p><strong>Step 2:</strong> Create a project (if you don't have one), then click <strong>"Create Credentials" → "OAuth 2.0 Client ID"</strong></p>
-        <p><strong>Step 3:</strong> Select <strong>"Desktop app"</strong> as the application type</p>
+        <p><strong>Step 1:</strong> Go to <ExtLink href="https://console.cloud.google.com/">Google Cloud Console</ExtLink> and create a project (or select an existing one)</p>
+        <p><strong>Step 2:</strong> Enable the APIs Kovo needs — go to <ExtLink href="https://console.cloud.google.com/apis/library">APIs &amp; Services → Library</ExtLink> and enable each one:</p>
+        <div className="pl-4 space-y-0.5 text-xs">
+          <p>• <ExtLink href="https://console.cloud.google.com/apis/library/drive.googleapis.com">Google Drive API</ExtLink></p>
+          <p>• <ExtLink href="https://console.cloud.google.com/apis/library/docs.googleapis.com">Google Docs API</ExtLink></p>
+          <p>• <ExtLink href="https://console.cloud.google.com/apis/library/gmail.googleapis.com">Gmail API</ExtLink></p>
+          <p>• <ExtLink href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com">Google Calendar API</ExtLink></p>
+          <p>• <ExtLink href="https://console.cloud.google.com/apis/library/sheets.googleapis.com">Google Sheets API</ExtLink></p>
+        </div>
+        <p><strong>Step 3:</strong> Go to <ExtLink href="https://console.cloud.google.com/apis/credentials">Credentials</ExtLink> → click <strong>"Create Credentials" → "OAuth 2.0 Client ID"</strong> → select <strong>"Desktop app"</strong></p>
         <p><strong>Step 4:</strong> Download the JSON file and paste its contents below</p>
-        <p className="text-xs text-gray-400">Detailed guide: <ExtLink href="https://developers.google.com/workspace/guides/create-credentials">Google Workspace API setup</ExtLink></p>
+        <p className="text-xs text-gray-400">Full guide: <ExtLink href="https://developers.google.com/workspace/guides/create-credentials">Google Workspace API setup</ExtLink></p>
       </HelpBox>
 
       <div className="space-y-1.5 kovo-fade-up">
@@ -308,11 +315,15 @@ function CallsPage({ form, set }) {
       </div>
 
       <HelpBox>
-        <p><strong>Step 1:</strong> You'll need a <strong>second Telegram account</strong> (a spare SIM or eSIM)</p>
-        <p><strong>Step 2:</strong> Log into <ExtLink href="https://my.telegram.org">my.telegram.org</ExtLink> with that second account's phone number</p>
-        <p><strong>Step 3:</strong> Go to <strong>"API development tools"</strong></p>
-        <p><strong>Step 4:</strong> Create an app — you'll get an <strong>API ID</strong> (number) and <strong>API Hash</strong> (hex string)</p>
-        <p><strong>Step 5:</strong> After setup, send <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">/reauth_caller +PHONE</code> in Telegram to authenticate the userbot</p>
+        <p className="text-xs text-gray-400 italic">Kovo uses a second Telegram account (a "userbot") to place real voice calls to your main account. Your bot can't call — only real user accounts can initiate calls.</p>
+        <p><strong>Step 1:</strong> Get a <strong>second phone number</strong> — a spare SIM, eSIM, or prepaid card. This will be the "caller" account.</p>
+        <p><strong>Step 2:</strong> Create a Telegram account on that second number (log in via Telegram app on any phone)</p>
+        <p><strong>Step 3:</strong> On a browser, go to <ExtLink href="https://my.telegram.org">my.telegram.org</ExtLink> and log in with the <strong>second number</strong> (the caller, not your main account)</p>
+        <p><strong>Step 4:</strong> Click <strong>"API development tools"</strong> → fill in any app name → you'll get an <strong>API ID</strong> (number) and <strong>API Hash</strong> (hex string). Paste them below.</p>
+        <p><strong>Step 5:</strong> After finishing this wizard, send this command to your Kovo bot on Telegram <strong>from your main account</strong>:</p>
+        <p className="pl-4"><code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs font-mono">/reauth_caller +971XXXXXXXX</code></p>
+        <p className="pl-4 text-xs text-gray-400">Replace with the second number. Kovo will send an OTP to that number — enter it when prompted. This links the caller account to Kovo.</p>
+        <p className="text-xs text-gray-400 mt-1"><strong>Result:</strong> When Kovo needs to alert you urgently, the second account calls your main Telegram — you pick up and hear TTS audio.</p>
       </HelpBox>
 
       <Field label="API ID" name="telegram_api_id" value={form.telegram_api_id} onChange={set} placeholder="12345678" />
