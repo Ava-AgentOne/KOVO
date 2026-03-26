@@ -1,7 +1,42 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import KovoLogo from '../components/KovoLogo'
 
-// ── Animated background particles ────────────────────────────────
+// ── Crack sound effect (Web Audio API — no file needed) ──────────
+function playCrackSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    // Short noise burst = crack
+    const duration = 0.15
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2)
+    }
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration)
+    source.connect(gain)
+    gain.connect(ctx.destination)
+    source.start()
+    // Pop sound after crack
+    setTimeout(() => {
+      const osc = ctx.createOscillator()
+      const g2 = ctx.createGain()
+      osc.frequency.setValueAtTime(800, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.1)
+      g2.gain.setValueAtTime(0.15, ctx.currentTime)
+      g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15)
+      osc.connect(g2)
+      g2.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.15)
+    }, 100)
+  } catch (e) { /* audio not available */ }
+}
+
+// ── Floating particles ───────────────────────────────────────────
 function FloatingParticles() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -51,9 +86,57 @@ function TypeWriter({ text, speed = 40, delay = 0, onDone }) {
   )
 }
 
+// ── Egg SVG ──────────────────────────────────────────────────────
+function Egg({ cracked, onCrackDone }) {
+  return (
+    <svg viewBox="0 0 200 260" width="200" height="260" className="absolute top-0 left-1/2 -translate-x-1/2" style={{ zIndex: cracked ? 5 : 15 }}>
+      {/* Left half */}
+      <g className={cracked ? 'kovo-egg-left' : ''}>
+        <path
+          d="M100,10 C55,10 20,80 20,160 C20,210 55,250 100,250 L100,130 Z"
+          fill="#F5E6D0"
+          stroke="#E8D5B8"
+          strokeWidth="2"
+        />
+        {/* Crack lines */}
+        {cracked && (
+          <g className="kovo-crack-lines">
+            <path d="M100,130 L75,120 L85,100 L60,95" stroke="#D4C4A8" strokeWidth="2" fill="none" strokeLinecap="round" />
+            <path d="M100,130 L80,145 L65,135" stroke="#D4C4A8" strokeWidth="2" fill="none" strokeLinecap="round" />
+          </g>
+        )}
+        {/* Speckles */}
+        <circle cx="65" cy="100" r="3" fill="#E8D5B8" opacity="0.6" />
+        <circle cx="50" cy="150" r="2.5" fill="#E8D5B8" opacity="0.5" />
+        <circle cx="75" cy="180" r="2" fill="#E8D5B8" opacity="0.4" />
+      </g>
+
+      {/* Right half */}
+      <g className={cracked ? 'kovo-egg-right' : ''}>
+        <path
+          d="M100,10 C145,10 180,80 180,160 C180,210 145,250 100,250 L100,130 Z"
+          fill="#F5E6D0"
+          stroke="#E8D5B8"
+          strokeWidth="2"
+        />
+        {/* Crack lines */}
+        {cracked && (
+          <g className="kovo-crack-lines">
+            <path d="M100,130 L125,115 L115,95 L140,90" stroke="#D4C4A8" strokeWidth="2" fill="none" strokeLinecap="round" />
+            <path d="M100,130 L120,150 L135,140" stroke="#D4C4A8" strokeWidth="2" fill="none" strokeLinecap="round" />
+          </g>
+        )}
+        {/* Speckles */}
+        <circle cx="135" cy="110" r="3" fill="#E8D5B8" opacity="0.6" />
+        <circle cx="150" cy="160" r="2.5" fill="#E8D5B8" opacity="0.5" />
+        <circle cx="125" cy="200" r="2" fill="#E8D5B8" opacity="0.4" />
+      </g>
+    </svg>
+  )
+}
+
 // ── Step labels ──────────────────────────────────────────────────
 const STEP_LABELS = {
-  welcome: 'Welcome',
   services: 'Services',
   core: 'Credentials',
   google: 'Google',
@@ -70,20 +153,20 @@ function ProgressBar({ steps, current }) {
       <div className="flex justify-between mb-2">
         {steps.map((step, i) => (
           <div key={step} className="flex flex-col items-center" style={{ width: `${100 / steps.length}%` }}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${
               i < current ? 'bg-emerald-500 text-white scale-90' :
               i === current ? 'bg-brand-500 text-white ring-4 ring-brand-500/20 scale-110' :
               'bg-gray-200 dark:bg-gray-800 text-gray-400'
             }`}>
               {i < current ? '✓' : i + 1}
             </div>
-            <span className={`text-[9px] mt-1 transition-colors ${
-              i === current ? 'text-brand-400 font-medium' : 'text-gray-400'
+            <span className={`text-[10px] mt-1.5 transition-colors ${
+              i === current ? 'text-brand-400 font-semibold' : 'text-gray-400'
             }`}>{STEP_LABELS[step]}</span>
           </div>
         ))}
       </div>
-      <div className="h-1 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 rounded-full transition-all duration-700 ease-out"
           style={{ width: `${pct}%` }}
@@ -94,12 +177,12 @@ function ProgressBar({ steps, current }) {
 }
 
 // ── Form field ───────────────────────────────────────────────────
-function Field({ label, name, value, onChange, placeholder = '', hint = '', type = 'text' }) {
+function Field({ label, name, value, onChange, placeholder = '', hint = '' }) {
   return (
     <div className="space-y-1.5 kovo-fade-up">
       <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
       <input
-        type={type}
+        type="text"
         value={value}
         onChange={e => onChange(name, e.target.value)}
         placeholder={placeholder}
@@ -113,45 +196,83 @@ function Field({ label, name, value, onChange, placeholder = '', hint = '', type
 
 // ── SPLASH / WELCOME PAGE ────────────────────────────────────────
 function SplashPage({ onStart }) {
-  const [showSubtext, setShowSubtext] = useState(false)
-  const [showButton, setShowButton] = useState(false)
+  const [phase, setPhase] = useState('egg')       // egg → cracking → hatched → revealed
+  const [showText, setShowText] = useState(false)
   const [showFeatures, setShowFeatures] = useState(false)
+  const [showButton, setShowButton] = useState(false)
+
+  useEffect(() => {
+    // Egg wobbles for 2s, then cracks
+    const t1 = setTimeout(() => {
+      setPhase('cracking')
+      playCrackSound()
+    }, 2000)
+    // Shell falls away, mascot revealed
+    const t2 = setTimeout(() => setPhase('hatched'), 2800)
+    // Text appears
+    const t3 = setTimeout(() => setShowText(true), 3200)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex flex-col items-center justify-center relative overflow-hidden">
       <FloatingParticles />
 
-      {/* Glow behind mascot */}
-      <div className="absolute w-96 h-96 bg-brand-500/10 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+      {/* Glow */}
+      <div className={`absolute w-96 h-96 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ${
+        phase === 'hatched' ? 'bg-brand-500/15 scale-125' : 'bg-brand-500/5'
+      }`} />
 
-      <div className="relative z-10 text-center space-y-8 px-6 max-w-lg">
-        {/* Animated mascot */}
-        <div className="kovo-splash-entrance">
-          <KovoLogo size={180} animate={true} />
+      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-lg">
+
+        {/* Egg + Mascot container — always centered */}
+        <div className="relative w-[200px] h-[260px] flex items-center justify-center mb-8">
+          {/* Egg shell (on top initially, falls away) */}
+          {phase !== 'hatched' && (
+            <Egg cracked={phase === 'cracking'} />
+          )}
+
+          {/* Mascot inside — starts hidden, fades in when shell cracks */}
+          <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ${
+            phase === 'egg' ? 'opacity-0 scale-75' :
+            phase === 'cracking' ? 'opacity-50 scale-90' :
+            'opacity-100 scale-100'
+          }`}>
+            <div className={phase === 'hatched' ? 'kovo-hatch-bounce' : ''}>
+              <KovoLogo size={180} animate={phase === 'hatched'} />
+            </div>
+          </div>
+
+          {/* Egg wobble animation on the container */}
+          {phase === 'egg' && (
+            <div className="absolute inset-0 kovo-egg-wobble" />
+          )}
         </div>
 
-        {/* Title with typing effect */}
-        <div className="space-y-3">
-          <h1 className="text-4xl font-black text-white tracking-tight kovo-fade-up" style={{ animationDelay: '0.8s' }}>
-            <span className="text-brand-400">KOVO</span>
-          </h1>
-          <p className="text-lg text-gray-300 kovo-fade-up" style={{ animationDelay: '1.2s' }}>
-            <TypeWriter
-              text="Your self-hosted AI agent, ready to set up."
-              speed={35}
-              delay={1400}
-              onDone={() => { setShowSubtext(true); setTimeout(() => setShowFeatures(true), 300); setTimeout(() => setShowButton(true), 800) }}
-            />
-          </p>
-        </div>
+        {/* Title + text */}
+        {showText && (
+          <div className="space-y-4">
+            <h1 className="text-5xl font-black text-white tracking-tight kovo-fade-up">
+              <span className="text-brand-400">KOVO</span>
+            </h1>
+            <p className="text-lg text-gray-300 kovo-fade-up" style={{ animationDelay: '0.3s' }}>
+              <TypeWriter
+                text="Your self-hosted AI agent, ready to set up."
+                speed={30}
+                delay={400}
+                onDone={() => { setTimeout(() => setShowFeatures(true), 300); setTimeout(() => setShowButton(true), 800) }}
+              />
+            </p>
+          </div>
+        )}
 
         {/* Feature pills */}
         {showFeatures && (
-          <div className="flex flex-wrap justify-center gap-2 kovo-fade-up">
+          <div className="flex flex-wrap justify-center gap-2 mt-6 kovo-fade-up">
             {['Claude Code Brain', 'Telegram Chat', 'Web Dashboard', 'Voice Calls', 'Security Audits'].map((f, i) => (
               <span
                 key={f}
-                className="px-3 py-1 text-xs font-medium rounded-full border border-brand-500/30 text-brand-300 bg-brand-500/5 kovo-fade-up"
+                className="px-3 py-1.5 text-xs font-medium rounded-full border border-brand-500/30 text-brand-300 bg-brand-500/5 kovo-fade-up"
                 style={{ animationDelay: `${i * 0.1}s` }}
               >
                 {f}
@@ -160,12 +281,12 @@ function SplashPage({ onStart }) {
           </div>
         )}
 
-        {/* CTA button */}
+        {/* CTA */}
         {showButton && (
-          <div className="kovo-fade-up pt-4">
+          <div className="kovo-fade-up mt-8">
             <button
               onClick={onStart}
-              className="group relative px-8 py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-2xl text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-brand-500/25"
+              className="group relative px-10 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-2xl text-base transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-brand-500/25"
             >
               Get Started
               <span className="inline-block ml-2 transition-transform group-hover:translate-x-1">→</span>
@@ -175,7 +296,6 @@ function SplashPage({ onStart }) {
         )}
       </div>
 
-      {/* Bottom subtle branding */}
       <div className="absolute bottom-6 text-center">
         <p className="text-gray-600 text-xs">Powered by Claude Code · GNU AGPLv3</p>
       </div>
@@ -183,10 +303,8 @@ function SplashPage({ onStart }) {
   )
 }
 
-// ── SERVICE SELECTION ────────────────────────────────────────────
-function ServicesPage({ services, setServices }) {
-  const toggle = key => setServices(s => ({ ...s, [key]: !s[key] }))
-
+// ── SERVICE SELECTION (FIXED) ────────────────────────────────────
+function ServicesPage({ services, onToggle }) {
   const items = [
     { key: 'google', icon: '🔗', label: 'Google Workspace', desc: 'Access Docs, Calendar, Gmail, Drive, and Sheets' },
     { key: 'calls', icon: '📞', label: 'Telegram Voice Calls', desc: 'Real calls for urgent alerts — needs a second SIM' },
@@ -199,11 +317,13 @@ function ServicesPage({ services, setServices }) {
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Optional Integrations</h2>
         <p className="text-sm text-gray-500 mt-1">Pick what you need now. You can add more later from Settings.</p>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {items.map(({ key, icon, label, desc }, i) => (
-          <label
+          <button
             key={key}
-            className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-200 kovo-fade-up ${
+            type="button"
+            onClick={() => onToggle(key)}
+            className={`w-full flex items-center gap-4 p-4 rounded-xl border text-left transition-all duration-200 kovo-fade-up ${
               services[key]
                 ? 'border-brand-500/50 bg-brand-500/5 dark:bg-brand-500/10 shadow-sm'
                 : 'border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-600'
@@ -215,12 +335,12 @@ function ServicesPage({ services, setServices }) {
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{label}</p>
               <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
             </div>
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
               services[key] ? 'border-brand-500 bg-brand-500' : 'border-gray-300 dark:border-gray-600'
             }`}>
-              {services[key] && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+              {services[key] && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
             </div>
-          </label>
+          </button>
         ))}
       </div>
     </div>
@@ -341,10 +461,9 @@ function SavedScreen({ countdown }) {
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center relative overflow-hidden">
       <FloatingParticles />
       <div className="absolute w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-
-      <div className="relative z-10 text-center space-y-6 px-6">
-        <div className="kovo-splash-entrance">
-          <KovoLogo size={120} animate={true} />
+      <div className="relative z-10 flex flex-col items-center text-center space-y-6 px-6">
+        <div className="kovo-hatch-bounce">
+          <KovoLogo size={140} animate={true} />
         </div>
         <h1 className="text-3xl font-black text-white kovo-fade-up" style={{ animationDelay: '0.3s' }}>
           <span className="text-emerald-400">All set!</span>
@@ -384,6 +503,10 @@ export default function Setup() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(5)
+
+  const toggleService = useCallback((key) => {
+    setServices(prev => ({ ...prev, [key]: !prev[key] }))
+  }, [])
 
   const steps = ['services', 'core']
   if (services.google) steps.push('google')
@@ -428,31 +551,26 @@ export default function Setup() {
     setSaving(false)
   }
 
-  // Splash screen
   if (showSplash) return <SplashPage onStart={() => setShowSplash(false)} />
-
-  // Saved screen
   if (saved) return <SavedScreen countdown={countdown} />
 
-  // Wizard
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4 relative">
-      {/* Subtle bg glow */}
       <div className="absolute w-[500px] h-[500px] bg-brand-500/5 rounded-full blur-[150px] top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
       <div className="w-full max-w-lg relative z-10">
-        {/* Header with logo */}
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <KovoLogo size={36} animate={true} />
-          <span className="text-xl font-bold text-brand-500 tracking-wide">KOVO</span>
-          <span className="text-xs text-gray-400 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5">Setup</span>
+        {/* Header — big logo with Setup below */}
+        <div className="flex flex-col items-center gap-2 mb-8">
+          <KovoLogo size={72} animate={true} />
+          <span className="text-2xl font-bold text-brand-500 tracking-wide">KOVO</span>
+          <span className="text-sm text-gray-400 font-medium tracking-widest uppercase">Setup Wizard</span>
         </div>
 
         <ProgressBar steps={steps} current={stepIndex} />
 
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 mt-6 shadow-sm">
           <div key={currentStep} className="kovo-step-enter">
-            {currentStep === 'services' && <ServicesPage services={services} setServices={setServices} />}
+            {currentStep === 'services' && <ServicesPage services={services} onToggle={toggleService} />}
             {currentStep === 'core'     && <CorePage form={form} set={set} />}
             {currentStep === 'google'   && <GooglePage form={form} set={set} />}
             {currentStep === 'calls'    && <CallsPage form={form} set={set} />}
@@ -471,7 +589,7 @@ export default function Setup() {
               <button
                 onClick={save}
                 disabled={saving || !form.telegram_bot_token || !form.owner_telegram_id}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-8 py-2.5 rounded-xl disabled:opacity-40 transition-all hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.02]"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold px-8 py-2.5 rounded-xl disabled:opacity-40 transition-all hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.02]"
               >
                 {saving ? (
                   <span className="flex items-center gap-2">
@@ -483,7 +601,7 @@ export default function Setup() {
             ) : (
               <button
                 onClick={next}
-                className="bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-all hover:shadow-lg hover:shadow-brand-500/20 hover:scale-[1.02]"
+                className="bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-all hover:shadow-lg hover:shadow-brand-500/20 hover:scale-[1.02]"
               >
                 Next →
               </button>
