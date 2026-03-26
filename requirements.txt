@@ -43,3 +43,4 @@ Pillow                           # image processing (src/tools/vision.py)
 # ML (CPU only)
 # Install separately to avoid pulling 3GB of NVIDIA drivers:
 # pip install torch --index-url https://download.pytorch.org/whl/cpu
+python-multipart
