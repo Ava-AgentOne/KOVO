@@ -24,29 +24,64 @@ body {
 .dark ::-webkit-scrollbar-track { @apply bg-gray-900; }
 .dark ::-webkit-scrollbar-thumb { @apply bg-gray-700 rounded; }
 
-/* Kovo logo breathing animation — visible pulse */
+/* ── Kovo Logo Animations ─────────────────────────────────────── */
+
+/* Gentle breathing pulse */
 @keyframes breathe {
   0%, 100% { transform: scale(1.0); }
-  50%      { transform: scale(1.08); }
+  50%      { transform: scale(1.06); }
 }
 
 .kovo-logo {
-  animation: breathe 2.5s ease-in-out infinite;
+  animation: breathe 3s ease-in-out infinite;
 }
 
-/* Antenna blink — quicker, more noticeable */
-@keyframes blink {
+/* Antenna glow blink */
+@keyframes antennaBlink {
   0%, 85%, 100% { opacity: 1; }
-  90%           { opacity: 0; }
+  90%           { opacity: 0.2; }
   92%           { opacity: 1; }
-  94%           { opacity: 0; }
+  94%           { opacity: 0.2; }
 }
 
 .kovo-blink {
-  animation: blink 3s ease-in-out infinite;
+  animation: antennaBlink 3.5s ease-in-out infinite;
+}
+
+/* Pupil drift — slow look left, center, right, center */
+@keyframes pupilDrift {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-3px); }
+  30%      { transform: translateX(-3px); }
+  50%      { transform: translateX(0); }
+  70%      { transform: translateX(3px); }
+  80%      { transform: translateX(3px); }
+}
+
+.kovo-pupil {
+  animation: pupilDrift 5s ease-in-out infinite;
+}
+
+/* Eyelid blink — slides down briefly to cover the eye */
+@keyframes eyelidBlink {
+  0%, 90%, 100% { transform: translateY(-38px); }
+  93%           { transform: translateY(0); }
+  96%           { transform: translateY(0); }
+}
+
+.kovo-eyelid-left {
+  transform: translateY(-38px);
+  animation: eyelidBlink 4.5s ease-in-out infinite;
+}
+
+.kovo-eyelid-right {
+  transform: translateY(-38px);
+  animation: eyelidBlink 4.5s ease-in-out 0.05s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .kovo-logo { animation: none; }
   .kovo-blink { animation: none; }
+  .kovo-pupil { animation: none; }
+  .kovo-eyelid-left, .kovo-eyelid-right { animation: none; transform: translateY(-38px); }
 }
