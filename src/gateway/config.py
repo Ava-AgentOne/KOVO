@@ -84,7 +84,7 @@ def validate_env() -> None:
 
     if problems:
         msg = (
-            "MiniClaw startup aborted — fix your config/.env file:\n"
+            "Kovo startup aborted — fix your config/.env file:\n"
             + "\n".join(problems)
             + "\n\nRun:  nano /opt/kovo/config/.env"
         )
@@ -159,15 +159,15 @@ def claude_timeout() -> int:
 
 
 def workspace_dir() -> Path:
-    return Path(get()["miniclaw"]["workspace"])
+    return Path(get()["kovo"]["workspace"])
 
 
 def data_dir() -> Path:
-    return Path(get()["miniclaw"]["data_dir"])
+    return Path(get()["kovo"]["data_dir"])
 
 
 def log_dir() -> Path:
-    return Path(get()["miniclaw"]["log_dir"])
+    return Path(get()["kovo"]["log_dir"])
 
 
 def gateway_host() -> str:

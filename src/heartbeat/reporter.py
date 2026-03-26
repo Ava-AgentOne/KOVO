@@ -46,12 +46,12 @@ class HeartbeatReporter:
         await self.send(f"📊 *{title}*\n\n{report}")
 
     async def send_morning_briefing(self, briefing: str) -> None:
-        await self.send(f"🌅 *Good Morning, the owner!*\n\n{briefing}")
+        await self.send(f"🌅 *Good Morning!*\n\n{briefing}")
 
     async def send_sim_reminder(self) -> None:
         await self.send(
             "📱 *SIM Top-Up Reminder*\n\n"
             "Your prepaid SIM is approaching 90 days without a top-up. "
-            "Top it up soon to keep the MiniClaw caller account active.\n\n"
+            "Top it up soon to keep the Kovo caller account active.\n\n"
             "UAE prepaid SIMs expire after 90 days of no activity."
         )
