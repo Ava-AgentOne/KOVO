@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/Ava-AgentOne/kovo/main/kovo-mascot.png" alt="Kovo" width="280">
+<img src="https://raw.githubusercontent.com/Ava-AgentOne/kovo/main/kovo-logo.svg" alt="Kovo" width="180">
 
 # <span style="color:#378ADD">KOVO</span>
 
 **Your Self-Hosted AI Agent for Linux**
 
 [![GitHub release](https://img.shields.io/github/v/release/Ava-AgentOne/kovo?color=378ADD&label=Release)](https://github.com/Ava-AgentOne/kovo/releases)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-Powered-DA7756?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
@@ -107,7 +107,7 @@ The built-in web dashboard gives you full visibility into KOVO's state:
 | 🔧 **Tools** | All registered tools with status and install commands |
 | 🤖 **Agents** | Main agent + any sub-agents with their tools |
 | 🧠 **Memory** | Browse daily logs and workspace files |
-| ⚡ **Skills** | View, create, delete skills + ClawHub marketplace |
+| ⚡ **Skills** | View, create, delete, and reload skills |
 | 💓 **Heartbeat** | Scheduled job status and health reports |
 | 🛡️ **Security** | Latest audit results, history, run/reset from UI |
 | 📜 **Logs** | Live gateway logs |
@@ -448,7 +448,7 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 
 ## 📜 License
 
-[GNU AGPLv3](LICENSE) — Free to use, modify, and share. Derivative works must remain open source.
+[MIT License](LICENSE) — Free to use, modify, and share.
 
 ---
 
