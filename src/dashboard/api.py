@@ -818,3 +818,70 @@ async def clawhub_install(body: _ClawHubInstallReq, request: Request):
         return {"ok": False, "error": f"clawhub error: {e}"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+# ── Backup ────────────────────────────────────────────────────────────────────
+
+_BACKUP_DIR = Path("/opt/kovo/data/backups")
+_BACKUP_SCRIPT = Path("/opt/kovo/scripts/backup.sh")
+
+
+def _human_size(size_bytes: int) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f}{unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f}TB"
+
+
+@router.post("/backup")
+async def run_backup():
+    """Run the backup script and return status."""
+    _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    if not _BACKUP_SCRIPT.exists():
+        return {"ok": False, "error": "backup.sh not found"}
+    try:
+        result = subprocess.run(
+            ["bash", str(_BACKUP_SCRIPT)],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            # Get size of latest backup
+            files = sorted(_BACKUP_DIR.glob("workspace_*"), key=lambda f: f.stat().st_mtime, reverse=True)
+            size = _human_size(files[0].stat().st_size) if files else "?"
+            return {"ok": True, "output": result.stdout.strip(), "size": size}
+        return {"ok": False, "error": result.stderr.strip() or "Backup script failed"}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "Backup timed out (60s)"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/backup/list")
+async def list_backups():
+    """List all backup files with sizes."""
+    _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    backups = []
+    total = 0
+    for f in sorted(_BACKUP_DIR.iterdir(), key=lambda f: f.stat().st_mtime, reverse=True):
+        if f.is_file():
+            size = f.stat().st_size
+            total += size
+            backups.append({
+                "name": f.name,
+                "size": _human_size(size),
+                "date": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+            })
+    return {"backups": backups, "total_size": _human_size(total), "count": len(backups)}
+
+
+@router.delete("/backup/{filename}")
+async def delete_backup(filename: str):
+    """Delete a specific backup file."""
+    if ".." in filename or "/" in filename:
+        raise HTTPException(400, "Invalid filename")
+    target = _BACKUP_DIR / filename
+    if not target.exists():
+        raise HTTPException(404, "Backup not found")
+    target.unlink()
+    return {"deleted": True, "filename": filename}
