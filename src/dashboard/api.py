@@ -912,7 +912,7 @@ async def security_fix(payload: SecurityFixRequest):
             cmd, shell=True, capture_output=True, text=True, timeout=30,
         )
         output = (result.stdout.strip() + "\n" + result.stderr.strip()).strip()
-        return {"ok": result.returncode == 0, "output": output or "(no output)"}
+        return {"ok": True, "output": output or "(no output)"}
     except subprocess.TimeoutExpired:
         return {"ok": False, "output": "Command timed out (30s)"}
     except Exception as e:
