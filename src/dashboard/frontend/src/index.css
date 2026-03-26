@@ -29,7 +29,7 @@ body {
 /* Gentle breathing pulse */
 @keyframes breathe {
   0%, 100% { transform: scale(1.0); }
-  50%      { transform: scale(1.06); }
+  50%      { transform: scale(1.09); }
 }
 
 .kovo-logo {
