@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 260" fill="none">
+  <!-- Antennae -->
+  <line x1="96" y1="44" x2="84" y2="4" stroke="#378ADD" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="84" cy="0" r="10" fill="#85B7EB"/>
+  <line x1="144" y1="44" x2="156" y2="12" stroke="#378ADD" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="156" cy="8" r="9" fill="#85B7EB"/>
+
+  <!-- Head -->
+  <rect x="20" y="40" width="200" height="200" rx="48" fill="#378ADD"/>
+
+  <!-- Left eye -->
+  <g transform="translate(80,120)">
+    <ellipse rx="36" ry="38" fill="#FFF"/>
+    <circle cx="8" cy="4" r="20" fill="#042C53"/>
+    <circle cx="14" cy="-6" r="8" fill="#FFF"/>
+    <circle cx="0" cy="12" r="4" fill="#FFF"/>
+  </g>
+
+  <!-- Right eye -->
+  <g transform="translate(160,120)">
+    <ellipse rx="36" ry="38" fill="#FFF"/>
+    <circle cx="8" cy="4" r="20" fill="#042C53"/>
+    <circle cx="14" cy="-6" r="8" fill="#FFF"/>
+    <circle cx="0" cy="12" r="4" fill="#FFF"/>
+  </g>
+
+  <!-- Smile -->
+  <path d="M96,180 Q120,200 144,180" fill="none" stroke="#E6F1FB" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Rosy cheeks -->
+  <ellipse cx="52" cy="164" rx="18" ry="12" fill="#F0997B" opacity="0.45"/>
+  <ellipse cx="188" cy="164" rx="18" ry="12" fill="#F0997B" opacity="0.45"/>
+</svg>
