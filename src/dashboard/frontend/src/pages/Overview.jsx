@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Cpu, MemoryStick, HardDrive, Clock, Shield, MessageSquare, RefreshCw, Trash2, Save, FileText, RotateCcw, KeyRound } from 'lucide-react'
+import { Cpu, MemoryStick, HardDrive, Clock, Shield, MessageSquare, RefreshCw, Trash2, Save, FileText, RotateCcw, KeyRound, Activity } from 'lucide-react'
 import StatusCard from '../components/StatusCard'
 import ConfirmModal from '../components/ConfirmModal'
 
@@ -85,7 +85,7 @@ function QuickAction({ icon: Icon, label, onClick, variant = 'default' }) {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse space-y-6">
-      <div className="h-8 w-32 bg-gray-200 dark:bg-gray-800 rounded" />
+      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-800 rounded" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[1,2,3,4].map(i => <div key={i} className="h-28 bg-gray-200 dark:bg-gray-800 rounded-xl" />)}
       </div>
@@ -94,6 +94,13 @@ function LoadingSkeleton() {
       </div>
     </div>
   )
+}
+
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
 }
 
 export default function Overview() {
@@ -120,7 +127,13 @@ export default function Overview() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Overview</h1>
+      {/* Greeting */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{getGreeting()}</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          {status ? `${status.tools_ready ?? 0} tools ready \u00b7 ${status.skill_count ?? 0} skills loaded` : 'Loading\u2026'}
+        </p>
+      </div>
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -132,6 +145,7 @@ export default function Overview() {
 
       {/* Services + Security + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Services */}
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Services</h2>
           <ServiceDot name="Ollama" status={status?.ollama} sub="NUC 10.0.1.212" />
@@ -141,6 +155,7 @@ export default function Overview() {
           <ServiceDot name="Skills" status={true} sub={status?.skill_count ? `${status.skill_count} loaded` : ''} />
         </div>
 
+        {/* Security */}
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Security</h2>
@@ -174,22 +189,26 @@ export default function Overview() {
           <Link to="/security" className="block text-center text-xs text-brand-500 hover:text-brand-600 mt-2">View history &rarr;</Link>
         </div>
 
+        {/* Quick Actions — no duplicate Run Audit */}
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-2">
-            <QuickAction icon={Shield} label="Run Audit" onClick={runAudit} variant="primary" />
+            <QuickAction icon={Activity} label="Health Check" onClick={() => navigate('/heartbeat')} variant="primary" />
             <QuickAction icon={Trash2} label="Purge Files" onClick={() => fetch('/api/storage/purge', { method: 'POST' })} />
             <QuickAction icon={Save} label="Backup Now" onClick={() => fetch('/api/backup', { method: 'POST' })} />
             <QuickAction icon={FileText} label="Full Report" onClick={() => navigate('/heartbeat')} />
             <QuickAction icon={RotateCcw} label="Restart" onClick={() => setConfirmRestart(true)} />
-            <QuickAction icon={KeyRound} label="Permissions" onClick={() => navigate('/settings')} />
+            <QuickAction icon={KeyRound} label="Settings" onClick={() => navigate('/settings')} />
           </div>
         </div>
       </div>
 
       {/* Agents */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Agents</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Agents</h2>
+          <Link to="/agents" className="text-xs text-brand-500 hover:text-brand-600">Manage &rarr;</Link>
+        </div>
         <div className="flex items-center gap-3 p-3 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-700/40 rounded-lg">
           <span className="w-2.5 h-2.5 rounded-full bg-brand-500 flex-shrink-0" />
           <div className="flex-1">
@@ -215,7 +234,10 @@ export default function Overview() {
 
       {/* Today's Activity */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Today's Activity &mdash; {memory?.date ?? '\u2026'}</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Today's Activity &mdash; {memory?.date ?? '\u2026'}</h2>
+          <Link to="/memory" className="text-xs text-brand-500 hover:text-brand-600">All logs &rarr;</Link>
+        </div>
         <DailyLog content={memory?.content} />
       </div>
 

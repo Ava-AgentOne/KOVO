@@ -65,16 +65,16 @@ export default function Layout({ children }) {
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 py-5 border-b border-gray-200 dark:border-gray-800">
-          <KovoLogo size={36} />
-          <div>
-            <div className="text-base font-bold text-brand-500">Kovo</div>
-            <div className="text-xs text-gray-400 dark:text-gray-500">AI Assistant</div>
+        {/* Logo — bigger mascot */}
+        <div className="flex flex-col items-center gap-2 px-4 py-5 border-b border-gray-200 dark:border-gray-800">
+          <KovoLogo size={52} />
+          <div className="text-center">
+            <div className="text-lg font-bold text-brand-500 tracking-wide">KOVO</div>
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest">AI Agent</div>
           </div>
           <button
             onClick={closeMobile}
-            className="ml-auto md:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            className="absolute top-4 right-3 md:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
           >
             <X size={18} />
           </button>
@@ -109,8 +109,8 @@ export default function Layout({ children }) {
           >
             <Menu size={22} />
           </button>
-          <KovoLogo size={28} />
-          <span className="text-sm font-bold text-brand-500">Kovo</span>
+          <KovoLogo size={32} />
+          <span className="text-sm font-bold text-brand-500 tracking-wide">KOVO</span>
           <button
             onClick={toggle}
             className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
