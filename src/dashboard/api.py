@@ -507,7 +507,7 @@ async def get_env():
 
 @router.post("/service/restart")
 async def restart_service():
-    """Attempt to restart the miniclaw systemd service."""
+    """Attempt to restart the kovo systemd service."""
     for svc in ("kovo", "kovo.service"):
         try:
             r = subprocess.run(
@@ -598,7 +598,7 @@ async def get_chat_history():
 async def chat_websocket(websocket: WebSocket):
     """
     WebSocket endpoint for the dashboard chat interface.
-    Connects to MiniClaw (user_id=0 for dashboard).
+    Connects to Kovo (user_id=0 for dashboard).
     """
     await websocket.accept()
 

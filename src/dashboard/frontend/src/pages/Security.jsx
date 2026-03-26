@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle, Info } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle, Info, MessageSquare, Wrench } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 
 function useApi(url, interval = 0) {
@@ -39,6 +40,90 @@ function StatusBadge({ status }) {
     <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
       <Info size={14} /> No data
     </span>
+  )
+}
+
+// Map common security findings to fix suggestions
+const FIX_HINTS = {
+  'Executable files found in /tmp': {
+    hint: 'Remove executable files from /tmp and /dev/shm that shouldn\'t be there.',
+    command: 'find /tmp /dev/shm -type f -executable -not -path "*/systemd*" 2>/dev/null',
+    autofix: 'Find and review executable files in /tmp. Remove anything suspicious.',
+  },
+  'open port': {
+    hint: 'Review unexpected open ports and close them with firewall rules.',
+    command: 'ss -tlnp',
+    autofix: 'Check for unexpected open ports and suggest firewall rules.',
+  },
+  'Failed systemd': {
+    hint: 'Restart or disable failed services.',
+    command: 'systemctl --failed',
+    autofix: 'Check failed systemd services and attempt to restart them.',
+  },
+  'SUID': {
+    hint: 'Review SUID binaries. Non-standard SUID files may be a security risk.',
+    command: 'find / -perm -4000 -type f 2>/dev/null',
+    autofix: 'Review SUID binaries and flag any unusual ones.',
+  },
+  'failed login': {
+    hint: 'Review failed login attempts and consider adding fail2ban.',
+    command: 'journalctl -u ssh --since "1 hour ago" | grep "Failed"',
+    autofix: 'Check failed login attempts and recommend security hardening.',
+  },
+}
+
+function getFix(finding) {
+  for (const [key, fix] of Object.entries(FIX_HINTS)) {
+    if (finding.toLowerCase().includes(key.toLowerCase())) return fix
+  }
+  return null
+}
+
+function FindingRow({ finding }) {
+  const [expanded, setExpanded] = useState(false)
+  const navigate = useNavigate()
+  const fix = getFix(finding)
+
+  const askKovo = () => {
+    // Navigate to chat — the agent will see this as a message
+    navigate('/chat')
+    // Store the fix request so chat can pick it up
+    sessionStorage.setItem('kovo-chat-prefill', `Fix this security issue: ${finding}`)
+  }
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+      <div className="flex items-start gap-2 p-3">
+        <AlertTriangle size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
+        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{finding}</span>
+        {fix && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-brand-500 hover:text-brand-600 flex-shrink-0"
+          >
+            {expanded ? 'Hide' : 'Fix'}
+          </button>
+        )}
+      </div>
+      {expanded && fix && (
+        <div className="px-3 pb-3 pt-0 border-t border-gray-100 dark:border-gray-700 mt-0">
+          <div className="mt-2 space-y-2">
+            <p className="text-xs text-gray-500">{fix.hint}</p>
+            {fix.command && (
+              <div className="text-xs font-mono bg-white dark:bg-gray-900 rounded px-2 py-1.5 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                $ {fix.command}
+              </div>
+            )}
+            <button
+              onClick={askKovo}
+              className="flex items-center gap-1.5 text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <MessageSquare size={12} /> Ask Kovo to fix
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -83,7 +168,7 @@ export default function Security() {
             className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-50 transition-colors"
           >
             <RefreshCw size={14} className={auditRunning ? 'animate-spin' : ''} />
-            {auditRunning ? 'Running…' : 'Run Audit'}
+            {auditRunning ? 'Running\u2026' : 'Run Audit'}
           </button>
         </div>
       </div>
@@ -98,19 +183,16 @@ export default function Security() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium"><StatusBadge status={l.status} /></div>
-              <p className="text-xs text-gray-400">{l.timestamp ? new Date(l.timestamp).toLocaleString() : '—'}</p>
+              <p className="text-xs text-gray-400">{l.timestamp ? new Date(l.timestamp).toLocaleString() : '\u2014'}</p>
             </div>
             {l.summary && (
               <p className="text-sm text-gray-600 dark:text-gray-400">{l.summary}</p>
             )}
             {l.findings && l.findings.length > 0 && (
-              <div className="space-y-1 mt-2">
-                <p className="text-xs font-medium text-gray-500 uppercase">Findings</p>
+              <div className="space-y-2 mt-2">
+                <p className="text-xs font-medium text-gray-500 uppercase">Findings &mdash; {l.findings.length} issue{l.findings.length > 1 ? 's' : ''}</p>
                 {l.findings.map((f, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <AlertTriangle size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700 dark:text-gray-300">{f}</span>
-                  </div>
+                  <FindingRow key={i} finding={f} />
                 ))}
               </div>
             )}
@@ -143,7 +225,7 @@ export default function Security() {
                   )}
                 </div>
                 <span className="text-xs text-gray-400">
-                  {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '—'}
+                  {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '\u2014'}
                 </span>
               </div>
             ))}
@@ -153,16 +235,15 @@ export default function Security() {
         )}
       </div>
 
-      {resetOpen && (
-        <ConfirmModal
-          title="Reset Security Baseline?"
-          message="This will recapture the current system state as the new baseline. Any existing deviations will be forgiven."
-          confirmLabel="Reset Baseline"
-          confirmColor="brand"
-          onConfirm={resetBaseline}
-          onCancel={() => setResetOpen(false)}
-        />
-      )}
+      <ConfirmModal
+        open={resetOpen}
+        title="Reset Security Baseline?"
+        message="This will recapture the current system state as the new baseline. Any existing deviations will be forgiven."
+        confirmLabel="Reset Baseline"
+        confirmColor="brand"
+        onConfirm={resetBaseline}
+        onCancel={() => setResetOpen(false)}
+      />
     </div>
   )
 }
