@@ -24,24 +24,26 @@ body {
 .dark ::-webkit-scrollbar-track { @apply bg-gray-900; }
 .dark ::-webkit-scrollbar-thumb { @apply bg-gray-700 rounded; }
 
-/* Kovo logo breathing animation */
+/* Kovo logo breathing animation — visible pulse */
 @keyframes breathe {
   0%, 100% { transform: scale(1.0); }
-  50%       { transform: scale(1.03); }
+  50%      { transform: scale(1.08); }
 }
 
 .kovo-logo {
-  animation: breathe 3s ease-in-out infinite;
+  animation: breathe 2.5s ease-in-out infinite;
 }
 
-/* Antenna blink */
+/* Antenna blink — quicker, more noticeable */
 @keyframes blink {
-  0%, 90%, 100% { opacity: 1; }
-  95%           { opacity: 0.1; }
+  0%, 85%, 100% { opacity: 1; }
+  90%           { opacity: 0; }
+  92%           { opacity: 1; }
+  94%           { opacity: 0; }
 }
 
 .kovo-blink {
-  animation: blink 5s ease-in-out infinite;
+  animation: blink 3s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
