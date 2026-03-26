@@ -20,8 +20,8 @@ def _dubai_today() -> date:
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -885,6 +885,73 @@ async def delete_backup(filename: str):
         raise HTTPException(404, "Backup not found")
     target.unlink()
     return {"deleted": True, "filename": filename}
+
+
+@router.get("/backup/download/{filename}")
+async def download_backup(filename: str):
+    """Download a backup file."""
+    if ".." in filename or "/" in filename:
+        raise HTTPException(400, "Invalid filename")
+    target = _BACKUP_DIR / filename
+    if not target.exists():
+        raise HTTPException(404, "Backup not found")
+    return FileResponse(
+        path=str(target),
+        filename=filename,
+        media_type="application/gzip",
+    )
+
+
+@router.post("/backup/restore")
+async def restore_backup(file: UploadFile = File(...)):
+    """Upload and restore a backup archive. Overwrites workspace, config, and db."""
+    if not file.filename.endswith((".tar.gz", ".tgz")):
+        return {"ok": False, "output": "Only .tar.gz backup files are accepted."}
+
+    import tempfile
+    tmp_path = None
+    try:
+        # Save uploaded file to temp location
+        content = await file.read()
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".tar.gz", dir="/tmp")
+        import os
+        os.close(tmp_fd)
+        with open(tmp_path, "wb") as f:
+            f.write(content)
+
+        size_mb = len(content) / (1024 * 1024)
+
+        # Also save a copy in the backups dir for reference
+        _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        import shutil as _sh
+        _sh.copy2(tmp_path, _BACKUP_DIR / file.filename)
+
+        # Extract the backup — restore workspace, config, db
+        result = subprocess.run(
+            ["tar", "xzf", tmp_path, "-C", "/opt/kovo", "--overwrite"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode != 0:
+            return {"ok": False, "output": f"Extract failed: {result.stderr.strip()}"}
+
+        # Restart the service to pick up restored files
+        subprocess.run(["systemctl", "restart", "kovo"], capture_output=True, timeout=10)
+
+        return {
+            "ok": True,
+            "output": f"Restored from {file.filename} ({size_mb:.1f} MB).\nService restarting..."
+        }
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "output": "Restore timed out."}
+    except Exception as e:
+        return {"ok": False, "output": f"Restore error: {e}"}
+    finally:
+        if tmp_path:
+            import os
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 
 # ── Security Fix (direct commands) ────────────────────────────────────────────
