@@ -67,7 +67,7 @@ export default function Layout({ children }) {
       >
         {/* Logo — bigger mascot */}
         <div className="flex flex-col items-center gap-2 px-4 py-5 border-b border-gray-200 dark:border-gray-800">
-          <KovoLogo size={78} />
+          <KovoLogo size={94} />
           <div className="text-center">
             <div className="text-2xl font-bold text-brand-500 tracking-wide">KOVO</div>
           </div>
