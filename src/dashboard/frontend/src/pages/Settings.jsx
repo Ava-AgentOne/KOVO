@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { Sun, Moon, RefreshCw } from 'lucide-react'
 
@@ -32,12 +33,16 @@ function ConfigEditor() {
   const [original, setOriginal] = useState('')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
+  const [loadError, setLoadError] = useState(null)
 
   useEffect(() => {
     fetch('/api/settings')
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
       .then(d => { setContent(d.content || ''); setOriginal(d.content || '') })
+      .catch(e => setLoadError(e.message))
   }, [])
+
+  if (loadError) return <p className="text-sm text-red-500">Failed to load settings: {loadError}</p>
 
   const save = async () => {
     setSaving(true)
@@ -51,7 +56,7 @@ function ConfigEditor() {
       const d = await r.json()
       if (r.ok) {
         setOriginal(content)
-        setMsg('Saved — restart service to apply changes')
+        setMsg('Saved \u2014 restart service to apply changes')
       } else {
         setMsg(d.detail || 'Save failed')
       }
@@ -78,7 +83,7 @@ function ConfigEditor() {
           disabled={saving || !isDirty}
           className="text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-40 transition-colors"
         >
-          {saving ? 'Saving…' : 'Save settings.yaml'}
+          {saving ? 'Saving\u2026' : 'Save settings.yaml'}
         </button>
       </div>
     </div>
@@ -88,10 +93,16 @@ function ConfigEditor() {
 function EnvViewer() {
   const [entries, setEntries] = useState([])
   const [revealed, setRevealed] = useState({})
+  const [loadError, setLoadError] = useState(null)
 
   useEffect(() => {
-    fetch('/api/env').then(r => r.json()).then(d => setEntries(d.entries || []))
+    fetch('/api/env')
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
+      .then(d => setEntries(d.entries || []))
+      .catch(e => setLoadError(e.message))
   }, [])
+
+  if (loadError) return <p className="text-sm text-red-500">Failed to load .env: {loadError}</p>
 
   const toggle = (key) => setRevealed(prev => ({ ...prev, [key]: !prev[key] }))
 
@@ -106,7 +117,7 @@ function EnvViewer() {
             <span className="text-gray-400">=</span>
             <span className="text-yellow-600 dark:text-yellow-300 flex-1">{revealed[e.key] ? e.value : e.masked}</span>
             <button onClick={() => toggle(e.key)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-1">
-              {revealed[e.key] ? '🙈' : '👁'}
+              {revealed[e.key] ? 'hide' : 'show'}
             </button>
           </div>
         )
@@ -147,7 +158,7 @@ function ServiceControls() {
       <div className="flex items-center gap-3">
         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${status?.active ? 'bg-green-500' : 'bg-red-500'}`} />
         <span className="text-sm text-gray-700 dark:text-gray-300">
-          {status ? `${status.service} — ${status.state}` : 'Checking…'}
+          {status ? `${status.service} \u2014 ${status.state}` : 'Checking\u2026'}
         </span>
       </div>
       <div className="flex items-center gap-3">
@@ -157,7 +168,7 @@ function ServiceControls() {
           className="flex items-center gap-2 text-sm bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
         >
           <RefreshCw size={14} className={restarting ? 'animate-spin' : ''} />
-          {restarting ? 'Restarting…' : 'Restart Kovo'}
+          {restarting ? 'Restarting\u2026' : 'Restart Kovo'}
         </button>
         {restartMsg && <span className="text-xs text-gray-500">{restartMsg}</span>}
       </div>
@@ -167,26 +178,37 @@ function ServiceControls() {
 
 function SystemInfo() {
   const [info, setInfo] = useState(null)
+  const [loadError, setLoadError] = useState(null)
 
   useEffect(() => {
-    fetch('/api/system/info').then(r => r.json()).then(setInfo).catch(() => {})
+    fetch('/api/system/info')
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
+      .then(setInfo)
+      .catch(e => setLoadError(e.message))
   }, [])
 
-  if (!info) return <p className="text-gray-400 text-sm italic">Loading…</p>
+  if (loadError) return <p className="text-sm text-red-500">Failed to load system info: {loadError}</p>
+  if (!info) return (
+    <div className="animate-pulse">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {[1,2,3,4,5,6].map(i => <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-lg" />)}
+      </div>
+    </div>
+  )
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {[
         { label: 'Python', value: info.python },
         { label: 'Node', value: info.node },
-        { label: 'Disk used', value: info.disk_used_gb != null ? `${info.disk_used_gb} / ${info.disk_total_gb} GB (${info.disk_pct}%)` : '—' },
-        { label: 'Disk free', value: info.disk_free_gb != null ? `${info.disk_free_gb} GB` : '—' },
-        { label: 'RAM used', value: info.ram_used_gb != null ? `${info.ram_used_gb} / ${info.ram_total_gb} GB (${info.ram_pct}%)` : '—' },
-        { label: 'RAM free', value: info.ram_free_gb != null ? `${info.ram_free_gb} GB` : '—' },
+        { label: 'Disk used', value: info.disk_used_gb != null ? `${info.disk_used_gb} / ${info.disk_total_gb} GB (${info.disk_pct}%)` : '\u2014' },
+        { label: 'Disk free', value: info.disk_free_gb != null ? `${info.disk_free_gb} GB` : '\u2014' },
+        { label: 'RAM used', value: info.ram_used_gb != null ? `${info.ram_used_gb} / ${info.ram_total_gb} GB (${info.ram_pct}%)` : '\u2014' },
+        { label: 'RAM free', value: info.ram_free_gb != null ? `${info.ram_free_gb} GB` : '\u2014' },
       ].map(({ label, value }) => (
         <div key={label} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
           <p className="text-xs text-gray-400 mb-1">{label}</p>
-          <p className="text-sm text-gray-700 dark:text-gray-200 font-mono">{value ?? '—'}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-200 font-mono">{value ?? '\u2014'}</p>
         </div>
       ))}
     </div>
@@ -216,7 +238,7 @@ function OllamaTest() {
         disabled={testing}
         className="text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
       >
-        {testing ? 'Testing…' : 'Test Ollama connection'}
+        {testing ? 'Testing\u2026' : 'Test Ollama connection'}
       </button>
       {result && (
         <span className={`text-sm ${result.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
@@ -247,7 +269,7 @@ function CredentialsSection() {
           status === null ? 'bg-gray-400' : status.configured ? 'bg-green-500' : 'bg-yellow-500'
         }`} />
         <span className="text-sm text-gray-700 dark:text-gray-300">
-          {status === null ? 'Checking…' : status.configured ? 'Core credentials configured' : 'Not configured — setup required'}
+          {status === null ? 'Checking\u2026' : status.configured ? 'Core credentials configured' : 'Not configured \u2014 setup required'}
         </span>
       </div>
       {status?.services && (
@@ -261,17 +283,17 @@ function CredentialsSection() {
                   : 'border-gray-200 dark:border-gray-700 text-gray-400'
               }`}
             >
-              {label} {status.services[key] ? '✓' : '—'}
+              {label} {status.services[key] ? '\u2713' : '\u2014'}
             </span>
           ))}
         </div>
       )}
-      <a
-        href="/dashboard/setup"
+      <Link
+        to="/setup"
         className="inline-block text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg transition-colors"
       >
         {status?.configured ? 'Edit Credentials' : 'Configure Credentials'}
-      </a>
+      </Link>
     </div>
   )
 }
@@ -289,11 +311,11 @@ export default function Settings() {
         <CredentialsSection />
       </Section>
 
-      <Section title="Configuration — settings.yaml">
+      <Section title="Configuration &mdash; settings.yaml">
         <ConfigEditor />
       </Section>
 
-      <Section title="Environment — .env">
+      <Section title="Environment &mdash; .env">
         <EnvViewer />
       </Section>
 
