@@ -143,63 +143,12 @@ body {
   animation: stepEnter 0.35s ease-out forwards;
 }
 
-/* ── Egg Hatch Animations ─────────────────────────────────────── */
-
 /* Egg wobble before cracking */
-@keyframes eggWobble {
-  0%, 100% { transform: rotate(0deg); }
-  15%      { transform: rotate(3deg); }
-  30%      { transform: rotate(-3deg); }
-  45%      { transform: rotate(4deg); }
-  60%      { transform: rotate(-2deg); }
-  75%      { transform: rotate(3deg); }
-  90%      { transform: rotate(-1deg); }
-}
-
-.kovo-egg-wobble {
-  animation: eggWobble 0.6s ease-in-out infinite;
-}
 
 /* Left shell falls away */
-@keyframes eggLeftFall {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-  100% { transform: translate(-80px, 60px) rotate(-35deg); opacity: 0; }
-}
-
-.kovo-egg-left {
-  animation: eggLeftFall 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
 
 /* Right shell falls away */
-@keyframes eggRightFall {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-  100% { transform: translate(80px, 60px) rotate(35deg); opacity: 0; }
-}
-
-.kovo-egg-right {
-  animation: eggRightFall 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
 
 /* Crack lines appear */
-@keyframes crackAppear {
-  0%   { opacity: 0; stroke-dashoffset: 50; }
-  100% { opacity: 1; stroke-dashoffset: 0; }
-}
-
-.kovo-crack-lines path {
-  stroke-dasharray: 50;
-  animation: crackAppear 0.3s ease-out forwards;
-}
 
 /* Mascot bounce after hatching */
-@keyframes hatchBounce {
-  0%   { transform: scale(0.7) translateY(20px); }
-  40%  { transform: scale(1.1) translateY(-10px); }
-  60%  { transform: scale(0.95) translateY(3px); }
-  80%  { transform: scale(1.03) translateY(-2px); }
-  100% { transform: scale(1) translateY(0); }
-}
-
-.kovo-hatch-bounce {
-  animation: hatchBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}

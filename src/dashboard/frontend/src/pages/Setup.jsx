@@ -1,40 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import KovoLogo from '../components/KovoLogo'
-
-// ── Crack sound effect (Web Audio API — no file needed) ──────────
-function playCrackSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    // Short noise burst = crack
-    const duration = 0.15
-    const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate)
-    const data = buffer.getChannelData(0)
-    for (let i = 0; i < data.length; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2)
-    }
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
-    const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration)
-    source.connect(gain)
-    gain.connect(ctx.destination)
-    source.start()
-    // Pop sound after crack
-    setTimeout(() => {
-      const osc = ctx.createOscillator()
-      const g2 = ctx.createGain()
-      osc.frequency.setValueAtTime(800, ctx.currentTime)
-      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.1)
-      g2.gain.setValueAtTime(0.15, ctx.currentTime)
-      g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15)
-      osc.connect(g2)
-      g2.connect(ctx.destination)
-      osc.start()
-      osc.stop(ctx.currentTime + 0.15)
-    }, 100)
-  } catch (e) { /* audio not available */ }
-}
 
 // ── Floating particles ───────────────────────────────────────────
 function FloatingParticles() {
@@ -86,55 +51,6 @@ function TypeWriter({ text, speed = 40, delay = 0, onDone }) {
   )
 }
 
-// ── Egg SVG ──────────────────────────────────────────────────────
-function Egg({ cracked, onCrackDone }) {
-  return (
-    <svg viewBox="0 0 200 260" width="200" height="260" className="absolute top-0 left-1/2 -translate-x-1/2" style={{ zIndex: cracked ? 5 : 15 }}>
-      {/* Left half */}
-      <g className={cracked ? 'kovo-egg-left' : ''}>
-        <path
-          d="M100,10 C55,10 20,80 20,160 C20,210 55,250 100,250 L100,130 Z"
-          fill="#F5E6D0"
-          stroke="#E8D5B8"
-          strokeWidth="2"
-        />
-        {/* Crack lines */}
-        {cracked && (
-          <g className="kovo-crack-lines">
-            <path d="M100,130 L75,120 L85,100 L60,95" stroke="#D4C4A8" strokeWidth="2" fill="none" strokeLinecap="round" />
-            <path d="M100,130 L80,145 L65,135" stroke="#D4C4A8" strokeWidth="2" fill="none" strokeLinecap="round" />
-          </g>
-        )}
-        {/* Speckles */}
-        <circle cx="65" cy="100" r="3" fill="#E8D5B8" opacity="0.6" />
-        <circle cx="50" cy="150" r="2.5" fill="#E8D5B8" opacity="0.5" />
-        <circle cx="75" cy="180" r="2" fill="#E8D5B8" opacity="0.4" />
-      </g>
-
-      {/* Right half */}
-      <g className={cracked ? 'kovo-egg-right' : ''}>
-        <path
-          d="M100,10 C145,10 180,80 180,160 C180,210 145,250 100,250 L100,130 Z"
-          fill="#F5E6D0"
-          stroke="#E8D5B8"
-          strokeWidth="2"
-        />
-        {/* Crack lines */}
-        {cracked && (
-          <g className="kovo-crack-lines">
-            <path d="M100,130 L125,115 L115,95 L140,90" stroke="#D4C4A8" strokeWidth="2" fill="none" strokeLinecap="round" />
-            <path d="M100,130 L120,150 L135,140" stroke="#D4C4A8" strokeWidth="2" fill="none" strokeLinecap="round" />
-          </g>
-        )}
-        {/* Speckles */}
-        <circle cx="135" cy="110" r="3" fill="#E8D5B8" opacity="0.6" />
-        <circle cx="150" cy="160" r="2.5" fill="#E8D5B8" opacity="0.5" />
-        <circle cx="125" cy="200" r="2" fill="#E8D5B8" opacity="0.4" />
-      </g>
-    </svg>
-  )
-}
-
 // ── Step labels ──────────────────────────────────────────────────
 const STEP_LABELS = {
   services: 'Services',
@@ -176,6 +92,27 @@ function ProgressBar({ steps, current }) {
   )
 }
 
+// ── Help box ─────────────────────────────────────────────────────
+function HelpBox({ children }) {
+  return (
+    <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30 rounded-xl p-4 space-y-2">
+      <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wide">How to get this</p>
+      <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed space-y-2">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ── External link ────────────────────────────────────────────────
+function ExtLink({ href, children }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="text-brand-500 hover:text-brand-600 underline underline-offset-2 font-medium">
+      {children} ↗
+    </a>
+  )
+}
+
 // ── Form field ───────────────────────────────────────────────────
 function Field({ label, name, value, onChange, placeholder = '', hint = '' }) {
   return (
@@ -194,81 +131,42 @@ function Field({ label, name, value, onChange, placeholder = '', hint = '' }) {
   )
 }
 
-// ── SPLASH / WELCOME PAGE ────────────────────────────────────────
+// ── SPLASH PAGE ──────────────────────────────────────────────────
 function SplashPage({ onStart }) {
-  const [phase, setPhase] = useState('egg')       // egg → cracking → hatched → revealed
-  const [showText, setShowText] = useState(false)
   const [showFeatures, setShowFeatures] = useState(false)
   const [showButton, setShowButton] = useState(false)
-
-  useEffect(() => {
-    // Egg wobbles for 2s, then cracks
-    const t1 = setTimeout(() => {
-      setPhase('cracking')
-      playCrackSound()
-    }, 2000)
-    // Shell falls away, mascot revealed
-    const t2 = setTimeout(() => setPhase('hatched'), 2800)
-    // Text appears
-    const t3 = setTimeout(() => setShowText(true), 3200)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex flex-col items-center justify-center relative overflow-hidden">
       <FloatingParticles />
 
-      {/* Glow */}
-      <div className={`absolute w-96 h-96 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ${
-        phase === 'hatched' ? 'bg-brand-500/15 scale-125' : 'bg-brand-500/5'
-      }`} />
+      {/* Glow behind mascot */}
+      <div className="absolute w-96 h-96 bg-brand-500/10 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
 
       <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-lg">
-
-        {/* Egg + Mascot container — always centered */}
-        <div className="relative w-[200px] h-[260px] flex items-center justify-center mb-8">
-          {/* Egg shell (on top initially, falls away) */}
-          {phase !== 'hatched' && (
-            <Egg cracked={phase === 'cracking'} />
-          )}
-
-          {/* Mascot inside — starts hidden, fades in when shell cracks */}
-          <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ${
-            phase === 'egg' ? 'opacity-0 scale-75' :
-            phase === 'cracking' ? 'opacity-50 scale-90' :
-            'opacity-100 scale-100'
-          }`}>
-            <div className={phase === 'hatched' ? 'kovo-hatch-bounce' : ''}>
-              <KovoLogo size={180} animate={phase === 'hatched'} />
-            </div>
-          </div>
-
-          {/* Egg wobble animation on the container */}
-          {phase === 'egg' && (
-            <div className="absolute inset-0 kovo-egg-wobble" />
-          )}
+        {/* Animated mascot — big, centered */}
+        <div className="kovo-splash-entrance mb-8">
+          <KovoLogo size={220} animate={true} />
         </div>
 
-        {/* Title + text */}
-        {showText && (
-          <div className="space-y-4">
-            <h1 className="text-5xl font-black text-white tracking-tight kovo-fade-up">
-              <span className="text-brand-400">KOVO</span>
-            </h1>
-            <p className="text-lg text-gray-300 kovo-fade-up" style={{ animationDelay: '0.3s' }}>
-              <TypeWriter
-                text="Your self-hosted AI agent, ready to set up."
-                speed={30}
-                delay={400}
-                onDone={() => { setTimeout(() => setShowFeatures(true), 300); setTimeout(() => setShowButton(true), 800) }}
-              />
-            </p>
-          </div>
-        )}
+        {/* Title */}
+        <h1 className="text-5xl font-black text-white tracking-tight kovo-fade-up" style={{ animationDelay: '0.6s' }}>
+          <span className="text-brand-400">KOVO</span>
+        </h1>
+
+        {/* Typing subtitle */}
+        <p className="text-lg text-gray-300 mt-4 kovo-fade-up" style={{ animationDelay: '1s' }}>
+          <TypeWriter
+            text="Your self-hosted AI agent, ready to set up."
+            speed={30}
+            delay={1200}
+            onDone={() => { setTimeout(() => setShowFeatures(true), 300); setTimeout(() => setShowButton(true), 800) }}
+          />
+        </p>
 
         {/* Feature pills */}
         {showFeatures && (
-          <div className="flex flex-wrap justify-center gap-2 mt-6 kovo-fade-up">
+          <div className="flex flex-wrap justify-center gap-2 mt-6">
             {['Claude Code Brain', 'Telegram Chat', 'Web Dashboard', 'Voice Calls', 'Security Audits'].map((f, i) => (
               <span
                 key={f}
@@ -283,7 +181,7 @@ function SplashPage({ onStart }) {
 
         {/* CTA */}
         {showButton && (
-          <div className="kovo-fade-up mt-8">
+          <div className="kovo-fade-up mt-10">
             <button
               onClick={onStart}
               className="group relative px-10 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-2xl text-base transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-brand-500/25"
@@ -303,7 +201,7 @@ function SplashPage({ onStart }) {
   )
 }
 
-// ── SERVICE SELECTION (FIXED) ────────────────────────────────────
+// ── SERVICE SELECTION ────────────────────────────────────────────
 function ServicesPage({ services, onToggle }) {
   const items = [
     { key: 'google', icon: '🔗', label: 'Google Workspace', desc: 'Access Docs, Calendar, Gmail, Drive, and Sheets' },
@@ -315,7 +213,7 @@ function ServicesPage({ services, onToggle }) {
     <div className="space-y-5">
       <div className="kovo-fade-up">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Optional Integrations</h2>
-        <p className="text-sm text-gray-500 mt-1">Pick what you need now. You can add more later from Settings.</p>
+        <p className="text-sm text-gray-500 mt-1">Pick what you need now. You can always add more later from Settings.</p>
       </div>
       <div className="space-y-3">
         {items.map(({ key, icon, label, desc }, i) => (
@@ -355,9 +253,16 @@ function CorePage({ form, set }) {
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Core Credentials</h2>
         <p className="text-sm text-gray-500 mt-1">Required for Kovo to connect to Telegram.</p>
       </div>
-      <Field label="Telegram Bot Token" name="telegram_bot_token" value={form.telegram_bot_token} onChange={set} placeholder="1234567890:AABBCCDDeeffgghh..." hint="Create a bot with @BotFather on Telegram and paste the token here" />
-      <Field label="Your Telegram User ID" name="owner_telegram_id" value={form.owner_telegram_id} onChange={set} placeholder="123456789" hint="Message @userinfobot on Telegram to find your ID" />
-      <Field label="Webhook URL" name="webhook_url" value={form.webhook_url} onChange={set} placeholder="https://your-domain.com (optional)" hint="Leave empty for polling mode — works great for home labs" />
+
+      <HelpBox>
+        <p><strong>Step 1:</strong> Open Telegram and search for <ExtLink href="https://t.me/BotFather">@BotFather</ExtLink></p>
+        <p><strong>Step 2:</strong> Send <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">/newbot</code>, follow the prompts, and copy the token it gives you.</p>
+        <p><strong>Step 3:</strong> To find your User ID, message <ExtLink href="https://t.me/userinfobot">@userinfobot</ExtLink> on Telegram — it replies with your numeric ID.</p>
+      </HelpBox>
+
+      <Field label="Telegram Bot Token" name="telegram_bot_token" value={form.telegram_bot_token} onChange={set} placeholder="1234567890:AABBCCDDeeffgghh..." />
+      <Field label="Your Telegram User ID" name="owner_telegram_id" value={form.owner_telegram_id} onChange={set} placeholder="123456789" />
+      <Field label="Webhook URL" name="webhook_url" value={form.webhook_url} onChange={set} placeholder="https://your-domain.com (optional)" hint="Leave empty for polling mode — recommended for home labs" />
     </div>
   )
 }
@@ -368,8 +273,17 @@ function GooglePage({ form, set }) {
     <div className="space-y-5">
       <div className="kovo-fade-up">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Google Credentials</h2>
-        <p className="text-sm text-gray-500 mt-1">Paste your OAuth2 service account JSON from Google Cloud Console.</p>
+        <p className="text-sm text-gray-500 mt-1">Enables Google Docs, Drive, Gmail, Calendar, and Sheets access.</p>
       </div>
+
+      <HelpBox>
+        <p><strong>Step 1:</strong> Go to <ExtLink href="https://console.cloud.google.com/apis/credentials">Google Cloud Console → Credentials</ExtLink></p>
+        <p><strong>Step 2:</strong> Create a project (if you don't have one), then click <strong>"Create Credentials" → "OAuth 2.0 Client ID"</strong></p>
+        <p><strong>Step 3:</strong> Select <strong>"Desktop app"</strong> as the application type</p>
+        <p><strong>Step 4:</strong> Download the JSON file and paste its contents below</p>
+        <p className="text-xs text-gray-400">Detailed guide: <ExtLink href="https://developers.google.com/workspace/guides/create-credentials">Google Workspace API setup</ExtLink></p>
+      </HelpBox>
+
       <div className="space-y-1.5 kovo-fade-up">
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Service Account JSON</label>
         <textarea
@@ -377,7 +291,7 @@ function GooglePage({ form, set }) {
           onChange={e => set('google_credentials_json', e.target.value)}
           placeholder={'{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}'}
           spellCheck={false}
-          className="w-full h-44 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-200 font-mono placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-all"
+          className="w-full h-40 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-200 font-mono placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-all"
         />
       </div>
     </div>
@@ -390,12 +304,19 @@ function CallsPage({ form, set }) {
     <div className="space-y-5">
       <div className="kovo-fade-up">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Telegram Voice Calls</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Get these from <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="text-brand-500 hover:underline">my.telegram.org</a> → API development tools.
-        </p>
+        <p className="text-sm text-gray-500 mt-1">Enables Kovo to make real Telegram voice calls for urgent alerts.</p>
       </div>
+
+      <HelpBox>
+        <p><strong>Step 1:</strong> You'll need a <strong>second Telegram account</strong> (a spare SIM or eSIM)</p>
+        <p><strong>Step 2:</strong> Log into <ExtLink href="https://my.telegram.org">my.telegram.org</ExtLink> with that second account's phone number</p>
+        <p><strong>Step 3:</strong> Go to <strong>"API development tools"</strong></p>
+        <p><strong>Step 4:</strong> Create an app — you'll get an <strong>API ID</strong> (number) and <strong>API Hash</strong> (hex string)</p>
+        <p><strong>Step 5:</strong> After setup, send <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">/reauth_caller +PHONE</code> in Telegram to authenticate the userbot</p>
+      </HelpBox>
+
       <Field label="API ID" name="telegram_api_id" value={form.telegram_api_id} onChange={set} placeholder="12345678" />
-      <Field label="API Hash" name="telegram_api_hash" value={form.telegram_api_hash} onChange={set} placeholder="abc123def456..." />
+      <Field label="API Hash" name="telegram_api_hash" value={form.telegram_api_hash} onChange={set} placeholder="abc123def456ghi789..." />
     </div>
   )
 }
@@ -408,7 +329,15 @@ function GroqPage({ form, set }) {
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Groq Transcription</h2>
         <p className="text-sm text-gray-500 mt-1">Fast cloud transcription for voice messages. Falls back to local Whisper if skipped.</p>
       </div>
-      <Field label="Groq API Key" name="groq_api_key" value={form.groq_api_key} onChange={set} placeholder="gsk_..." hint="Free tier at console.groq.com — 14,400 requests/day" />
+
+      <HelpBox>
+        <p><strong>Step 1:</strong> Go to <ExtLink href="https://console.groq.com/keys">console.groq.com/keys</ExtLink></p>
+        <p><strong>Step 2:</strong> Sign up for free (Google or GitHub login)</p>
+        <p><strong>Step 3:</strong> Click <strong>"Create API Key"</strong> and copy it</p>
+        <p className="text-xs text-gray-400">Free tier includes 14,400 requests/day — more than enough for personal use. Kovo uses the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs">whisper-large-v3-turbo</code> model for fast, accurate transcription.</p>
+      </HelpBox>
+
+      <Field label="Groq API Key" name="groq_api_key" value={form.groq_api_key} onChange={set} placeholder="gsk_..." />
     </div>
   )
 }
@@ -440,7 +369,7 @@ function ReviewPage({ form, services, error }) {
       <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 space-y-0 kovo-fade-up">
         {rows.map(({ label, value, ok }, i) => (
           <div key={label} className={`flex items-center gap-3 py-2.5 ${i < rows.length - 1 ? 'border-b border-gray-200 dark:border-gray-700/50' : ''}`}>
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${ok ? 'bg-emerald-500' : 'bg-red-400'}`} />
+            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${ok ? 'bg-emerald-500' : 'bg-red-400'}`} />
             <span className="text-xs text-gray-400 w-20 flex-shrink-0">{label}</span>
             <span className={`text-sm font-mono ${ok ? 'text-gray-700 dark:text-gray-300' : 'text-red-400'}`}>{value}</span>
           </div>
@@ -462,8 +391,8 @@ function SavedScreen({ countdown }) {
       <FloatingParticles />
       <div className="absolute w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
       <div className="relative z-10 flex flex-col items-center text-center space-y-6 px-6">
-        <div className="kovo-hatch-bounce">
-          <KovoLogo size={140} animate={true} />
+        <div className="kovo-splash-entrance">
+          <KovoLogo size={160} animate={true} />
         </div>
         <h1 className="text-3xl font-black text-white kovo-fade-up" style={{ animationDelay: '0.3s' }}>
           <span className="text-emerald-400">All set!</span>
@@ -559,11 +488,11 @@ export default function Setup() {
       <div className="absolute w-[500px] h-[500px] bg-brand-500/5 rounded-full blur-[150px] top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
       <div className="w-full max-w-lg relative z-10">
-        {/* Header — big logo with Setup below */}
+        {/* Header — big logo + KOVO + Setup Wizard below */}
         <div className="flex flex-col items-center gap-2 mb-8">
-          <KovoLogo size={72} animate={true} />
-          <span className="text-2xl font-bold text-brand-500 tracking-wide">KOVO</span>
-          <span className="text-sm text-gray-400 font-medium tracking-widest uppercase">Setup Wizard</span>
+          <KovoLogo size={140} animate={true} />
+          <span className="text-3xl font-black text-brand-500 tracking-wide">KOVO</span>
+          <span className="text-base text-gray-400 font-semibold tracking-widest uppercase">Setup Wizard</span>
         </div>
 
         <ProgressBar steps={steps} current={stepIndex} />
