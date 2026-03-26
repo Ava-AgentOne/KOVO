@@ -1,5 +1,5 @@
 #!/bin/bash
-# Migrate OpenClaw workspace to MiniClaw
+# Migrate OpenClaw workspace to KOVO
 # Usage: ./migrate_openclaw.sh /path/to/openclaw/workspace
 
 set -e
@@ -10,7 +10,7 @@ if [ -z "$1" ]; then
 fi
 
 SOURCE="$1"
-TARGET="/opt/miniclaw/workspace"
+TARGET="/opt/kovo/workspace"
 
 echo "Migrating OpenClaw workspace from: $SOURCE"
 echo "To: $TARGET"
@@ -36,7 +36,7 @@ done
 # Copy with notes
 if [ -f "$SOURCE/TOOLS.md" ]; then
     cp "$SOURCE/TOOLS.md" "$TARGET/TOOLS.md"
-    echo -e "\n## MiniClaw Migration Notes\n- Migrated from OpenClaw on $(date)\n- Update paths and hosts for VM" >> "$TARGET/TOOLS.md"
+    echo -e "\n## KOVO Migration Notes\n- Migrated from OpenClaw on $(date)\n- Update paths and hosts for VM" >> "$TARGET/TOOLS.md"
     echo "  ✓ Copied TOOLS.md (review paths!)"
 fi
 

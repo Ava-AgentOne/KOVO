@@ -2,10 +2,10 @@
 import asyncio
 import os
 import sys
-sys.path.insert(0, "/opt/miniclaw")
+sys.path.insert(0, "/opt/kovo")
 
 from dotenv import load_dotenv
-load_dotenv("/opt/miniclaw/config/.env")
+load_dotenv("/opt/kovo/config/.env")
 
 import edge_tts
 import httpx
@@ -30,7 +30,7 @@ async def main():
         )
 
         for voice, label in VOICES:
-            path = f"/opt/miniclaw/data/audio/sample_{voice}.mp3"
+            path = f"/opt/kovo/data/audio/sample_{voice}.mp3"
             c = edge_tts.Communicate(TEXT, voice)
             await c.save(path)
 

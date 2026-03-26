@@ -1,15 +1,15 @@
 """Generate a weather briefing and place a real Telegram voice call."""
 import asyncio
 import sys
-sys.path.insert(0, "/opt/miniclaw")
+sys.path.insert(0, "/opt/kovo")
 
 from dotenv import load_dotenv
-load_dotenv("/opt/miniclaw/config/.env")
+load_dotenv("/opt/kovo/config/.env")
 
 import edge_tts
 from src.tools.telegram_call import TelegramCaller
 
-AUDIO_PATH = "/opt/miniclaw/data/audio/weather_briefing.mp3"
+AUDIO_PATH = "/opt/kovo/data/audio/weather_briefing.mp3"
 VOICE = "en-US-GuyNeural"
 
 BRIEFING = (
