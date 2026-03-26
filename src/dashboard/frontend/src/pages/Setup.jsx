@@ -164,34 +164,36 @@ function SplashPage({ onStart }) {
           />
         </p>
 
-        {/* Feature pills */}
-        {showFeatures && (
-          <div className="flex flex-wrap justify-center gap-2 mt-6">
-            {['Claude Code Brain', 'Telegram Chat', 'Web Dashboard', 'Voice Calls', 'Security Audits'].map((f, i) => (
-              <span
-                key={f}
-                className="px-3 py-1.5 text-xs font-medium rounded-full border border-brand-500/30 text-brand-300 bg-brand-500/5 kovo-fade-up"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              >
-                {f}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* CTA */}
-        {showButton && (
-          <div className="kovo-fade-up mt-10">
-            <button
-              onClick={onStart}
-              className="group relative px-10 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-2xl text-base transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-brand-500/25"
+        {/* Feature pills — always in DOM, fade via CSS transition */}
+        <div
+          className="flex flex-wrap justify-center gap-2 mt-6"
+          style={{ opacity: showFeatures ? 1 : 0, transform: showFeatures ? 'translateY(0)' : 'translateY(12px)', transition: 'opacity 0.6s ease, transform 0.6s ease' }}
+        >
+          {['Claude Code Brain', 'Telegram Chat', 'Web Dashboard', 'Voice Calls', 'Security Audits'].map((f, i) => (
+            <span
+              key={f}
+              className="px-3 py-1.5 text-xs font-medium rounded-full border border-brand-500/30 text-brand-300 bg-brand-500/5"
+              style={{ opacity: showFeatures ? 1 : 0, transform: showFeatures ? 'translateY(0)' : 'translateY(8px)', transition: `opacity 0.5s ease ${i * 0.08}s, transform 0.5s ease ${i * 0.08}s` }}
             >
-              Get Started
-              <span className="inline-block ml-2 transition-transform group-hover:translate-x-1">→</span>
-            </button>
-            <p className="text-gray-500 text-xs mt-4">Takes about 2 minutes</p>
-          </div>
-        )}
+              {f}
+            </span>
+          ))}
+        </div>
+
+        {/* CTA — always in DOM, fade via CSS transition */}
+        <div
+          className="mt-10"
+          style={{ opacity: showButton ? 1 : 0, transform: showButton ? 'translateY(0)' : 'translateY(16px)', transition: 'opacity 0.7s ease, transform 0.7s ease', pointerEvents: showButton ? 'auto' : 'none' }}
+        >
+          <button
+            onClick={onStart}
+            className="group relative px-10 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-2xl text-base transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-brand-500/25"
+          >
+            Get Started
+            <span className="inline-block ml-2 transition-transform group-hover:translate-x-1">→</span>
+          </button>
+          <p className="text-gray-500 text-xs mt-4">Takes about 2 minutes</p>
+        </div>
       </div>
 
       <div className="absolute bottom-6 text-center">
