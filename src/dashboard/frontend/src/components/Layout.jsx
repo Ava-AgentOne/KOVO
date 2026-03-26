@@ -67,10 +67,9 @@ export default function Layout({ children }) {
       >
         {/* Logo — bigger mascot */}
         <div className="flex flex-col items-center gap-2 px-4 py-5 border-b border-gray-200 dark:border-gray-800">
-          <KovoLogo size={52} />
+          <KovoLogo size={78} />
           <div className="text-center">
-            <div className="text-lg font-bold text-brand-500 tracking-wide">KOVO</div>
-            <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest">AI Agent</div>
+            <div className="text-2xl font-bold text-brand-500 tracking-wide">KOVO</div>
           </div>
           <button
             onClick={closeMobile}
