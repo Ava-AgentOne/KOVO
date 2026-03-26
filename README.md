@@ -7,7 +7,7 @@
 **Your Self-Hosted AI Agent for Linux**
 
 [![GitHub release](https://img.shields.io/github/v/release/Ava-AgentOne/kovo?color=378ADD&label=Release)](https://github.com/Ava-AgentOne/kovo/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-Powered-DA7756?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
@@ -448,7 +448,7 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 
 ## 📜 License
 
-[MIT License](LICENSE) — Free to use, modify, and share.
+[GNU AGPLv3](LICENSE) — Free to use, modify, and share. Derivative works must remain open source.
 
 ---
 
