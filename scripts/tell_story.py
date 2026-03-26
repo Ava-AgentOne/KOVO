@@ -2,10 +2,10 @@
 import asyncio
 import os
 import sys
-sys.path.insert(0, "/opt/miniclaw")
+sys.path.insert(0, "/opt/kovo")
 
 from dotenv import load_dotenv
-load_dotenv("/opt/miniclaw/config/.env")
+load_dotenv("/opt/kovo/config/.env")
 
 import edge_tts
 import httpx
@@ -34,7 +34,7 @@ The end.
 """
 
 async def main():
-    path = "/opt/miniclaw/data/audio/story.mp3"
+    path = "/opt/kovo/data/audio/story.mp3"
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
     print("Generating TTS audio...")

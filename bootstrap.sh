@@ -11,7 +11,7 @@ KOVO_VERSION="0.3.0"
 #   bash bootstrap.sh --uninstall  # Clean removal
 #
 # Requirements: Ubuntu 24.04+ · 8GB+ RAM · 30GB+ free disk
-# License: GNU AGPLv3
+# License: MIT
 # ═══════════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -115,7 +115,7 @@ new_screen() {
         echo -e "$dots"
     else
         echo -e "  ${BOLD}${WHITE}Self-Hosted AI Agent${NC}  ${GRAY}v${INSTALLER_VERSION} installer${NC}"
-        echo -e "  ${DIM}Powered by Claude Code · GNU AGPLv3${NC}"
+        echo -e "  ${DIM}Powered by Claude Code · MIT License${NC}"
     fi
     echo ""
 }
