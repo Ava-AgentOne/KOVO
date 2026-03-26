@@ -315,15 +315,23 @@ function CallsPage({ form, set }) {
       </div>
 
       <HelpBox>
-        <p className="text-xs text-gray-400 italic">Kovo uses a second Telegram account (a "userbot") to place real voice calls to your main account. Your bot can't call — only real user accounts can initiate calls.</p>
-        <p><strong>Step 1:</strong> Get a <strong>second phone number</strong> — a spare SIM, eSIM, or prepaid card. This will be the "caller" account.</p>
-        <p><strong>Step 2:</strong> Create a Telegram account on that second number (log in via Telegram app on any phone)</p>
-        <p><strong>Step 3:</strong> On a browser, go to <ExtLink href="https://my.telegram.org">my.telegram.org</ExtLink> and log in with the <strong>second number</strong> (the caller, not your main account)</p>
-        <p><strong>Step 4:</strong> Click <strong>"API development tools"</strong> → fill in any app name → you'll get an <strong>API ID</strong> (number) and <strong>API Hash</strong> (hex string). Paste them below.</p>
-        <p><strong>Step 5:</strong> After finishing this wizard, send this command to your Kovo bot on Telegram <strong>from your main account</strong>:</p>
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 space-y-1.5 mb-3">
+          <p className="text-xs font-bold text-gray-600 dark:text-gray-300">Three Telegram accounts involved:</p>
+          <p className="text-xs"><span className="inline-block w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-bold text-center leading-4 mr-1.5">1</span><strong>Your main account</strong> — your personal Telegram (where you chat with friends, family, etc.)</p>
+          <p className="text-xs"><span className="inline-block w-4 h-4 rounded-full bg-brand-500 text-white text-[10px] font-bold text-center leading-4 mr-1.5">2</span><strong>Kovo Bot</strong> — the bot you created with @BotFather in the previous step. You chat with Kovo through this bot. Bots <strong>cannot</strong> make voice calls.</p>
+          <p className="text-xs"><span className="inline-block w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold text-center leading-4 mr-1.5">3</span><strong>Caller account</strong> — a second <em>real</em> Telegram user account (needs a second SIM/eSIM). This is the account that physically dials your main account for urgent alerts.</p>
+        </div>
+        <p className="text-xs text-gray-400 italic mb-2">Why? Telegram bots can send messages but can't make voice calls. Only real user accounts can call. So Kovo uses this second account as a "caller" that rings your main phone when something is urgent.</p>
+        <p><strong>Step 1:</strong> Get a <strong>second phone number</strong> — a spare SIM, eSIM, or prepaid card</p>
+        <p><strong>Step 2:</strong> Install Telegram on any phone and create an account with that second number. This becomes the <strong>Caller account</strong> <span className="inline-block w-3 h-3 rounded-full bg-amber-500 text-[8px] text-white font-bold text-center leading-3">3</span></p>
+        <p><strong>Step 3:</strong> On a browser, go to <ExtLink href="https://my.telegram.org">my.telegram.org</ExtLink> and log in with the <strong>second number</strong> (Caller account <span className="inline-block w-3 h-3 rounded-full bg-amber-500 text-[8px] text-white font-bold text-center leading-3">3</span>, not your main)</p>
+        <p><strong>Step 4:</strong> Click <strong>"API development tools"</strong> → fill in any app name → copy the <strong>API ID</strong> and <strong>API Hash</strong></p>
+        <p><strong>Step 5:</strong> After finishing this wizard, open your <strong>Kovo Bot</strong> chat <span className="inline-block w-3 h-3 rounded-full bg-brand-500 text-[8px] text-white font-bold text-center leading-3">2</span> on your <strong>main account</strong> <span className="inline-block w-3 h-3 rounded-full bg-emerald-500 text-[8px] text-white font-bold text-center leading-3">1</span> and send:</p>
         <p className="pl-4"><code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs font-mono">/reauth_caller +971XXXXXXXX</code></p>
-        <p className="pl-4 text-xs text-gray-400">Replace with the second number. Kovo will send an OTP to that number — enter it when prompted. This links the caller account to Kovo.</p>
-        <p className="text-xs text-gray-400 mt-1"><strong>Result:</strong> When Kovo needs to alert you urgently, the second account calls your main Telegram — you pick up and hear TTS audio.</p>
+        <p className="pl-4 text-xs text-gray-400">Use the <strong>Caller's phone number</strong> <span className="inline-block w-3 h-3 rounded-full bg-amber-500 text-[8px] text-white font-bold text-center leading-3">3</span>. Telegram sends an OTP to that number — enter it when prompted.</p>
+        <div className="bg-emerald-50 dark:bg-emerald-900/15 rounded-lg p-2.5 mt-2">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400"><strong>Result:</strong> When Kovo detects something urgent (disk full, security alert, etc.), the Caller account <span className="inline-block w-3 h-3 rounded-full bg-amber-500 text-[8px] text-white font-bold text-center leading-3">3</span> dials your main account <span className="inline-block w-3 h-3 rounded-full bg-emerald-500 text-[8px] text-white font-bold text-center leading-3">1</span> — your phone rings and you hear a TTS voice message.</p>
+        </div>
       </HelpBox>
 
       <Field label="API ID" name="telegram_api_id" value={form.telegram_api_id} onChange={set} placeholder="12345678" />
