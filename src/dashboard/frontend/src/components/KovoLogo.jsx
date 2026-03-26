@@ -18,20 +18,56 @@ export default function KovoLogo({ size = 36, animate = true }) {
       {/* Head */}
       <rect x="10" y="20" width="100" height="100" rx="24" fill="#378ADD" />
 
-      {/* Eyes */}
-      <g style={{ transformOrigin: '60px 62px' }}>
-        <g transform="translate(40,60)">
-          <ellipse rx="18" ry="19" fill="#FFF" />
-          <circle cx="4" cy="2" r="10" fill="#042C53" />
-          <circle cx="7" cy="-3" r="4" fill="#FFF" />
-          <circle cx="0" cy="6" r="2" fill="#FFF" />
+      {/* Eyes — clipPath hides overflow for blink effect */}
+      <defs>
+        <clipPath id="leftEyeClip">
+          <ellipse cx="40" cy="60" rx="18" ry="19" />
+        </clipPath>
+        <clipPath id="rightEyeClip">
+          <ellipse cx="80" cy="60" rx="18" ry="19" />
+        </clipPath>
+      </defs>
+
+      {/* Left eye */}
+      <g>
+        {/* White */}
+        <ellipse cx="40" cy="60" rx="18" ry="19" fill="#FFF" />
+        {/* Pupil group — moves left/right */}
+        <g clipPath="url(#leftEyeClip)" className={animate ? 'kovo-pupil' : ''} style={{ transformOrigin: '40px 60px' }}>
+          <circle cx="44" cy="62" r="10" fill="#042C53" />
+          <circle cx="47" cy="57" r="4" fill="#FFF" />
+          <circle cx="40" cy="66" r="2" fill="#FFF" />
         </g>
-        <g transform="translate(80,60)">
-          <ellipse rx="18" ry="19" fill="#FFF" />
-          <circle cx="4" cy="2" r="10" fill="#042C53" />
-          <circle cx="7" cy="-3" r="4" fill="#FFF" />
-          <circle cx="0" cy="6" r="2" fill="#FFF" />
+        {/* Eyelid — slides down to blink */}
+        <rect
+          x="22" y="41"
+          width="36" height="38"
+          rx="12"
+          fill="#378ADD"
+          clipPath="url(#leftEyeClip)"
+          className={animate ? 'kovo-eyelid-left' : ''}
+        />
+      </g>
+
+      {/* Right eye */}
+      <g>
+        {/* White */}
+        <ellipse cx="80" cy="60" rx="18" ry="19" fill="#FFF" />
+        {/* Pupil group — moves left/right */}
+        <g clipPath="url(#rightEyeClip)" className={animate ? 'kovo-pupil' : ''} style={{ transformOrigin: '80px 60px' }}>
+          <circle cx="84" cy="62" r="10" fill="#042C53" />
+          <circle cx="87" cy="57" r="4" fill="#FFF" />
+          <circle cx="80" cy="66" r="2" fill="#FFF" />
         </g>
+        {/* Eyelid — slides down to blink */}
+        <rect
+          x="62" y="41"
+          width="36" height="38"
+          rx="12"
+          fill="#378ADD"
+          clipPath="url(#rightEyeClip)"
+          className={animate ? 'kovo-eyelid-right' : ''}
+        />
       </g>
 
       {/* Smile */}
