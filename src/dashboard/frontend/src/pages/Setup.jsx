@@ -23,30 +23,39 @@ function FloatingParticles() {
     </div>
   )
 }
-// ── Shooting stars ───────────────────────────────────────────────
+// ── Shooting stars (right → left and left → right) ──────────────
 function ShootingStars() {
   const [stars, setStars] = useState([])
 
   useEffect(() => {
     const spawn = () => {
       const id = Date.now() + Math.random()
-      const star = {
+      const fromLeft = Math.random() < 0.5
+      const star = fromLeft ? {
+        id,
+        top: Math.random() * 40 + '%',
+        left: Math.random() * 25 + '%',
+        angle: 140 + Math.random() * 20,
+        duration: 0.6 + Math.random() * 0.5,
+        size: 1 + Math.random() * 1.5,
+        side: 'left',
+      } : {
         id,
         top: Math.random() * 50 + '%',
         left: Math.random() * 30 + 60 + '%',
         angle: 35 + Math.random() * 20,
         duration: 0.6 + Math.random() * 0.5,
-        delay: 0,
         size: 1 + Math.random() * 1.5,
+        side: 'right',
       }
       setStars(prev => [...prev, star])
       setTimeout(() => setStars(prev => prev.filter(s => s.id !== id)), (star.duration + 0.5) * 1000)
     }
     const interval = setInterval(() => {
       if (Math.random() < 0.4) spawn()
-    }, 2000)
-    // Fire one early
+    }, 2500)
     setTimeout(spawn, 1500)
+    setTimeout(() => spawn(), 3000)
     return () => clearInterval(interval)
   }, [])
 
@@ -69,49 +78,6 @@ function ShootingStars() {
   )
 }
 
-// ── Floating planets ─────────────────────────────────────────────
-function FloatingPlanets() {
-  const planets = [
-    { size: 40, color: '#6366f1', ring: true, top: '15%', left: '8%', delay: 0, glow: '#6366f150' },
-    { size: 24, color: '#f59e0b', ring: false, top: '72%', left: '85%', delay: 2, glow: '#f59e0b40' },
-    { size: 16, color: '#10b981', ring: false, top: '25%', left: '90%', delay: 4, glow: '#10b98130' },
-    { size: 32, color: '#ec4899', ring: true, top: '80%', left: '12%', delay: 1, glow: '#ec489940' },
-  ]
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {planets.map((p, i) => (
-        <div
-          key={i}
-          className="kovo-planet"
-          style={{
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            background: `radial-gradient(circle at 35% 35%, ${p.color}dd, ${p.color}60)`,
-            boxShadow: `0 0 ${p.size * 0.6}px ${p.glow}, inset -${p.size * 0.15}px -${p.size * 0.1}px ${p.size * 0.3}px rgba(0,0,0,0.4)`,
-            top: p.top,
-            left: p.left,
-            animationDelay: `${p.delay}s`,
-          }}
-        >
-          {p.ring && (
-            <div
-              className="absolute rounded-full border opacity-40"
-              style={{
-                width: `${p.size * 1.6}px`,
-                height: `${p.size * 0.4}px`,
-                borderColor: p.color,
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%) rotateX(70deg) rotateZ(-15deg)',
-              }}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
 
 
 // ── Typing effect ────────────────────────────────────────────────
@@ -340,7 +306,6 @@ function SplashPage({ onStart }) {
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex flex-col items-center justify-center relative overflow-hidden">
       <FloatingParticles />
       <ShootingStars />
-      <FloatingPlanets />
 
       {/* Glow behind mascot */}
       <div className="absolute w-96 h-96 bg-brand-500/10 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
