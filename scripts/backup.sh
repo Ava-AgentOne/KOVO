@@ -112,11 +112,11 @@ if $LIST_ONLY; then
                 if [[ "$key" == _* ]]; then
                     echo -e "    ${D}(generated)${N} ${key#_}"
                 elif [[ "$key" == */ ]]; then
-                    local count=$(find "$KOVO_DIR/$key" -type f 2>/dev/null | wc -l)
-                    local size=$(du -sh "$KOVO_DIR/$key" 2>/dev/null | cut -f1)
+                    count=$(find "$KOVO_DIR/$key" -type f 2>/dev/null | wc -l)
+                    size=$(du -sh "$KOVO_DIR/$key" 2>/dev/null | cut -f1)
                     echo -e "    $key  ${D}($count files, $size)${N}"
                 else
-                    local size=$(du -sh "$KOVO_DIR/$key" 2>/dev/null | cut -f1)
+                    size=$(du -sh "$KOVO_DIR/$key" 2>/dev/null | cut -f1)
                     echo -e "    $key  ${D}($size)${N}"
                 fi
             fi
