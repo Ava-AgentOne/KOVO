@@ -205,9 +205,12 @@ function StructuredConfig() {
 function BackupManager() {
   const [backups, setBackups] = useState(null)
   const [running, setRunning] = useState(false)
+  const [runningTier, setRunningTier] = useState('')
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState('')
   const [restoreResult, setRestoreResult] = useState(null)
+  const [expandedManifest, setExpandedManifest] = useState(null)
+  const [manifests, setManifests] = useState({})
   const fileInputRef = useRef(null)
 
   const loadBackups = () =>
@@ -218,17 +221,19 @@ function BackupManager() {
 
   useEffect(() => { loadBackups() }, [])
 
-  const runBackup = async () => {
+  const runBackup = async (tier) => {
     setRunning(true)
+    setRunningTier(tier)
     setMsg('')
     try {
-      const r = await fetch('/api/backup', { method: 'POST' })
+      const r = await fetch(`/api/backup?tier=${tier}`, { method: 'POST' })
       const d = await r.json()
-      if (d.ok) setMsg(`Backup created (${d.size || '?'})`)
+      if (d.ok) setMsg(`${tier === 'full' ? 'Full' : 'Core'} backup created (${d.size || '?'})`)
       else setMsg(d.error || 'Backup failed')
       loadBackups()
     } catch (e) { setMsg('Backup failed: ' + e.message) }
     setRunning(false)
+    setRunningTier('')
   }
 
   const deleteBackup = async (filename) => {
@@ -239,6 +244,19 @@ function BackupManager() {
     } catch {}
   }
 
+  const loadManifest = async (filename) => {
+    if (expandedManifest === filename) { setExpandedManifest(null); return }
+    setExpandedManifest(filename)
+    if (manifests[filename]) return
+    try {
+      const r = await fetch(`/api/backup/manifest/${filename}`)
+      const d = await r.json()
+      setManifests(prev => ({ ...prev, [filename]: d }))
+    } catch {
+      setManifests(prev => ({ ...prev, [filename]: { error: 'Could not read manifest' } }))
+    }
+  }
+
   const handleUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -246,7 +264,7 @@ function BackupManager() {
       setRestoreResult({ ok: false, output: 'Only .tar.gz backup files are accepted.' })
       return
     }
-    if (!confirm(`Restore from "${file.name}"? This will overwrite current workspace, config, and database. The service will restart.`)) {
+    if (!confirm(`Restore from "${file.name}"? This will overlay workspace, config, and reinstall user packages.`)) {
       fileInputRef.current.value = ''
       return
     }
@@ -256,10 +274,7 @@ function BackupManager() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const r = await fetch('/api/backup/restore', {
-        method: 'POST',
-        body: formData,
-      })
+      const r = await fetch('/api/backup/restore', { method: 'POST', body: formData })
       const d = await r.json()
       setRestoreResult(d)
       if (d.ok) loadBackups()
@@ -270,89 +285,130 @@ function BackupManager() {
     fileInputRef.current.value = ''
   }
 
+  const getTier = (name) => {
+    if (name.includes('-full_') || name.includes('-full.')) return 'full'
+    if (name.includes('-core_') || name.includes('-core.')) return 'core'
+    return 'legacy'
+  }
+
+  const tierBadge = (tier) => {
+    const cls = {
+      core: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700',
+      full: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700',
+      legacy: 'bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700',
+    }
+    return <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium uppercase ${cls[tier] || cls.legacy}`}>{tier}</span>
+  }
+
   return (
     <div className="space-y-3">
-      {/* Action buttons */}
       <div className="flex items-center gap-2 flex-wrap">
-        <button onClick={runBackup} disabled={running}
+        <button onClick={() => runBackup('core')} disabled={running}
           className="flex items-center gap-2 text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
-          <Archive size={14} /> {running ? 'Backing up\u2026' : 'Backup Now'}
+          <Archive size={14} /> {running && runningTier === 'core' ? 'Backing up…' : 'Core Backup'}
         </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".tar.gz,.tgz"
-          className="hidden"
-          onChange={handleUpload}
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
-        >
-          {uploading ? (
-            <><Loader2 size={14} className="animate-spin" /> Restoring...</>
-          ) : (
-            <><Upload size={14} /> Restore from File</>
-          )}
+        <button onClick={() => runBackup('full')} disabled={running}
+          className="flex items-center gap-2 text-sm bg-purple-500 hover:bg-purple-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
+          <Archive size={14} /> {running && runningTier === 'full' ? 'Backing up…' : 'Full Backup'}
         </button>
-
+        <input ref={fileInputRef} type="file" accept=".tar.gz,.tgz" className="hidden" onChange={handleUpload} />
+        <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+          className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
+          {uploading ? <><Loader2 size={14} className="animate-spin" /> Restoring...</> : <><Upload size={14} /> Restore from File</>}
+        </button>
         {msg && <span className="text-xs text-gray-500">{msg}</span>}
       </div>
+      <div className="flex gap-4 text-[11px] text-gray-400">
+        <span>Core = config + brain + packages (~1-5 MB)</span>
+        <span>Full = core + media files (~1-10 GB)</span>
+      </div>
 
-      {/* Restore result */}
       {restoreResult && (
-        <div className={`rounded-lg p-3 text-sm ${
-          restoreResult.ok
-            ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40'
-            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40'
-        }`}>
+        <div className={`rounded-lg p-3 text-sm ${restoreResult.ok ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40'}`}>
           <p className={`text-xs font-semibold mb-1 ${restoreResult.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
-            {restoreResult.ok ? 'Restore Complete \u2014 service restarting...' : 'Restore Failed'}
+            {restoreResult.ok ? 'Restore Complete — service restarting...' : 'Restore Failed'}
           </p>
-          <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
-            {restoreResult.output}
-          </pre>
+          {restoreResult.manifest && (
+            <div className="flex gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
+              <span>{restoreResult.manifest.stats?.skills_count || 0} skills</span>
+              <span>{restoreResult.manifest.stats?.memory_days || 0} days memory</span>
+              <span>{restoreResult.manifest.stats?.pip_delta_count || 0} user packages</span>
+            </div>
+          )}
+          {restoreResult.output && (
+            <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed max-h-40 overflow-y-auto">{restoreResult.output}</pre>
+          )}
         </div>
       )}
 
-      {/* Backup list */}
       {backups && (
         <div className="space-y-1.5">
-          <p className="text-xs text-gray-400">
-            {backups.backups?.length || 0} backups {'\u00b7'} {backups.total_size || '0B'} total
-          </p>
+          <p className="text-xs text-gray-400">{backups.backups?.length || 0} backups &middot; {backups.total_size || '0B'} total</p>
           {backups.backups?.length > 0 && (
-            <div className="max-h-56 overflow-y-auto space-y-1">
-              {backups.backups.map(b => (
-                <div key={b.name} className="flex items-center justify-between text-sm p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Archive size={14} className="text-gray-400 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-gray-700 dark:text-gray-300 font-mono text-xs truncate">{b.name}</p>
-                      {b.date && <p className="text-[10px] text-gray-400">{new Date(b.date).toLocaleString()}</p>}
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {backups.backups.map(b => {
+                const tier = getTier(b.name)
+                const manifest = manifests[b.name]
+                const isExpanded = expandedManifest === b.name
+                return (
+                  <div key={b.name} className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div className="flex items-center justify-between text-sm p-2.5">
+                      <button onClick={() => loadManifest(b.name)} className="flex items-center gap-2 min-w-0 text-left hover:opacity-70 transition-opacity">
+                        <Archive size={14} className="text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-gray-700 dark:text-gray-300 font-mono text-xs truncate">{b.name}</p>
+                            {tierBadge(tier)}
+                          </div>
+                          {b.date && <p className="text-[10px] text-gray-400">{new Date(b.date).toLocaleString()}</p>}
+                        </div>
+                      </button>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-gray-400">{b.size}</span>
+                        <a href={`/api/backup/download/${b.name}`} download className="flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 transition-colors px-2 py-1 rounded hover:bg-brand-50 dark:hover:bg-brand-900/20">
+                          <Download size={12} /> Download
+                        </a>
+                        <button onClick={() => deleteBackup(b.name)} className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
+                    {isExpanded && manifest && !manifest.error && (
+                      <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-700">
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="bg-white dark:bg-gray-900 rounded-lg p-2">
+                            <p className="text-gray-400 text-[10px]">Skills</p>
+                            <p className="text-gray-700 dark:text-gray-300 font-semibold">{manifest.stats?.skills_count || 0}</p>
+                          </div>
+                          <div className="bg-white dark:bg-gray-900 rounded-lg p-2">
+                            <p className="text-gray-400 text-[10px]">Memory days</p>
+                            <p className="text-gray-700 dark:text-gray-300 font-semibold">{manifest.stats?.memory_days || 0}</p>
+                          </div>
+                          <div className="bg-white dark:bg-gray-900 rounded-lg p-2">
+                            <p className="text-gray-400 text-[10px]">User packages</p>
+                            <p className="text-gray-700 dark:text-gray-300 font-semibold">{manifest.stats?.pip_delta_count || 0}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {Object.entries(manifest.auth_status || {}).map(([key, val]) => (
+                            <span key={key} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${val === true ? 'border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : val === 'requires_reauth' ? 'border-yellow-300 dark:border-yellow-700 text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' : 'border-gray-200 dark:border-gray-700 text-gray-400'}`}>{key.replace(/_/g, ' ')}</span>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2">v{manifest.kovo_version} &middot; {manifest.hostname} &middot; {manifest.backup_date?.split('T')[0]}</p>
+                      </div>
+                    )}
+                    {isExpanded && manifest?.error && (
+                      <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-700">
+                        <p className="text-xs text-gray-400 italic">Legacy backup — no manifest data</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-gray-400">{b.size}</span>
-                    <a
-                      href={`/api/backup/download/${b.name}`}
-                      download
-                      className="flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 transition-colors px-2 py-1 rounded hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                    >
-                      <Download size={12} /> Download
-                    </a>
-                    <button onClick={() => deleteBackup(b.name)} className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete">
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
           {(!backups.backups || backups.backups.length === 0) && (
-            <p className="text-xs text-gray-400 italic">No backups yet. Click "Backup Now" to create one.</p>
+            <p className="text-xs text-gray-400 italic">No backups yet. Click "Core Backup" to create one.</p>
           )}
         </div>
       )}
