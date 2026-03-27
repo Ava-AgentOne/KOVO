@@ -297,7 +297,10 @@ The router classifies incoming messages and routes them:
 │               ├── Memory.jsx     # Browse/edit workspace files
 │               ├── Skills.jsx     # Skill registry
 │               ├── Heartbeat.jsx  # Schedule + history
-│               └── Logs.jsx       # Real-time log viewer
+│               ├── Logs.jsx       # Real-time log viewer
+│               ├── Security.jsx   # Security audit results + history
+│               ├── Settings.jsx   # YAML config editor + backup manager
+│               └── Setup.jsx      # First-time setup wizard
 ├── config/
 │   ├── settings.yaml          # Main config file
 │   ├── .env                   # Secrets (tokens, API keys)
@@ -313,7 +316,8 @@ The router classifies incoming messages and routes them:
 │   └── backups/               # workspace/ backups from backup.sh (keep: 30 days)
 ├── scripts/
 │   ├── migrate_openclaw.sh    # Copy + patch OpenClaw workspace
-│   └── backup.sh              # Backup workspace to Unraid share
+│   ├── backup.sh              # Two-tier backup (core/full) with manifest
+│   └── restore.sh             # Smart restore with .env merge + package reinstall
 ├── .claude/
 │   └── settings.local.json    # Claude Code sandbox permissions (61 entries)
 ├── tests/
@@ -611,7 +615,7 @@ async def generate_tts_audio(text: str, output_path: str, voice: str = "en-US-Gu
     ], capture_output=True)
     return raw_path
 
-async def call_esam(message: str, urgent: bool = False):
+async def call_owner(message: str, urgent: bool = False):
     """
     Primary: Initiate real Telegram call and play TTS audio
     Fallback: Send voice message via bot if call not answered
@@ -699,11 +703,11 @@ async def check_caller_session_health():
 
 **Re-authentication command:** When the owner sends `/reauth_caller` in Telegram, Kovo triggers the Pyrogram re-auth flow (sends OTP to the prepaid SIM number, the owner enters the code via Telegram).
 
-**Prepaid SIM reminder:** Kovo tracks when the last top-up reminder was sent. Every 80 days it sends: "Reminder: top up your prepaid SIM (xxx-xxxx) to keep the caller account alive. UAE prepaid SIMs expire after 90 days without top-up."
+**Prepaid SIM reminder:** Kovo tracks when the last top-up reminder was sent. Every 80 days it sends: "Reminder: top up your prepaid SIM (xxx-xxxx) to keep the caller account alive. Prepaid SIMs may expire after 90 days without top-up (varies by carrier)."
 
 ### 9. Dashboard (src/dashboard/)
 
-React web UI served on port 3000.
+React web UI served by the gateway on port 8080 at `/dashboard`.
 
 Pages:
 - **Overview**: Main agent + sub-agents panel, status cards, today's activity
@@ -986,6 +990,9 @@ Rewrote `build_system_prompt(user_message)` with pure-Python keyword classifiers
 
 ### Phase 19: Rename + GitHub Install ✅
 KOVO renamed to **Kovo**. `ESAM_TELEGRAM_ID` renamed to `OWNER_TELEGRAM_ID` for generic installs. Bootstrap v4.0 (16 steps) clones source from `github.com/Ava-AgentOne/kovo`, installs Python deps from `requirements.txt`, builds dashboard frontend via npm — no "build with Claude" step needed. Every friend gets identical code, dashboard, and logo. Kovo brand: #378ADD blue alien mascot with antennae and rosy cheeks.
+
+### Phase 20: v0.5 — Backup & Restore, Setup Wizard, Dashboard Polish ✅
+`scripts/backup.sh` v2 — two-tier backups (core ~50KB, full ~3MB+) with manifest.json tracking skills, memory days, packages, auth status. `scripts/restore.sh` — smart .env merge (backup fills blanks, current wins), pip delta reinstall, crontab restore, auth status report. Dashboard backup UI with core/full buttons, tier badges, click-to-expand manifest viewer. Setup wizard enhancements: choice page (new install vs restore), city+timezone auto-detection, Telegram redirect on save, restore success screen with manifest details. CLI bootstrap mascot (15-line ANSI 256-color) with KOVO block letters. Splash screen animations: bounce-in mascot, staggered text timing, dual-direction shooting stars. Full personal data scrub — name, IPs, memory logs removed from public repo. DOCS.md removed (README + CLAUDE.md cover everything).
 
 ## Environment Variables (.env)
 ```
