@@ -192,7 +192,7 @@ def _write_identity(
 
 
 def _write_user(workspace_dir: Path, profile: dict) -> None:
-    """Write USER.md — everything MiniClaw knows about the user."""
+    """Write USER.md — everything Kovo knows about the user."""
     name = profile.get("name") or "Unknown"
     city = profile.get("city") or "Unknown"
     country = profile.get("country") or "Unknown"

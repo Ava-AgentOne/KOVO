@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "MiniClaw online. 🦞\n\n"
+        "Kovo online. 🦞\n\n"
         "*Core*\n"
         "/status — system status\n"
         "/health — live health check\n"

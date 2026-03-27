@@ -38,3 +38,6 @@ data/.storage_state.json
 
 # Runtime security audit data
 data/security/
+
+# Backup archives
+data/backups/

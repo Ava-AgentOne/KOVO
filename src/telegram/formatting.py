@@ -1,6 +1,6 @@
 """
 Telegram formatting helpers — emoji, Unicode progress bars, inline keyboards,
-and the persistent reply keyboard for all MiniClaw command responses.
+and the persistent reply keyboard for all Kovo command responses.
 
 Design rules:
 - 30-35 characters per line max (mobile Telegram width)
@@ -220,7 +220,7 @@ def format_status(
     ol_icon  = "✅" if ollama_ok else "❌"
     ol_text  = "online"   if ollama_ok else "offline"
     return (
-        "🤖 *MiniClaw Status*\n\n"
+        "🤖 *Kovo Status*\n\n"
         f"📡 Gateway: running\n"
         f"{ol_icon} Ollama: {ol_text}\n"
         f"✅ Claude CLI: ready\n"
@@ -316,7 +316,7 @@ def format_skills(skills: list) -> str:
 
 def format_agents(sub_agents: list) -> str:
     """Format /agents showing the main agent + any sub-agents."""
-    lines = ["🤖 *Agents*\n", "Main: *MiniClaw* ✅", "  Tools: all"]
+    lines = ["🤖 *Agents*\n", "Main: *Kovo* ✅", "  Tools: all"]
 
     if sub_agents:
         lines += ["", f"Sub-agents: {len(sub_agents)}"]
