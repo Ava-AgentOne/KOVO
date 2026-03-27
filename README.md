@@ -133,12 +133,13 @@ curl -fsSL https://raw.githubusercontent.com/Ava-AgentOne/kovo/main/bootstrap.sh
 ```
 
 This will:
-1. Clone the repo to `/opt/kovo`
+1. Check your system meets requirements
 2. Install Python 3.13+, Node 22, system dependencies
 3. Create a Python virtual environment with all packages
 4. Build the dashboard frontend
 5. Set up Claude Code permissions
 6. Set up the systemd service
+7. Launch the **Setup Wizard** for easy configuration
 7. Launch the **Setup Wizard** for easy configuration
 7. Launch the **Setup Wizard** for easy configuration
 
@@ -163,132 +164,6 @@ The wizard walks you through everything with step-by-step guides:
 Credentials are saved to `config/.env` on your machine — never transmitted.
 
 > **Prefer manual setup?** Copy `config/.env.template` to `config/.env` and fill in your tokens, then restart: `sudo systemctl restart kovo`
-
-## 📦 Detailed Installation
-
-<details>
-<summary><strong>Step-by-step manual installation</strong></summary>
-
-### 1. System packages
-
-```bash
-sudo apt update && sudo apt install -y \
-  python3.13 python3.13-venv python3-pip \
-  git curl ffmpeg redis-server \
-  clamav chkrootkit rkhunter
-```
-
-### 2. Node.js 22
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-```
-
-### 3. Claude Code CLI
-
-```bash
-npm install -g @anthropic-ai/claude-code
-claude auth login
-```
-
-### 4. Clone and setup
-
-```bash
-sudo git clone https://github.com/Ava-AgentOne/kovo.git /opt/kovo
-cd /opt/kovo
-python3.13 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 5. Dashboard frontend
-
-```bash
-cd src/dashboard/frontend
-npm install && npm run build
-cd /opt/kovo
-```
-
-### 6. Configure
-
-```bash
-cp config/.env.template config/.env
-chmod 600 config/.env
-```
-
-**Option A (recommended):** Use the setup wizard at `http://<IP>:8080/dashboard/setup`
-
-**Option B (manual):** Edit directly with `nano config/.env`
-
-### 7. Systemd service
-
-```bash
-sudo cp systemd/kovo.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now kovo
-```
-
-### 8. Verify
-
-```bash
-sudo systemctl status kovo
-curl http://localhost:8080/api/status
-```
-
-</details>
-
-<details>
-<summary><strong>Setting up a Local LLM (optional)</strong></summary>
-
-KOVO can use any local LLM for cheap tasks (heartbeats, classification). This saves Claude usage for complex work.
-
-### Option A: Ollama
-
-```bash
-# Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Pull a model
-ollama pull llama3.1:8b
-
-# Set in .env
-echo "OLLAMA_HOST=http://localhost:11434" >> /opt/kovo/config/.env
-```
-
-### Option B: LM Studio or other OpenAI-compatible endpoint
-
-Set the endpoint URL in your `.env`:
-
-```env
-OLLAMA_HOST=http://localhost:1234/v1
-```
-
-KOVO uses the `/api/generate` endpoint (Ollama format). Any compatible server works.
-
-</details>
-
-<details>
-<summary><strong>Setting up Telegram Voice Calls (optional)</strong></summary>
-
-For real Telegram voice calls (urgent alerts, wake-up calls):
-
-1. Get a second Telegram account (eSIM or prepaid SIM)
-2. Get API credentials from [my.telegram.org](https://my.telegram.org)
-3. Add to `.env`:
-
-```env
-TELEGRAM_API_ID=your-api-id
-TELEGRAM_API_HASH=your-api-hash
-```
-
-4. Authenticate the userbot:
-
-```bash
-cd /opt/kovo && python -m src.tools.telegram_call --auth
-```
-
-</details>
 
 ## 📱 Telegram Commands
 
