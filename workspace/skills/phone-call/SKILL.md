@@ -14,7 +14,7 @@ trigger: call, voice call, ring, phone, urgent call, speak to me, talk to me, vo
 - **Urgency levels**: Normal (voice message) vs Urgent (attempt call first)
 
 ## When to Use
-- The owner explicitly asks to be called (`/call` command)
+- the owner explicitly asks to be called (`/call` command)
 - Agent marks a notification as URGENT (disk full, service down, security alert)
 - Scheduled wake-up reminders
 

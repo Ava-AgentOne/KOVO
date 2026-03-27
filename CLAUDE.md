@@ -453,7 +453,7 @@ Daily log format:
 # 2026-03-21
 
 ## Session 14:30
-- The owner asked about server health
+- the owner asked about server health
 - Reported disk usage at 78% on cache drive
 - Recommended clearing Docker image cache
 
@@ -581,7 +581,7 @@ Uses tgcalls + Pyrogram userbot for real Telegram calls to the owner. Falls back
 **Use cases:**
 - Urgent server alerts (disk full, container down, array degraded)
 - Agent needs approval for a risky action
-- The owner sends `/call` command in Telegram
+- the owner sends `/call` command in Telegram
 - Scheduled wake-up/reminder calls
 - Any notification marked as "urgent" by the agent
 
