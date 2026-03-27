@@ -131,6 +131,116 @@ function Field({ label, name, value, onChange, placeholder = '', hint = '' }) {
   )
 }
 
+
+// ── INSTALL MODE CHOICE ──────────────────────────────────────────
+function ChoicePage({ onChoice }) {
+  const [restoreFile, setRestoreFile] = useState(null)
+  const [restoring, setRestoring] = useState(false)
+  const [restoreError, setRestoreError] = useState('')
+  const [restoreSuccess, setRestoreSuccess] = useState(false)
+
+  const handleRestore = async () => {
+    if (!restoreFile) return
+    setRestoring(true)
+    setRestoreError('')
+    try {
+      const formData = new FormData()
+      formData.append('file', restoreFile)
+      const r = await fetch('/api/backup/restore', { method: 'POST', body: formData })
+      const d = await r.json()
+      if (!r.ok) setRestoreError(d.detail || 'Restore failed')
+      else setRestoreSuccess(true)
+    } catch (e) {
+      setRestoreError(e.message)
+    }
+    setRestoring(false)
+  }
+
+  if (restoreSuccess) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center space-y-6">
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Backup Restored</h2>
+          <p className="text-gray-500 text-sm">Your workspace and configuration have been restored. Kovo is restarting...</p>
+          <a href="/dashboard/" className="inline-block bg-brand-500 hover:bg-brand-600 text-white font-bold px-8 py-3 rounded-xl transition-all">
+            Go to Dashboard →
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg relative z-10">
+        <div className="flex flex-col items-center gap-2 mb-10">
+          <KovoLogo size={100} animate={true} />
+          <span className="text-2xl font-black text-brand-500 tracking-wide mt-2">KOVO</span>
+        </div>
+
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => onChoice('new')}
+            className="w-full flex items-center gap-5 p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900 hover:border-brand-500/50 hover:shadow-lg hover:shadow-brand-500/5 transition-all duration-300 group text-left"
+          >
+            <div className="w-14 h-14 bg-brand-50 dark:bg-brand-900/20 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+              <svg className="w-7 h-7 text-brand-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">New Installation</p>
+              <p className="text-sm text-gray-400 mt-0.5">Set up Kovo from scratch with the guided wizard</p>
+            </div>
+            <svg className="w-5 h-5 text-gray-300 dark:text-gray-600 ml-auto group-hover:text-brand-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => document.getElementById('restore-panel').classList.toggle('hidden')}
+            className="w-full flex items-center gap-5 p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/5 transition-all duration-300 group text-left"
+          >
+            <div className="w-14 h-14 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+              <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">Restore from Backup</p>
+              <p className="text-sm text-gray-400 mt-0.5">Upload a previous Kovo backup archive to restore</p>
+            </div>
+            <svg className="w-5 h-5 text-gray-300 dark:text-gray-600 ml-auto group-hover:text-amber-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          </button>
+
+          <div id="restore-panel" className="hidden">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 space-y-4 mt-2">
+              <div className="flex items-center gap-3">
+                <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl cursor-pointer hover:border-amber-400 transition-colors">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  <span className="text-sm text-gray-500">{restoreFile ? restoreFile.name : 'Choose backup file (.tar.gz)'}</span>
+                  <input type="file" accept=".tar.gz,.tgz" className="hidden" onChange={e => setRestoreFile(e.target.files[0])} />
+                </label>
+              </div>
+              {restoreError && (
+                <p className="text-sm text-red-500">{restoreError}</p>
+              )}
+              <button
+                onClick={handleRestore}
+                disabled={!restoreFile || restoring}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl disabled:opacity-40 transition-all text-sm"
+              >
+                {restoring ? 'Restoring...' : 'Restore Backup'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-8">Backups include workspace, credentials, and settings</p>
+      </div>
+    </div>
+  )
+}
+
 // ── SPLASH PAGE ──────────────────────────────────────────────────
 function SplashPage({ onStart }) {
   const [showFeatures, setShowFeatures] = useState(false)
@@ -438,6 +548,7 @@ function SavedScreen({ countdown }) {
 // ── MAIN SETUP COMPONENT ─────────────────────────────────────────
 export default function Setup() {
   const [showSplash, setShowSplash] = useState(true)
+  const [showChoice, setShowChoice] = useState(false)
   const [services, setServices] = useState({ google: false, calls: false, groq: false })
   const [form, setForm] = useState({
     telegram_bot_token: '',
@@ -501,7 +612,8 @@ export default function Setup() {
     setSaving(false)
   }
 
-  if (showSplash) return <SplashPage onStart={() => setShowSplash(false)} />
+  if (showSplash) return <SplashPage onStart={() => { setShowSplash(false); setShowChoice(true) }} />
+  if (showChoice) return <ChoicePage onChoice={(mode) => { setShowChoice(false) }} />
   if (saved) return <SavedScreen countdown={countdown} />
 
   return (
