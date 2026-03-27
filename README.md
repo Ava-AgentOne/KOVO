@@ -113,7 +113,6 @@ The built-in web dashboard gives you full visibility into KOVO's state:
 | 📜 **Logs** | Live gateway logs |
 | ⚙️ **Settings** | YAML config editor + environment variables |
 | 🧙 **Setup Wizard** | First-time guided configuration with step-by-step credential guides |
-| 🧙 **Setup Wizard** | First-time guided configuration with step-by-step credential guides |
 
 ## 🚀 Quick Start
 
@@ -121,10 +120,9 @@ The built-in web dashboard gives you full visibility into KOVO's state:
 
 - **Linux VM** — Ubuntu 24.04+, Debian 12+, or similar (tested on Unraid)
 - **4GB+ RAM**, **40GB+ disk**
-- **Claude Code CLI** — installed and authenticated ([install guide](https://docs.anthropic.com/en/docs/claude-code))
-- **Telegram Bot Token** — [create one via @BotFather](https://t.me/BotFather)
-- **Your Telegram User ID** — [find yours via @userinfobot](https://t.me/userinfobot)
-- **Local LLM** *(optional)* — [Ollama](https://ollama.com), [LM Studio](https://lmstudio.ai), or any OpenAI-compatible endpoint
+- **Claude Max** or **Team** subscription — [sign up](https://claude.ai)
+
+> The installer handles everything else — Claude Code CLI, Node.js, Python, and all dependencies. The **Setup Wizard** guides you through creating your Telegram bot, connecting Google Workspace, and setting up voice calls.
 
 ### One-Line Install
 
@@ -139,8 +137,6 @@ This will:
 4. Build the dashboard frontend
 5. Set up Claude Code permissions
 6. Set up the systemd service
-7. Launch the **Setup Wizard** for easy configuration
-7. Launch the **Setup Wizard** for easy configuration
 7. Launch the **Setup Wizard** for easy configuration
 
 ### Configure & Start
@@ -211,18 +207,6 @@ trigger: keyword1, keyword2, keyword3
 
 Instructions for how KOVO should use this skill...
 ```
-
-## ⚙️ Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `TELEGRAM_BOT_TOKEN` | ✅ | Bot token from @BotFather |
-| `OWNER_TELEGRAM_ID` | ✅ | Your Telegram user ID |
-| `OLLAMA_HOST` | ❌ | Local LLM URL (default: `http://localhost:11434`) |
-| `GROQ_API_KEY` | ❌ | Groq cloud API for fast voice transcription |
-| `GITHUB_TOKEN` | ❌ | GitHub access for ClawHub skill marketplace |
-| `TELEGRAM_API_ID` | ❌ | For voice calls (from my.telegram.org) |
-| `TELEGRAM_API_HASH` | ❌ | For voice calls (from my.telegram.org) |
 
 ## 🛡️ Security
 
