@@ -11,7 +11,7 @@ import edge_tts
 import httpx
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-ESAM_ID = os.environ.get("ESAM_TELEGRAM_ID")
+OWNER_ID = os.environ.get("OWNER_TELEGRAM_ID")
 VOICE = "en-US-AriaNeural"
 
 STORY = """
@@ -46,7 +46,7 @@ async def main():
         with open(path, "rb") as f:
             resp = await client.post(
                 f"https://api.telegram.org/bot{BOT_TOKEN}/sendVoice",
-                data={"chat_id": ESAM_ID, "caption": "🦅 *A Short Story from Ava*", "parse_mode": "Markdown"},
+                data={"chat_id": OWNER_ID, "caption": "🦅 *A Short Story from Ava*", "parse_mode": "Markdown"},
                 files={"voice": f},
                 timeout=60,
             )

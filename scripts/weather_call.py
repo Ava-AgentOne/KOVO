@@ -49,12 +49,12 @@ async def main():
     if result.get("method") != "call":
         print("Call not answered — sending voice message fallback...")
         BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-        ESAM_ID = os.environ.get("ESAM_TELEGRAM_ID")
+        OWNER_ID = os.environ.get("OWNER_TELEGRAM_ID")
         async with httpx.AsyncClient() as client:
             with open(AUDIO_PATH, "rb") as f:
                 resp = await client.post(
                     f"https://api.telegram.org/bot{BOT_TOKEN}/sendVoice",
-                    data={"chat_id": ESAM_ID, "caption": "🌤 *Weather Briefing — Al Ain, Tue 24 Mar*\n_(Missed call fallback)_", "parse_mode": "Markdown"},
+                    data={"chat_id": OWNER_ID, "caption": "🌤 *Weather Briefing — Al Ain, Tue 24 Mar*\n_(Missed call fallback)_", "parse_mode": "Markdown"},
                     files={"voice": f},
                     timeout=60,
                 )
