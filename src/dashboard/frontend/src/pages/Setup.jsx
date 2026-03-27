@@ -375,6 +375,15 @@ function CorePage({ form, set }) {
       <Field label="Telegram Bot Token" name="telegram_bot_token" value={form.telegram_bot_token} onChange={set} placeholder="1234567890:AABBCCDDeeffgghh..." />
       <Field label="Your Telegram User ID" name="owner_telegram_id" value={form.owner_telegram_id} onChange={set} placeholder="123456789" />
       <Field label="Webhook URL" name="webhook_url" value={form.webhook_url} onChange={set} placeholder="https://your-domain.com (optional)" hint="Leave empty for polling mode — recommended for home labs" />
+
+      <div className="border-t border-gray-100 dark:border-gray-800 pt-5 mt-5 kovo-fade-up">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Location & Timezone</p>
+        <p className="text-xs text-gray-400 mb-3">Auto-detected from your browser. Kovo uses this for scheduling morning briefings and time-aware responses.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="City" name="city" value={form.city} onChange={set} placeholder="Dubai" />
+          <Field label="Timezone" name="timezone" value={form.timezone} onChange={set} placeholder="Asia/Dubai" />
+        </div>
+      </div>
     </div>
   )
 }
@@ -485,6 +494,8 @@ function ReviewPage({ form, services, error }) {
     { label: 'Bot Token', value: mask(form.telegram_bot_token), ok: !!form.telegram_bot_token },
     { label: 'User ID', value: form.owner_telegram_id || '—', ok: !!form.owner_telegram_id },
     form.webhook_url && { label: 'Webhook', value: form.webhook_url, ok: true },
+    form.city && { label: 'City', value: form.city, ok: true },
+    form.timezone && { label: 'Timezone', value: form.timezone, ok: true },
     services.google && { label: 'Google', value: form.google_credentials_json ? '✓ JSON provided' : '✗ Not set', ok: !!form.google_credentials_json },
     services.calls && { label: 'API ID', value: form.telegram_api_id || '—', ok: !!form.telegram_api_id },
     services.calls && { label: 'API Hash', value: mask(form.telegram_api_hash), ok: !!form.telegram_api_hash },
@@ -516,12 +527,14 @@ function ReviewPage({ form, services, error }) {
 }
 
 // ── SAVED SCREEN ─────────────────────────────────────────────────
-function SavedScreen({ countdown }) {
+function SavedScreen({ countdown, botToken }) {
+  const botUsername = botToken ? botToken.split(':')[0] : ''
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center relative overflow-hidden">
       <FloatingParticles />
       <div className="absolute w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-      <div className="relative z-10 flex flex-col items-center text-center space-y-6 px-6">
+      <div className="relative z-10 flex flex-col items-center text-center space-y-6 px-6 max-w-md">
         <div className="kovo-splash-entrance">
           <KovoLogo size={160} animate={true} />
         </div>
@@ -531,13 +544,30 @@ function SavedScreen({ countdown }) {
         <p className="text-gray-400 text-sm kovo-fade-up" style={{ animationDelay: '0.6s' }}>
           Kovo is restarting with your credentials...
         </p>
-        <div className="kovo-fade-up" style={{ animationDelay: '0.9s' }}>
-          <div className="inline-flex items-center gap-2 bg-gray-800/60 rounded-full px-5 py-2">
+
+        <div className="kovo-fade-up w-full" style={{ animationDelay: '0.9s' }}>
+          <div className="bg-gray-800/60 rounded-2xl p-6 space-y-4">
+            <p className="text-gray-300 text-sm font-medium">Now go say hi to your agent!</p>
+            <a
+              href={`https://t.me/kovo_bot`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-3 w-full bg-[#26A5E4] hover:bg-[#1e96d1] text-white font-bold py-3.5 rounded-xl transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-[#26A5E4]/20"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+              Open Kovo in Telegram
+            </a>
+            <p className="text-gray-500 text-xs">Send any message to start the onboarding conversation</p>
+          </div>
+        </div>
+
+        <div className="kovo-fade-up" style={{ animationDelay: '1.2s' }}>
+          <div className="inline-flex items-center gap-2 bg-gray-800/40 rounded-full px-5 py-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-gray-300 text-sm">Dashboard in {countdown}s</span>
           </div>
         </div>
-        <a href="/dashboard/" className="text-brand-400 hover:text-brand-300 text-sm underline block kovo-fade-up" style={{ animationDelay: '1.2s' }}>
+        <a href="/dashboard/" className="text-brand-400 hover:text-brand-300 text-xs underline block kovo-fade-up" style={{ animationDelay: '1.5s' }}>
           Skip to dashboard →
         </a>
       </div>
@@ -558,7 +588,21 @@ export default function Setup() {
     telegram_api_id: '',
     telegram_api_hash: '',
     groq_api_key: '',
+    city: '',
+    timezone: '',
   })
+
+  // Auto-detect timezone and city
+  useEffect(() => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+    const city = tz.split('/').pop().replace(/_/g, ' ') || ''
+    setForm(f => ({
+      ...f,
+      timezone: f.timezone || tz,
+      city: f.city || city,
+    }))
+  }, [])
+
   const [stepIndex, setStepIndex] = useState(0)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -614,7 +658,7 @@ export default function Setup() {
 
   if (showSplash) return <SplashPage onStart={() => { setShowSplash(false); setShowChoice(true) }} />
   if (showChoice) return <ChoicePage onChoice={(mode) => { setShowChoice(false) }} />
-  if (saved) return <SavedScreen countdown={countdown} />
+  if (saved) return <SavedScreen countdown={countdown} botToken={form.telegram_bot_token} />
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4 relative">
