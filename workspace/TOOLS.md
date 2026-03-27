@@ -27,7 +27,7 @@ tools:
   name: tts
   status: configured
 - config_needed: null
-  description: "Ollama LLM on NUC at 192.168.1.212:11434 \u2014 used for heartbeat checks"
+  description: "Ollama LLM on NUC at <OLLAMA-HOST>:11434 \u2014 used for heartbeat checks"
   install_command: null
   name: ollama
   status: configured
@@ -68,7 +68,7 @@ Agents check this registry before using a tool and notify the owner if a tool is
 - **Workspace**: /opt/kovo/workspace
 
 ## Network Hosts
-- **Ollama**: http://192.168.1.212:11434
+- **Ollama**: http://<OLLAMA-HOST>:11434
 - **Home Assistant**: (configure when ready)
 - **Unraid WebUI**: (configure when ready)
 
