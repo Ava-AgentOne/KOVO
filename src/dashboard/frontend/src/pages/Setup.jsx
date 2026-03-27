@@ -205,7 +205,7 @@ function ChoicePage({ onChoice }) {
       const r = await fetch('/api/backup/restore', { method: 'POST', body: formData })
       const d = await r.json()
       if (!r.ok) setRestoreError(d.detail || 'Restore failed')
-      else setRestoreSuccess(true)
+      else { setRestoreManifest(d.manifest || null); setRestoreSuccess(true) }
     } catch (e) {
       setRestoreError(e.message)
     }
@@ -213,17 +213,70 @@ function ChoicePage({ onChoice }) {
   }
 
   if (restoreSuccess) {
+    const m = restoreManifest
+    const authEntries = m?.auth_status ? Object.entries(m.auth_status) : []
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-        <div className="w-full max-w-md text-center space-y-6">
-          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+        <div className="w-full max-w-lg text-center space-y-6">
+          <div className="kovo-splash-entrance">
+            <KovoLogo size={100} animate={true} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Backup Restored</h2>
-          <p className="text-gray-500 text-sm">Your workspace and configuration have been restored. Kovo is restarting...</p>
-          <a href="/dashboard/" className="inline-block bg-brand-500 hover:bg-brand-600 text-white font-bold px-8 py-3 rounded-xl transition-all">
-            Go to Dashboard →
-          </a>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Backup Restored!</h2>
+
+          {m && m.stats && (
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-brand-500">{m.stats.skills_count || 0}</p>
+                <p className="text-xs text-gray-400">Skills</p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-brand-500">{m.stats.memory_days || 0}</p>
+                <p className="text-xs text-gray-400">Days of memory</p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-brand-500">{m.stats.pip_delta_count || 0}</p>
+                <p className="text-xs text-gray-400">User packages</p>
+              </div>
+            </div>
+          )}
+
+          {authEntries.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800 text-left space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase">Auth status</p>
+              {authEntries.map(([key, val]) => (
+                <div key={key} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400 capitalize">{key.replace(/_/g, ' ')}</span>
+                  {val === true ? (
+                    <span className="text-emerald-500 text-xs font-medium flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      Transferred
+                    </span>
+                  ) : val === 'requires_reauth' ? (
+                    <span className="text-amber-500 text-xs font-medium">Needs re-auth</span>
+                  ) : (
+                    <span className="text-gray-400 text-xs">—</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {(!m || !m.auth_status) && (
+            <p className="text-gray-500 text-sm">Your workspace and configuration have been restored. Kovo is restarting...</p>
+          )}
+
+          <div className="bg-amber-50 dark:bg-amber-900/15 rounded-xl p-3 border border-amber-200 dark:border-amber-700/40 text-left">
+            <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">Next step</p>
+            <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">Run <code className="bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded font-mono text-xs">claude login</code> on the VM to authenticate Claude Code on this machine.</p>
+          </div>
+
+          <div className="flex gap-3 justify-center">
+            <a href="/dashboard/" className="bg-brand-500 hover:bg-brand-600 text-white font-bold px-6 py-2.5 rounded-xl transition-all text-sm">
+              Go to Dashboard →
+            </a>
+          </div>
+
+          {m && <p className="text-[10px] text-gray-400">Restored from v{m.kovo_version} · {m.hostname} · {m.backup_date?.split('T')[0]}</p>}
         </div>
       </div>
     )
