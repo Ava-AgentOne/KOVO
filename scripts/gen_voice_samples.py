@@ -11,7 +11,7 @@ import edge_tts
 import httpx
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-ESAM_ID = os.environ.get("ESAM_TELEGRAM_ID")
+OWNER_ID = os.environ.get("OWNER_TELEGRAM_ID")
 
 TEXT = "Hi the owner! I am Ava, your personal AI assistant. How can I help you today?"
 
@@ -26,7 +26,7 @@ async def main():
     async with httpx.AsyncClient() as client:
         await client.post(
             f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={"chat_id": ESAM_ID, "text": "🎙️ *Voice Samples* — reply with the number you like!\n\nSending 4 samples now...", "parse_mode": "Markdown"}
+            json={"chat_id": OWNER_ID, "text": "🎙️ *Voice Samples* — reply with the number you like!\n\nSending 4 samples now...", "parse_mode": "Markdown"}
         )
 
         for voice, label in VOICES:
@@ -37,7 +37,7 @@ async def main():
             with open(path, "rb") as f:
                 await client.post(
                     f"https://api.telegram.org/bot{BOT_TOKEN}/sendVoice",
-                    data={"chat_id": ESAM_ID, "caption": label, "parse_mode": "Markdown"},
+                    data={"chat_id": OWNER_ID, "caption": label, "parse_mode": "Markdown"},
                     files={"voice": f},
                     timeout=30,
                 )
@@ -45,7 +45,7 @@ async def main():
 
         await client.post(
             f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={"chat_id": ESAM_ID, "text": "Reply with *1, 2, 3, or 4* to set your preferred voice 👆", "parse_mode": "Markdown"}
+            json={"chat_id": OWNER_ID, "text": "Reply with *1, 2, 3, or 4* to set your preferred voice 👆", "parse_mode": "Markdown"}
         )
 
 asyncio.run(main())

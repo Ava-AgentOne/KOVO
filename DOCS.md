@@ -1044,7 +1044,7 @@ sudo systemctl enable --now kovo
 sudo systemctl status kovo
 ```
 
-After migration, update your `.env` file: rename `ESAM_TELEGRAM_ID` → `OWNER_TELEGRAM_ID` and update `config.py` / `settings.yaml` to reference `OWNER_TELEGRAM_ID`.
+After migration, update your `.env` file: rename `OWNER_TELEGRAM_ID` → `OWNER_TELEGRAM_ID` and update `config.py` / `settings.yaml` to reference `OWNER_TELEGRAM_ID`.
 
 ---
 
@@ -1052,7 +1052,7 @@ After migration, update your `.env` file: rename `ESAM_TELEGRAM_ID` → `OWNER_T
 
 ### v0.1 (2026-03-24)
 
-- **Renamed KOVO → Kovo** — new name, new identity. `OWNER_TELEGRAM_ID` replaces `ESAM_TELEGRAM_ID` so every install is generic and friend-ready.
+- **Renamed KOVO → Kovo** — new name, new identity. `OWNER_TELEGRAM_ID` replaces `OWNER_TELEGRAM_ID` so every install is generic and friend-ready.
 - **GitHub-based install** — bootstrap now clones source code from `github.com/Ava-AgentOne/kovo` instead of generating it with Claude Code. Every friend gets the identical codebase, dashboard, and logo. `bootstrap.sh` v4.0 with 16 steps including git clone, requirements.txt install, and dashboard build.
 - **Kovo branding** — Kovo Blue (#378ADD), logo SVGs (square, circle), friendly blue alien mascot with antennae and rosy cheeks. IDENTITY.md template updated.
 - **Migration** — existing `/opt/kovo` installs: rename directory, update service file, rename database. See migration script in `scripts/`.
