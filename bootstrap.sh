@@ -97,40 +97,30 @@ trap trap_handler EXIT
 new_screen() {
     local step=${1:-0} total=8
     clear
-    local LB='\033[38;5;117m'  # light blue (antennae)
-    local KB='\033[38;5;75m'   # kovo blue (body)
-    local WH='\033[38;5;255m'  # white (eyes)
-    local DK='\033[38;5;24m'   # dark navy (pupils)
-    local CH='\033[38;5;216m'  # coral (cheeks)
-    local SM='\033[38;5;153m'  # soft blue (smile)
-    local OR='\033[38;5;208m'  # orange (credit)
-    local GY='\033[38;5;242m'  # gray (version)
+    local LB='\033[38;5;117m'
+    local KB='\033[38;5;75m'
+    local WH='\033[38;5;255m'
+    local DK='\033[38;5;24m'
+    local CH='\033[38;5;216m'
+    local SM='\033[38;5;153m'
+    local OR='\033[38;5;208m'
+    local GY='\033[38;5;242m'
     echo ""
-    echo -e "${LB}            ###${NC}"
-    echo -e "${LB}           ######            ####${NC}"
-    echo -e "${LB}            ###*             ####${NC}"
-    echo -e "${KB}              ++             +++${NC}"
-    echo -e "${KB}              +++           +++${NC}"
-    echo -e "${KB}               +++         +++${NC}"
-    echo -e "${KB}           +++++++++++++++++++++++${NC}"
-    echo -e "${KB}        +++++++++++++++++++++++++++++${NC}"
-    echo -e "${KB}       ++++++++++++++++++++++++++++++++${NC}"
-    echo -e "${KB}      ++++++++++++++++++++++++++++++++++${NC}"
-    echo -e "${KB}     +++++++++++${WH}*${KB}+++++++++++++++++++++++${NC}         ${KB}${BOLD}██╗  ██╗  ██████╗  ██╗   ██╗  ██████╗${NC}"
-    echo -e "${KB}     +++++++${WH}#@@@@@@@*${KB}+++${WH}*@@@@@@@%${KB}+++++++${NC}         ${KB}${BOLD}██║ ██╔╝ ██╔═══██╗ ██║   ██║ ██╔═══██╗${NC}"
-    echo -e "${KB}     ++++++${WH}@@@@@@@@@@%${KB}+${WH}#@@@@@@@@@@${KB}++++++${NC}         ${KB}${BOLD}█████╔╝  ██║   ██║ ██║   ██║ ██║   ██║${NC}"
-    echo -e "${KB}     +++++${WH}@@@@@${DK}::-${WH}@@@@*@@@@*${DK}::*${WH}@@@@${KB}+++++${NC}         ${KB}${BOLD}██╔═██╗  ██║   ██║ ╚██╗ ██╔╝ ██║   ██║${NC}"
-    echo -e "${KB}     +++++${WH}@@@@${DK}-:::-${WH}+${DK}:${WH}=@@@@*${DK}::::==:${WH}%*${KB}++++${NC}         ${KB}${BOLD}██║  ██╗ ╚██████╔╝  ╚████╔╝  ╚██████╔╝${NC}"
-    echo -e "${KB}     +++++${WH}@@@@${DK}-::::::${WH}=*@@@#${DK}:::::::${WH}@${KB}+++++${NC}         ${KB}${BOLD}╚═╝  ╚═╝  ╚═════╝    ╚═══╝    ╚═════╝${NC}"
-    echo -e "${KB}     ++++++${WH}@@@@=${DK}+*::${WH}*%${KB}+${WH}#@@@%${DK}-#-:${WH}-%${KB}++++++${NC}"
-    echo -e "${KB}     ++${CH}****${KB}+${WH}#@@@@@@@*${KB}++++${WH}@@@@@@@%${KB}+${CH}****${KB}++${NC}         ${CYAN}Self-hosted AI agent${NC}"
-    echo -e "${KB}     +${CH}******${KB}++++${WH}*${KB}+++++++++++${WH}*${KB}++++${CH}******${KB}+${NC}         ${GY}v${KOVO_VERSION} · Powered by Claude Code${NC}"
-    echo -e "${KB}     ++++++++++++${SM}%%*${KB}++++++${SM}%%${KB}++++++++++++${NC}         ${GY}GNU AGPLv3${NC}"
-    echo -e "${KB}     +++++++++++++${SM}*%@@@@@%*${KB}+++++++++++++${NC}         ${OR}Created by: Ava-AgentOne${NC}"
-    echo -e "${KB}     +++++++++++++++++++++++++++++++++++${NC}"
-    echo -e "${KB}      +++++++++++++++++++++++++++++++++${NC}"
-    echo -e "${KB}       +++++++++++++++++++++++++++++++${NC}"
-    echo -e "${KB}         +++++++++++++++++++++++++++${NC}"
+    echo -e "${LB}       ##*${NC}"
+    echo -e "${LB}       ###       ###${NC}"
+    echo -e "${KB}        ++       ++${NC}"
+    echo -e "${KB}         ++     ++${NC}"
+    echo -e "${KB}     +++++++++++++++++${NC}"
+    echo -e "${KB}   +++++++++++++++++++++${NC}       ${KB}${BOLD}██╗  ██╗  ██████╗  ██╗   ██╗  ██████╗${NC}"
+    echo -e "${KB}   +++++${WH}*##*${KB}+++${WH}*##*${KB}+++++${NC}       ${KB}${BOLD}██║ ██╔╝ ██╔═══██╗ ██║   ██║ ██╔═══██╗${NC}"
+    echo -e "${KB}   +++${WH}#@@@@@@${KB}+${WH}@@@@@@%${KB}+++${NC}       ${KB}${BOLD}█████╔╝  ██║   ██║ ██║   ██║ ██║   ██║${NC}"
+    echo -e "${KB}   +++${WH}%@${DK}*:-*${WH}+@@@${DK}-:=${WH}*${KB}++++${NC}       ${KB}${BOLD}██╔═██╗  ██║   ██║ ╚██╗ ██╔╝ ██║   ██║${NC}"
+    echo -e "${KB}   +++${WH}%@#${DK}:+:${WH}-%@@${DK}==-:${KB}++++${NC}       ${KB}${BOLD}██║  ██╗ ╚██████╔╝  ╚████╔╝  ╚██████╔╝${NC}"
+    echo -e "${KB}   +${CH}****${WH}@@@%${KB}+++${WH}%@@@${CH}****${KB}+${NC}       ${KB}${BOLD}╚═╝  ╚═╝  ╚═════╝    ╚═══╝    ╚═════╝${NC}"
+    echo -e "${KB}   +++++++${WH}**${KB}+++${WH}*#${KB}+++++++${NC}"
+    echo -e "${KB}   +++++++++${SM}###${KB}+++++++++${NC}       ${CYAN}Self-hosted AI agent${NC}"
+    echo -e "${KB}   +++++++++++++++++++++${NC}       ${GY}v${KOVO_VERSION} · Powered by Claude Code · GNU AGPLv3${NC}"
+    echo -e "${KB}     +++++++++++++++++${NC}         ${OR}Created by: Ava-AgentOne${NC}"
     echo ""
     if (( step > 0 )); then
         local dots="   "
@@ -140,9 +130,6 @@ new_screen() {
             else dots+="${GRAY}○${NC} "; fi
         done
         echo -e "$dots"
-    else
-        echo -e "  ${BOLD}${WHITE}Self-Hosted AI Agent${NC}  ${GRAY}v${INSTALLER_VERSION} installer${NC}"
-        echo -e "  ${DIM}Powered by Claude Code · GNU AGPLv3${NC}"
     fi
     echo ""
 }
