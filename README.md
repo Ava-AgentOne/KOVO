@@ -138,35 +138,27 @@ This will:
 5. Set up Claude Code permissions
 6. Set up the systemd service
 
-### Configure
-
-```bash
-cd /opt/kovo/config
-cp .env.example .env
-nano .env
-```
-
-Fill in your credentials:
-
-```env
-# Required
-TELEGRAM_BOT_TOKEN=your-bot-token
-OWNER_TELEGRAM_ID=your-telegram-id
-
-# Optional — local LLM for cheap tasks
-OLLAMA_HOST=http://localhost:11434
-
-# Optional — Groq for fast voice transcription
-GROQ_API_KEY=your-groq-key
-```
-
-### Start
+### Configure & Start
 
 ```bash
 sudo systemctl enable --now kovo
 ```
 
-Open the dashboard at `http://<YOUR-VM-IP>:8080/dashboard`
+Open the **Setup Wizard** in your browser:
+
+```
+http://<YOUR-VM-IP>:8080/dashboard/setup
+```
+
+The wizard walks you through everything with step-by-step guides:
+- **Telegram** — bot token + your user ID (with links to @BotFather and @userinfobot)
+- **Google Workspace** — which APIs to enable, with direct links to each one
+- **Voice Calls** — clear 3-account explanation (your main account, the bot, the caller)
+- **Groq Transcription** — free tier setup at console.groq.com
+
+Credentials are saved to `config/.env` on your machine — never transmitted.
+
+> **Prefer manual setup?** Copy `config/.env.template` to `config/.env` and fill in your tokens, then restart: `sudo systemctl restart kovo`
 
 ## 📦 Detailed Installation
 
