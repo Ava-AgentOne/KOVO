@@ -1,5 +1,5 @@
 """
-SQLite structured storage for MiniClaw.
+SQLite structured storage for Kovo.
 WAL mode, 4 system tables: memories, heartbeat_log, permission_log, conversation_stats.
 Natural language SELECT-only queries via Claude haiku.
 """
@@ -14,7 +14,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 _DUBAI_TZ = timezone(timedelta(hours=4))
-_DB_PATH = Path("/opt/kovo/data/miniclaw.db")
+_DB_PATH = Path("/opt/kovo/data/kovo.db")
 
 _SCHEMA = """\
 PRAGMA journal_mode=WAL;

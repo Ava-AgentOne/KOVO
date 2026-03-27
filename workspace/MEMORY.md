@@ -12,7 +12,7 @@
 
 ## System Knowledge
 - Ollama runs on NUC at 10.0.1.212:11434 with llama3.1:8b
-- MiniClaw VM is on Unraid with 8GB RAM, 50GB disk
+- Kovo VM is on Unraid with 8GB RAM, 50GB disk
 - Esam previously used OpenClaw and wants the same experience at lower cost
 - PyTorch runs in CPU-only mode (no GPU in VM)
 
@@ -20,10 +20,10 @@
 ## 2026-03-22
 Here are 3-5 key learnings from today's log:
 
-* The user is interacting with a chatbot or AI assistant named MiniClaw, which responds to the user's queries using the Miniclaw model and Claude/Sonnet agent.
-* The user has asked MiniClaw to call them on Telegram, but MiniClaw does not recognize this command as a valid skill (Session 10:48-10:55).
-* MiniClaw is able to provide information about disk space usage on the system, including a formatted report with emojis (Sessions 12:09 and 12:11).
-* The user has asked MiniClaw to use more creative and visually appealing responses in Telegram, which MiniClaw is willing to do (Session 12:11).
+* The user is interacting with a chatbot or AI assistant named Kovo, which responds to the user's queries using the Miniclaw model and Claude/Sonnet agent.
+* The user has asked Kovo to call them on Telegram, but Kovo does not recognize this command as a valid skill (Session 10:48-10:55).
+* Kovo is able to provide information about disk space usage on the system, including a formatted report with emojis (Sessions 12:09 and 12:11).
+* The user has asked Kovo to use more creative and visually appealing responses in Telegram, which Kovo is willing to do (Session 12:11).
 
 
 ## 2026-03-22
@@ -33,9 +33,9 @@ Here are today's key learnings from the log:
 
 - 📢 **Reply format rule established** — Every reply must include **both** voice 🔊 + text 📝, always. Initially misinterpreted as "voice messages only need text," then clarified to mean *all* replies
 
-- 🖼️ **Image capability confirmed** — MiniClaw *can* send images to Telegram by: searching the web → downloading to VM → using `bot.send_photo()`. Sandbox was blocking it at the time, but the path is viable
+- 🖼️ **Image capability confirmed** — Kovo *can* send images to Telegram by: searching the web → downloading to VM → using `bot.send_photo()`. Sandbox was blocking it at the time, but the path is viable
 
-- ⚠️ **Bot code needs updating** — The voice+text-on-every-reply behaviour requires a code change to the MiniClaw bot handler; memory/preferences alone won't enforce it automatically
+- ⚠️ **Bot code needs updating** — The voice+text-on-every-reply behaviour requires a code change to the Kovo bot handler; memory/preferences alone won't enforce it automatically
 
 - 💥 **Error at 13:24** — `claude -p` exited with code 143 (SIGTERM / timeout kill), causing a failed session. Worth monitoring for recurrence
 

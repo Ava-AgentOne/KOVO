@@ -1,6 +1,6 @@
 """
 StorageManager — disk usage monitoring, automated garbage collection, and
-user-approval cleanup for the MiniClaw data directory.
+user-approval cleanup for the Kovo data directory.
 
 Directory tiers:
   Tier 1 (auto-purge, no approval): tmp (1d), audio (7d), screenshots (7d)

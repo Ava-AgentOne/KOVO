@@ -11,7 +11,7 @@
 - Unraid server (main) — runs Docker containers, VMs
 - Intel NUC at 10.0.1.212 — runs Ollama (llama3.1:8b)
 - Home Assistant instance
-- MiniClaw VM at 10.0.1.XX — this machine
+- Kovo VM at 10.0.1.XX — this machine
 
 ## Contact
 - Email: REDACTED_EMAIL

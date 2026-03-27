@@ -52,7 +52,7 @@ tools:
 
 # Tool Registry
 
-This file tracks all tools available to MiniClaw and its sub-agents.
+This file tracks all tools available to Kovo and its sub-agents.
 Agents check this registry before using a tool and notify Esam if a tool is missing or unconfigured.
 
 ## Status Values
@@ -63,9 +63,9 @@ Agents check this registry before using a tool and notify Esam if a tool is miss
 
 ## Environment
 - **OS**: Ubuntu 25.10 (Questing) — VM on Unraid (8GB RAM, 50GB disk)
-- **Python**: 3.13 (venv at /opt/miniclaw/venv)
+- **Python**: 3.13 (venv at /opt/kovo/venv)
 - **Node**: 22+ (system install)
-- **Workspace**: /opt/miniclaw/workspace
+- **Workspace**: /opt/kovo/workspace
 
 ## Network Hosts
 - **Ollama**: http://10.0.1.212:11434

@@ -27,7 +27,7 @@ _INPUT_CAP = 3200
 _MEMORY_BUDGET = 500
 
 _EXTRACTION_PROMPT = """\
-You are MiniClaw's memory extractor. Read the conversation log below and extract \
+You are Kovo's memory extractor. Read the conversation log below and extract \
 the most important facts, preferences, and learnings about Esam and his projects.
 
 Rules:

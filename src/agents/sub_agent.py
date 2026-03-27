@@ -6,7 +6,7 @@ Each sub-agent has:
   workspace/agents/{name}/tools.yaml   — list of tool names
   workspace/agents/{name}/memory/      — sub-agent's own memory
 
-The main agent (MiniClaw) delegates to sub-agents and summarises results.
+The main agent (Kovo) delegates to sub-agents and summarises results.
 """
 from __future__ import annotations
 
@@ -145,7 +145,7 @@ class SubAgentRunner:
 
         # Remove the "no sub-agents" placeholder if present
         content = content.replace(
-            "*No sub-agents yet. MiniClaw will recommend one when it notices repeated specialised requests.*",
+            "*No sub-agents yet. Kovo will recommend one when it notices repeated specialised requests.*",
             "",
         )
 
@@ -211,7 +211,7 @@ class SubAgentRunner:
             f"{agent.soul}\n\n"
             f"## Your Tools\n{tools_block}\n\n"
             f"## Instructions\n"
-            f"You are a specialised sub-agent of MiniClaw. "
+            f"You are a specialised sub-agent of Kovo. "
             f"Handle this request and return a clear, direct answer."
         )
 
