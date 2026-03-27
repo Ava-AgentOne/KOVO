@@ -150,16 +150,16 @@ function SplashPage({ onStart }) {
         </div>
 
         {/* Title */}
-        <h1 className="text-5xl font-black text-white tracking-tight kovo-fade-up" style={{ animationDelay: '0.6s' }}>
+        <h1 className="text-5xl font-black text-white tracking-tight kovo-fade-up" style={{ animationDelay: '1.8s' }}>
           <span className="text-brand-400">KOVO</span>
         </h1>
 
         {/* Typing subtitle */}
-        <p className="text-lg text-gray-300 mt-4 kovo-fade-up" style={{ animationDelay: '1s' }}>
+        <p className="text-lg text-gray-300 mt-4 kovo-fade-up" style={{ animationDelay: '2.2s' }}>
           <TypeWriter
             text="Your self-hosted AI agent, ready to set up."
             speed={30}
-            delay={1200}
+            delay={2800}
             onDone={() => { setTimeout(() => setShowFeatures(true), 300); setTimeout(() => setShowButton(true), 800) }}
           />
         </p>
