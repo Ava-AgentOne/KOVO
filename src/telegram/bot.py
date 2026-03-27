@@ -1,5 +1,5 @@
 """
-Telegram bot — receives messages, routes through MiniClaw (single main agent), replies.
+Telegram bot — receives messages, routes through Kovo (single main agent), replies.
 """
 import asyncio
 import logging
@@ -358,7 +358,7 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         response_text = result.get("text", "(no response)")
         model_used = result.get("model_used", "?")
-        agent_used = result.get("agent", "miniclaw")
+        agent_used = result.get("agent", "kovo")
         log.info("user=%s agent=%s model=%s len=%d", user_id, agent_used, model_used, len(response_text))
 
         # Handle any [SEND_IMAGE: ...] tags before sending text
