@@ -85,12 +85,45 @@ body {
   animation: blinkLine 4s ease-in-out infinite;
 }
 
+
+/* Shooting star streak */
+@keyframes shootingStar {
+  0%   { transform: rotate(var(--angle)) translateX(0); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: rotate(var(--angle)) translateX(-300px); opacity: 0; }
+}
+
+.kovo-shooting-star {
+  position: absolute;
+  width: 80px;
+  height: var(--size, 1.5px);
+  background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.1), transparent);
+  border-radius: 50px;
+  animation: shootingStar var(--duration, 0.8s) linear forwards;
+}
+
+/* Planet float — gentle drift */
+@keyframes planetFloat {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(6px, -8px); }
+  50%      { transform: translate(-4px, -14px); }
+  75%      { transform: translate(8px, -6px); }
+}
+
+.kovo-planet {
+  position: absolute;
+  border-radius: 50%;
+  animation: planetFloat 12s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kovo-logo { animation: none; }
   .kovo-antenna-glow { animation: none; }
   .kovo-pupil { animation: none; }
   .kovo-eye { animation: none; }
   .kovo-blink-line { animation: none; }
+  .kovo-shooting-star { animation: none; }
+  .kovo-planet { animation: none; }
 }
 
 /* ── Setup Wizard Animations ──────────────────────────────────── */
