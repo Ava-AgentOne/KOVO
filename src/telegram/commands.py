@@ -358,7 +358,7 @@ async def cmd_call(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not text:
         await update.message.reply_text(
             "Usage: `/call <message to speak>`\n"
-            "Example: `/call Hey Esam, the disk is almost full!`",
+            "Example: `/call Hey the owner, the disk is almost full!`",
             parse_mode="Markdown",
         )
         return

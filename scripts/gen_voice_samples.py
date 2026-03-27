@@ -13,7 +13,7 @@ import httpx
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 ESAM_ID = os.environ.get("ESAM_TELEGRAM_ID")
 
-TEXT = "Hi Esam! I am Ava, your personal AI assistant. How can I help you today?"
+TEXT = "Hi the owner! I am Ava, your personal AI assistant. How can I help you today?"
 
 VOICES = [
     ("en-US-JennyNeural",   "1️⃣ Jenny — 🇺🇸 Friendly & warm"),

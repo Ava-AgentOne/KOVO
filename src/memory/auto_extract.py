@@ -28,11 +28,11 @@ _MEMORY_BUDGET = 500
 
 _EXTRACTION_PROMPT = """\
 You are Kovo's memory extractor. Read the conversation log below and extract \
-the most important facts, preferences, and learnings about Esam and his projects.
+the most important facts, preferences, and learnings about the owner and his projects.
 
 Rules:
 - Extract 3-8 bullet points maximum
-- Each bullet: concise, specific, factual (not vague like "Esam likes good code")
+- Each bullet: concise, specific, factual (not vague like "the owner likes good code")
 - Focus on: preferences, decisions, project facts, recurring topics, things to remember
 - Skip: routine exchanges, errors already fixed, system metrics, transient info
 - Do NOT extract timestamps, permission grants, or trivial chat

@@ -10,7 +10,7 @@ Turn loop (repeats until call ends or idle timeout):
 Call-to-Task (after hang-up):
   - Full transcript → Claude extracts action items
   - Each task executed via agent.handle()
-  - Progress updates sent to Esam via tg_bot
+  - Progress updates sent to the owner via tg_bot
 """
 from __future__ import annotations
 

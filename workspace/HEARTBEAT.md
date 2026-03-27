@@ -16,4 +16,4 @@
 - [ ] System overnight health summary
 
 ## Every 80 Days
-- [ ] Remind Esam to top up prepaid SIM for caller account
+- [ ] Remind the owner to top up prepaid SIM for caller account

@@ -84,7 +84,7 @@ You (Telegram)  ←→  Web Dashboard
 
 **Key design choice:** One agent handles everything. Kovo only loads the context relevant to your message — not everything every time. This saves 60–90% of system prompt tokens on routine messages. Sub-agents are created only when you explicitly approve them.
 
-**Ollama** (on a NUC at `10.0.1.212:11434`) handles heartbeat health checks only. All your messages go to Claude.
+**Ollama** (on a NUC at `<OLLAMA-HOST>:11434`) handles heartbeat health checks only. All your messages go to Claude.
 
 ---
 
@@ -483,7 +483,7 @@ Kovo can place real Telegram voice calls using a second Telegram account (userbo
 
 **Usage:**
 ```
-/call Hey Esam, the disk is almost full!
+/call Hey the owner, the disk is almost full!
 ```
 
 Or send any message marked as urgent — the agent decides when to call.
@@ -869,7 +869,7 @@ Make sure `CLAUDE_CODE_OAUTH_TOKEN` is set in `.env`.
 This is non-fatal — heartbeat reports will be skipped but the bot still works.
 
 ```bash
-curl http://10.0.1.212:11434/api/version
+curl http://<OLLAMA-HOST>:11434/api/version
 ```
 
 If unreachable, Ollama is offline or the NUC is down. Kovo will send a warning and skip the summary.

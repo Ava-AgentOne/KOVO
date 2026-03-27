@@ -21,7 +21,7 @@ class HeartbeatReporter:
         self._store = structured_store
 
     async def send(self, text: str, parse_mode: str = "Markdown") -> None:
-        """Send a message to Esam. Splits if >4096 chars."""
+        """Send a message to the owner. Splits if >4096 chars."""
         if not text:
             return
         try:

@@ -13,7 +13,7 @@ AUDIO_PATH = "/opt/kovo/data/audio/weather_briefing.mp3"
 VOICE = "en-US-GuyNeural"
 
 BRIEFING = (
-    "Good morning Esam. Here is your weather briefing for Al Ain, Tuesday March 24th. "
+    "Good morning the owner. Here is your weather briefing for Al Ain, Tuesday March 24th. "
     "Currently: Partly cloudy, 27 degrees Celsius, humidity at 48 percent, "
     "northerly winds at 30 kilometres per hour. UV index is 6, "
     "so sunscreen is recommended if you are heading outside. "

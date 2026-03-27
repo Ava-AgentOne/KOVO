@@ -766,7 +766,7 @@
         <span class="status-badge badge-green">Healthy</span>
       </div>
       <h1 class="report-title">Kovo Health Report</h1>
-      <p class="report-subtitle">kovo &middot; 10.0.1.133 &middot; Tuesday, 25 March 2026 &middot; 08:00 GST</p>
+      <p class="report-subtitle">kovo &middot; <YOUR-VM-IP> &middot; Tuesday, 25 March 2026 &middot; 08:00 GST</p>
     </header>
 
     <!-- ══════════════════════════════════════════════════════════
@@ -844,7 +844,7 @@
         </div>
         <div class="info-item">
           <div class="info-item-key">IP Address</div>
-          <div class="info-item-value">10.0.1.133</div>
+          <div class="info-item-value"><YOUR-VM-IP></div>
         </div>
         <div class="info-item">
           <div class="info-item-key">OS</div>
@@ -856,7 +856,7 @@
         </div>
         <div class="info-item">
           <div class="info-item-key">Ollama</div>
-          <div class="info-item-value">10.0.1.212:11434</div>
+          <div class="info-item-value"><OLLAMA-HOST>:11434</div>
         </div>
         <div class="info-item">
           <div class="info-item-key">Load (1m/5m/15m)</div>
@@ -1040,7 +1040,7 @@
         <div class="list-row">
           <div>
             <div class="list-row-label">Ollama NUC</div>
-            <div class="list-row-sub">10.0.1.212:11434</div>
+            <div class="list-row-sub"><OLLAMA-HOST>:11434</div>
           </div>
           <span class="pill pill-yellow">Unreachable</span>
         </div>
@@ -1250,7 +1250,7 @@
           <div class="timeline-content">
             <div class="timeline-time">Yesterday &middot; 18:32 GST</div>
             <div class="timeline-title">Ollama connectivity lost</div>
-            <div class="timeline-body">NUC at 10.0.1.212 unreachable &mdash; heartbeat health checks skipped. Non-fatal.</div>
+            <div class="timeline-body">NUC at <OLLAMA-HOST> unreachable &mdash; heartbeat health checks skipped. Non-fatal.</div>
           </div>
         </div>
 
@@ -1325,7 +1325,7 @@
           <div class="rec-number" style="--rec-bg:var(--yellow-dim); --rec-color:var(--yellow)">1</div>
           <div class="rec-content">
             <div class="rec-title">Restore Ollama connectivity</div>
-            <div class="rec-body">NUC at 10.0.1.212 has been unreachable for 14 hours. Heartbeat health checks and model routing are degraded. Check NUC power and network.</div>
+            <div class="rec-body">NUC at <OLLAMA-HOST> has been unreachable for 14 hours. Heartbeat health checks and model routing are degraded. Check NUC power and network.</div>
           </div>
           <span class="rec-priority pill pill-yellow">Medium</span>
         </div>

@@ -252,6 +252,6 @@ class SubAgentRunner:
             lines.append(f"- **{a.name}**: {a.purpose} (tools: {tools_str})")
         lines.append(
             "\nDelegate to sub-agents when their specialisation matches the request. "
-            "Summarise their results for Esam."
+            "Summarise their results for the owner."
         )
         return "\n".join(lines)

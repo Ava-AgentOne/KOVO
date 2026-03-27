@@ -2,7 +2,7 @@
 
 This file lists all active sub-agents created by Kovo.
 The main agent (Kovo) handles everything by default.
-Sub-agents are created on demand when Esam approves a recommendation.
+Sub-agents are created on demand when the owner approves a recommendation.
 
 ## Main Agent
 - **Name**: Kovo
@@ -25,9 +25,9 @@ Format:
 *No sub-agents yet. Kovo will recommend one when it notices repeated specialised requests.*
 
 ## Sub-Agent Creation Flow
-1. Kovo notices Esam repeatedly asks for a specific type of job
+1. Kovo notices the owner repeatedly asks for a specific type of job
 2. Kovo recommends creating a sub-agent via Telegram message
-3. Esam replies "yes" or "/create_agent {name}"
+3. the owner replies "yes" or "/create_agent {name}"
 4. Kovo creates workspace/agents/{name}/ with SOUL.md, tools.yaml, memory/
 5. Kovo registers it in this file
 6. Sub-agent is live — Kovo delegates to it and summarises results

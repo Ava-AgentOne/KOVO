@@ -75,7 +75,7 @@ def _log_permission_grant(pattern: str) -> None:
         today = datetime.now(_DUBAI_TZ).strftime("%Y-%m-%d")
         timestamp = datetime.now(_DUBAI_TZ).strftime("%H:%M")
         log_file = _MEMORY_DIR / f"{today}.md"
-        entry = f"\n- [{timestamp}] 🔑 Permission granted by Esam: `{pattern}`\n"
+        entry = f"\n- [{timestamp}] 🔑 Permission granted by the owner: `{pattern}`\n"
         with open(log_file, "a") as f:
             f.write(entry)
     except Exception as e:

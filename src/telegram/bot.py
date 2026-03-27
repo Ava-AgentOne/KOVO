@@ -220,7 +220,7 @@ async def _handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             except Exception as e:
                 log.error("TTS/voice reply failed: %s", e)
 
-        # Always send text too — voice + text together (Esam's preference)
+        # Always send text too — voice + text together (the owner's preference)
         for i in range(0, max(len(response_text), 1), 4096):
             chunk = response_text[i : i + 4096]
             if chunk:
@@ -267,14 +267,14 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         message_text = _extract_text(msg)
 
-        # When Esam uses Telegram's reply/quote feature, include the quoted
+        # When the owner uses Telegram's reply/quote feature, include the quoted
         # message as context so the agent knows what's being referred to.
         reply = msg.reply_to_message
         if reply is not None:
             quoted_text = _extract_text(reply)
             if quoted_text:
                 if message_text:
-                    # Prepend quoted context to Esam's reply
+                    # Prepend quoted context to the owner's reply
                     message_text = f'[Quoting: "{quoted_text[:400]}"]\n{message_text}'
                 else:
                     # Replied with no new text — treat the quoted text as the message

@@ -27,4 +27,4 @@ Follow SOUL.md: direct, concise, results-oriented. No fluff.
 
 ## Memory
 Log significant learnings and decisions to the daily log.
-When Esam shares important preferences or facts, note them.
+When the owner shares important preferences or facts, note them.

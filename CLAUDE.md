@@ -6,7 +6,7 @@
 
 Kovo is a self-hosted personal AI agent inspired by OpenClaw and GoBot. It runs on an Ubuntu 25.10 (Questing) VM (8GB RAM, 50GB disk) on an Unraid server. It uses the **Claude Code CLI as a subprocess** (`claude -p`) for complex tasks and **Ollama** (running on a NUC — see `ollama.url` in settings.yaml) for cheap/simple tasks like heartbeats and quick answers.
 
-The owner's name is Esam. He is based in Al Ain, UAE.
+The owner's name is the owner. He is based in Al Ain, UAE.
 
 ## System Requirements (already installed by bootstrap.sh)
 - **OS**: Ubuntu 25.10 (Questing)
@@ -14,7 +14,7 @@ The owner's name is Esam. He is based in Al Ain, UAE.
 - **Node.js**: 22+ (installed via NodeSource — includes npm, do NOT install Ubuntu's `npm` package separately as it conflicts)
 - **PyTorch**: CPU-only (no GPU in VM — always use `--index-url https://download.pytorch.org/whl/cpu`)
 - **Whisper**: Installed with `--no-deps` to avoid pulling GPU triton dependency
-- **Claude Code**: Installed globally via npm, authenticated with Esam's Max subscription
+- **Claude Code**: Installed globally via npm, authenticated with the owner's Max subscription
 - **Venv**: All Python packages in `/opt/kovo/venv` (never install system-wide)
 
 **bootstrap.sh v4.0** additionally creates:
@@ -31,13 +31,13 @@ Telegram Bot  ←→  Dashboard Chat (WebSocket)
       ▼                    ▼
 Gateway (Python FastAPI)
       │
-      ├── Kovo — Main Agent (the ONLY agent Esam talks to)
+      ├── Kovo — Main Agent (the ONLY agent the owner talks to)
       │     ├── Smart context loading: always SOUL+USER+IDENTITY, rest on-demand
       │     ├── Access to ALL tools (shell, browser, google_api, ...)
       │     ├── Delegates to sub-agents when available
       │     └── Recommends new sub-agents on repeated patterns
       │
-      ├── Sub-Agents (on-demand, created by Kovo with Esam's approval)
+      ├── Sub-Agents (on-demand, created by Kovo with the owner's approval)
       │     └── workspace/agents/{name}/SOUL.md + tools.yaml + memory/
       │
       ├── Tool Registry (workspace/TOOLS.md)
@@ -86,11 +86,11 @@ Gateway (Python FastAPI)
 - Zero token cost for classification — pure Python string matching
 
 ### Tools vs Skills
-- **Tools** = installed capabilities (shell, browser, google_api, etc.). Tracked in `workspace/TOOLS.md` with status. When a tool is missing, Kovo tells Esam what's needed.
+- **Tools** = installed capabilities (shell, browser, google_api, etc.). Tracked in `workspace/TOOLS.md` with status. When a tool is missing, Kovo tells the owner what's needed.
 - **Skills** = procedures and knowledge (SKILL.md format). Describe *how* to do things, not *what can be done*.
 
 ### Sub-Agents (On-Demand)
-- Sub-agents are created only when Esam approves a recommendation.
+- Sub-agents are created only when the owner approves a recommendation.
 - Each sub-agent lives in `workspace/agents/{name}/` with its own SOUL.md, tools.yaml, memory/.
 - Kovo delegates to sub-agents when appropriate and summarises results.
 - Kovo recommends a sub-agent after `_PATTERN_THRESHOLD` (5) repeated topic queries.
@@ -129,7 +129,7 @@ The file lives at `/opt/kovo/.claude/settings.local.json` and contains an `allow
 When the agent (via `claude -p`) encounters a command blocked by the sandbox:
 1. `src/tools/claude_cli.py` detects the permission error in stderr
 2. Extracts the base command and builds a pattern (e.g., `Bash(docker *)`)
-3. Sends a Telegram message asking Esam to approve
+3. Sends a Telegram message asking the owner to approve
 4. On `/approve`: updates `.claude/settings.local.json`, retries the command
 5. On `/deny`: skips and suggests an alternative
 
@@ -141,7 +141,7 @@ Every grant is logged to daily memory.
 **Commands:** `/permissions` (view list), `/approve`, `/deny`
 
 ### Claude Code Subprocess (NOT API)
-Kovo uses Esam's Claude Max subscription through the official Claude Code CLI. This is the GoBot approach and stays within Anthropic's terms of service.
+Kovo uses the owner's Claude Max subscription through the official Claude Code CLI. This is the GoBot approach and stays within Anthropic's terms of service.
 
 ```python
 import subprocess, json
@@ -196,7 +196,7 @@ The router classifies incoming messages and routes them:
 /opt/kovo/workspace/
 ├── SOUL.md              # Kovo's persona, values, boundaries
 ├── AGENTS.md            # Sub-agent registry (main agent + all sub-agents)
-├── USER.md              # Esam's profile, preferences
+├── USER.md              # the owner's profile, preferences
 ├── IDENTITY.md          # Agent name, emoji, avatar
 ├── TOOLS.md             # Tool registry (YAML frontmatter + human notes)
 ├── HEARTBEAT.md         # Periodic task checklist
@@ -349,7 +349,7 @@ Features:
 - Voice messages → transcribe with Whisper
 - Commands: `/status`, `/tools`, `/agents`, `/health`, `/skills`, `/memory`, `/call`, `/storage`, `/purge`, `/permissions`, `/approve`, `/deny`
 - Markdown formatting for responses
-- Only responds to Esam (allowlist by Telegram user ID)
+- Only responds to the owner (allowlist by Telegram user ID)
 
 Key commands:
 - `/tools` — show tool registry with install/config status
@@ -453,7 +453,7 @@ Daily log format:
 # 2026-03-21
 
 ## Session 14:30
-- Esam asked about server health
+- the owner asked about server health
 - Reported disk usage at 78% on cache drive
 - Recommended clearing Docker image cache
 
@@ -517,13 +517,13 @@ Default schedule (configurable in HEARTBEAT.md):
 | Sunday 3 AM | **Storage review** | Scan Tier 2 files, notify if old files found |
 | Sunday 3:30 AM | **Memory budget** | Archive MEMORY.md if >500 lines |
 | Sunday 7 AM | **Security audit** | Full VM security scan, baseline comparison, call on suspicious activity |
-| Every 80 days | **SIM top-up** | Remind Esam to top up prepaid SIM |
+| Every 80 days | **SIM top-up** | Remind the owner to top up prepaid SIM |
 
 Heartbeat flow:
 1. Cron fires → read HEARTBEAT.md checklist
 2. Ollama evaluates: does anything need attention?
 3. If yes → escalate to Claude for detailed analysis
-4. Send findings to Esam via Telegram
+4. Send findings to the owner via Telegram
 5. Log to memory/YYYY-MM-DD.md
 
 ### 7b. Storage Management (src/tools/storage.py)
@@ -561,11 +561,11 @@ Three-tier garbage collection system. Runs automatically via heartbeat scheduler
 
 ### 8. Telegram Voice Calls (src/tools/telegram_call.py)
 
-Uses tgcalls + Pyrogram userbot for real Telegram calls to Esam. Falls back to voice messages if the call isn't answered.
+Uses tgcalls + Pyrogram userbot for real Telegram calls to the owner. Falls back to voice messages if the call isn't answered.
 
 **Architecture:**
 - A **Telegram userbot** (separate account from the bot) using Pyrogram + tgcalls
-- The userbot can initiate real Telegram voice calls to Esam
+- The userbot can initiate real Telegram voice calls to the owner
 - TTS engine generates audio (edge-tts for free, or ElevenLabs for natural voice)
 - Audio is converted to RAW format (s16le, 48kHz, stereo) for tgcalls
 - If call not answered within 30 seconds → fallback to voice message via the bot
@@ -581,7 +581,7 @@ Uses tgcalls + Pyrogram userbot for real Telegram calls to Esam. Falls back to v
 **Use cases:**
 - Urgent server alerts (disk full, container down, array degraded)
 - Agent needs approval for a risky action
-- Esam sends `/call` command in Telegram
+- the owner sends `/call` command in Telegram
 - Scheduled wake-up/reminder calls
 - Any notification marked as "urgent" by the agent
 
@@ -659,18 +659,18 @@ class TTSEngine:
             return await self._elevenlabs(text, output_path)
 ```
 
-The agent can also receive voice messages from Esam → transcribe with Whisper → process as text.
+The agent can also receive voice messages from the owner → transcribe with Whisper → process as text.
 
 ### 8c. Caller Session Health Monitor
 
-The Telegram userbot session (used for voice calls) can expire if Telegram invalidates it. Kovo must monitor this proactively and alert Esam BEFORE it breaks.
+The Telegram userbot session (used for voice calls) can expire if Telegram invalidates it. Kovo must monitor this proactively and alert the owner BEFORE it breaks.
 
 **Monitoring logic (runs every 6 hours as part of heartbeat):**
 ```python
 async def check_caller_session_health():
     """
     Verify the Telegram userbot session is still alive.
-    Alert Esam via bot if it's dying.
+    Alert the owner via bot if it's dying.
     """
     try:
         # Try a simple API call with the userbot
@@ -699,7 +699,7 @@ async def check_caller_session_health():
         return None
 ```
 
-**Re-authentication command:** When Esam sends `/reauth_caller` in Telegram, Kovo triggers the Pyrogram re-auth flow (sends OTP to the prepaid SIM number, Esam enters the code via Telegram).
+**Re-authentication command:** When the owner sends `/reauth_caller` in Telegram, Kovo triggers the Pyrogram re-auth flow (sends OTP to the prepaid SIM number, the owner enters the code via Telegram).
 
 **Prepaid SIM reminder:** Kovo tracks when the last top-up reminder was sent. Every 80 days it sends: "Reminder: top up your prepaid SIM (xxx-xxxx) to keep the caller account alive. UAE prepaid SIMs expire after 90 days without top-up."
 
@@ -906,7 +906,7 @@ memory:
 
 ### Phase 1: Core Gateway + Telegram + Router
 Build the foundation first. Get a working Telegram bot that can:
-1. Receive messages from Esam
+1. Receive messages from the owner
 2. Classify complexity with Ollama
 3. Route simple messages to Ollama
 4. Route complex messages to Claude via `claude -p`
@@ -969,7 +969,7 @@ Guided Telegram interview for new installs. Configures agent name, user profile,
 Comprehensive build-time allowlist (61 entries in `.claude/settings.local.json`) + runtime self-updating via Telegram approval. Blocked commands propagate through the call stack to the bot layer, which sends a formatted request and retries on approval.
 
 ### Phase 13: Storage Management ✅
-Three-tier garbage collection (`src/tools/storage.py`). Tier 1 auto-purges on 6-hour heartbeat. Tier 2 scans weekly and asks Esam before deleting. Low-disk alerts at 15% free. `/storage` and `/purge` Telegram commands.
+Three-tier garbage collection (`src/tools/storage.py`). Tier 1 auto-purges on 6-hour heartbeat. Tier 2 scans weekly and asks the owner before deleting. Low-disk alerts at 15% free. `/storage` and `/purge` Telegram commands.
 
 ### Phase 14: Smart Context Loading ✅
 Rewrote `build_system_prompt(user_message)` with pure-Python keyword classifiers. Always loads SOUL+USER+IDENTITY; loads MEMORY.md, daily log, best-matching skill, TOOLS, AGENTS, DB schema only on keyword match. Saves 60–90% system prompt tokens on routine messages.
@@ -1010,6 +1010,6 @@ GOOGLE_CREDENTIALS_PATH=/opt/kovo/config/google-credentials.json
 1. **Self-evolving**: The agent can install packages, create services, and write new skills
 2. **OpenClaw compatible**: Workspace files are interchangeable with OpenClaw
 3. **Cost-efficient**: Ollama for simple tasks, Claude only when needed
-4. **Safe**: Dangerous operations require Telegram confirmation from Esam
+4. **Safe**: Dangerous operations require Telegram confirmation from the owner
 5. **Observable**: Everything logged to daily memory files
 6. **Resilient**: Systemd service auto-restarts on crash

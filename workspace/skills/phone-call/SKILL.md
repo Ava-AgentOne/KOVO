@@ -14,7 +14,7 @@ trigger: call, voice call, ring, phone, urgent call, speak to me, talk to me, vo
 - **Urgency levels**: Normal (voice message) vs Urgent (attempt call first)
 
 ## When to Use
-- Esam explicitly asks to be called (`/call` command)
+- the owner explicitly asks to be called (`/call` command)
 - Agent marks a notification as URGENT (disk full, service down, security alert)
 - Scheduled wake-up reminders
 
@@ -32,7 +32,7 @@ trigger: call, voice call, ring, phone, urgent call, speak to me, talk to me, vo
 4. If no answer after 30s → send voice message via bot
 
 ### Session Health Check
-The userbot session is checked every 6 hours. If expired, Esam is alerted via bot with reauth instructions.
+The userbot session is checked every 6 hours. If expired, the owner is alerted via bot with reauth instructions.
 
 ## Setup
 Requires a second Telegram account with credentials in `.env`:

@@ -157,6 +157,6 @@ class ToolRegistry:
             if not t.available and t.config_needed:
                 lines.append(f"  - Config needed: {t.config_needed}")
         lines.append(
-            "\nWhen you need a tool that is ❌, tell Esam what's needed and ask if he wants you to install/configure it."
+            "\nWhen you need a tool that is ❌, tell the owner what's needed and ask if he wants you to install/configure it."
         )
         return "\n".join(lines)

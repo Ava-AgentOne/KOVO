@@ -27,7 +27,7 @@ tools:
   name: tts
   status: configured
 - config_needed: null
-  description: "Ollama LLM on NUC at 10.0.1.212:11434 \u2014 used for heartbeat checks"
+  description: "Ollama LLM on NUC at <OLLAMA-HOST>:11434 \u2014 used for heartbeat checks"
   install_command: null
   name: ollama
   status: configured
@@ -53,7 +53,7 @@ tools:
 # Tool Registry
 
 This file tracks all tools available to Kovo and its sub-agents.
-Agents check this registry before using a tool and notify Esam if a tool is missing or unconfigured.
+Agents check this registry before using a tool and notify the owner if a tool is missing or unconfigured.
 
 ## Status Values
 - `installed` — tool is installed and ready to use
@@ -68,17 +68,17 @@ Agents check this registry before using a tool and notify Esam if a tool is miss
 - **Workspace**: /opt/kovo/workspace
 
 ## Network Hosts
-- **Ollama**: http://10.0.1.212:11434
+- **Ollama**: http://<OLLAMA-HOST>:11434
 - **Home Assistant**: (configure when ready)
 - **Unraid WebUI**: (configure when ready)
 
 ## Tool Notes
-- **shell**: Always available. Dangerous commands require Esam's Telegram confirmation.
+- **shell**: Always available. Dangerous commands require the owner's Telegram confirmation.
 - **browser**: Playwright with Chromium in headless mode.
 - **google_api**: Requires OAuth2. Run `/auth_google` in Telegram to configure.
 - **telegram_call**: Pyrogram userbot. Falls back to voice message if call not answered.
 - **tts**: edge-tts (Microsoft Azure voices, free). Voice: en-US-AriaNeural.
 - **ollama**: Runs on NUC. Used only for scheduled heartbeat health checks.
-- **claude_cli**: Uses Esam's Claude Max subscription. No API key needed.
+- **claude_cli**: Uses the owner's Claude Max subscription. No API key needed.
 - **whisper**: Groq whisper-large-v3-turbo (primary) + local Whisper (fallback).
 - **github**: PyGithub. Set GITHUB_TOKEN in config/.env. Run `/auth_github` to verify.

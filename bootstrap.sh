@@ -619,7 +619,7 @@ telegram:
   allowed_users:
     - \${OWNER_TELEGRAM_ID}
 ollama:
-  url: http://10.0.1.212:11434
+  url: http://<OLLAMA-HOST>:11434
   default_model: llama3.1:8b
   enabled: false
 claude:

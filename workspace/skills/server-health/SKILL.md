@@ -44,6 +44,6 @@ If everything is healthy, say so briefly. Include the raw numbers.
 
 ## Infrastructure Context
 - This is an Ubuntu 25.10 VM running on an Unraid server
-- Ollama NUC is at 10.0.1.212:11434
+- Ollama NUC is at <OLLAMA-HOST>:11434
 - Docker is used heavily — check container health
 - The VM has 8GB RAM and 50GB disk

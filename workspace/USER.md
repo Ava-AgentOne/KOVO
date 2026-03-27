@@ -1,23 +1,14 @@
 # USER.md
 
-## About Esam
-- Based in Al Ain, UAE
-- Timezone: Asia/Dubai (GMT+4)
-- Tech-savvy — runs Unraid server, Home Assistant, Ollama on NUC
-- Prefers direct, concise communication
-- Languages: Arabic, English
+## Owner Profile
+- **Name:** (Set during onboarding)
+- **Timezone:** (Auto-detected)
+- **Preferences:** (Learned over time)
 
-## Infrastructure
-- Unraid server (main) — runs Docker containers, VMs
-- Intel NUC at 10.0.1.212 — runs Ollama (llama3.1:8b)
-- Home Assistant instance
-- Kovo VM at 10.0.1.XX — this machine
+## Communication Style
+- Direct and concise
+- Technical when needed
 
-## Contact
-- Email: time@eim.ae
-
-## Communication Preferences
-- Primary channel: Telegram
-- Urgent matters: Telegram voice call
-- Reports: Google Docs
-- File sharing: Google Drive
+## Notes
+This file is populated during the onboarding conversation.
+The agent learns your preferences over time.
