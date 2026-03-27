@@ -112,6 +112,7 @@ The built-in web dashboard gives you full visibility into KOVO's state:
 | 🛡️ **Security** | Latest audit results, history, run/reset from UI |
 | 📜 **Logs** | Live gateway logs |
 | ⚙️ **Settings** | YAML config editor + environment variables |
+| 🧙 **Setup Wizard** | First-time guided configuration with step-by-step credential guides |
 
 ## 🚀 Quick Start
 
@@ -137,6 +138,7 @@ This will:
 4. Build the dashboard frontend
 5. Set up Claude Code permissions
 6. Set up the systemd service
+7. Launch the **Setup Wizard** for easy configuration
 
 ### Configure & Start
 
@@ -209,10 +211,13 @@ cd /opt/kovo
 ### 6. Configure
 
 ```bash
-cp config/.env.example config/.env
+cp config/.env.template config/.env
 chmod 600 config/.env
-nano config/.env  # Add your tokens
 ```
+
+**Option A (recommended):** Use the setup wizard at `http://<IP>:8080/dashboard/setup`
+
+**Option B (manual):** Edit directly with `nano config/.env`
 
 ### 7. Systemd service
 
