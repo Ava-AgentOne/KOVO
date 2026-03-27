@@ -113,6 +113,7 @@ The built-in web dashboard gives you full visibility into KOVO's state:
 | 📜 **Logs** | Live gateway logs |
 | ⚙️ **Settings** | YAML config editor + environment variables |
 | 🧙 **Setup Wizard** | First-time guided configuration with step-by-step credential guides |
+| 🧙 **Setup Wizard** | First-time guided configuration with step-by-step credential guides |
 
 ## 🚀 Quick Start
 
@@ -138,6 +139,7 @@ This will:
 4. Build the dashboard frontend
 5. Set up Claude Code permissions
 6. Set up the systemd service
+7. Launch the **Setup Wizard** for easy configuration
 7. Launch the **Setup Wizard** for easy configuration
 
 ### Configure & Start
