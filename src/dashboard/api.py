@@ -835,24 +835,25 @@ def _human_size(size_bytes: int) -> str:
 
 
 @router.post("/backup")
-async def run_backup():
-    """Run the backup script and return status."""
+async def run_backup(tier: str = "core"):
+    """Run the backup script. tier: 'core' or 'full'."""
     _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     if not _BACKUP_SCRIPT.exists():
         return {"ok": False, "error": "backup.sh not found"}
+    cmd = ["bash", str(_BACKUP_SCRIPT)]
+    if tier == "full":
+        cmd.append("--full")
     try:
-        result = subprocess.run(
-            ["bash", str(_BACKUP_SCRIPT)],
-            capture_output=True, text=True, timeout=60,
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode == 0:
-            # Get size of latest backup
-            files = sorted(_BACKUP_DIR.glob("workspace_*"), key=lambda f: f.stat().st_mtime, reverse=True)
+            files = sorted(_BACKUP_DIR.glob("kovo-backup-*"), key=lambda f: f.stat().st_mtime, reverse=True)
+            if not files:
+                files = sorted(_BACKUP_DIR.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
             size = _human_size(files[0].stat().st_size) if files else "?"
-            return {"ok": True, "output": result.stdout.strip(), "size": size}
+            return {"ok": True, "output": result.stdout.strip()[-2000:], "size": size, "tier": tier}
         return {"ok": False, "error": result.stderr.strip() or "Backup script failed"}
     except subprocess.TimeoutExpired:
-        return {"ok": False, "error": "Backup timed out (60s)"}
+        return {"ok": False, "error": "Backup timed out (5min)"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
@@ -902,16 +903,39 @@ async def download_backup(filename: str):
     )
 
 
+
+
+@router.get("/backup/manifest/{filename}")
+async def get_backup_manifest(filename: str):
+    """Read manifest.json from a backup archive."""
+    if ".." in filename or "/" in filename:
+        raise HTTPException(400, "Invalid filename")
+    backup_path = _BACKUP_DIR / filename
+    if not backup_path.exists():
+        raise HTTPException(404, "Backup not found")
+    try:
+        import tarfile as _tf
+        with _tf.open(str(backup_path), "r:gz") as tar:
+            for name in ("./manifest.json", "manifest.json"):
+                try:
+                    mf = tar.extractfile(name)
+                    if mf:
+                        return json.loads(mf.read().decode())
+                except Exception:
+                    continue
+        return {"error": "No manifest found (legacy backup)"}
+    except Exception as e:
+        return {"error": str(e)}
+
 @router.post("/backup/restore")
 async def restore_backup(file: UploadFile = File(...)):
-    """Upload and restore a backup archive. Overwrites workspace, config, and db."""
+    """Restore from a KOVO backup archive (v2 format with manifest)."""
     if not file.filename.endswith((".tar.gz", ".tgz")):
         return {"ok": False, "output": "Only .tar.gz backup files are accepted."}
 
     import tempfile
     tmp_path = None
     try:
-        # Save uploaded file to temp location
         content = await file.read()
         tmp_fd, tmp_path = tempfile.mkstemp(suffix=".tar.gz", dir="/tmp")
         import os
@@ -919,30 +943,49 @@ async def restore_backup(file: UploadFile = File(...)):
         with open(tmp_path, "wb") as f:
             f.write(content)
 
-        size_mb = len(content) / (1024 * 1024)
-
-        # Also save a copy in the backups dir for reference
+        # Save copy in backups dir
         _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
         import shutil as _sh
         _sh.copy2(tmp_path, _BACKUP_DIR / file.filename)
 
-        # Extract the backup — restore workspace, config, db
-        result = subprocess.run(
-            ["tar", "xzf", tmp_path, "-C", "/opt/kovo", "--overwrite"],
-            capture_output=True, text=True, timeout=60,
-        )
-        if result.returncode != 0:
-            return {"ok": False, "output": f"Extract failed: {result.stderr.strip()}"}
+        # Use restore.sh v2 if available, fallback to raw extract
+        restore_script = Path("/opt/kovo/scripts/restore.sh")
+        if restore_script.exists():
+            result = subprocess.run(
+                ["bash", str(restore_script), tmp_path],
+                capture_output=True, text=True, timeout=300,
+            )
+        else:
+            result = subprocess.run(
+                ["tar", "xzf", tmp_path, "-C", "/opt/kovo", "--overwrite"],
+                capture_output=True, text=True, timeout=60,
+            )
 
-        # Restart the service to pick up restored files
+        # Read manifest if available
+        manifest = None
+        try:
+            import tarfile as _tf
+            with _tf.open(tmp_path, "r:gz") as tar:
+                for name in ("./manifest.json", "manifest.json"):
+                    try:
+                        mf = tar.extractfile(name)
+                        if mf:
+                            manifest = json.loads(mf.read().decode())
+                            break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
         subprocess.run(["systemctl", "restart", "kovo"], capture_output=True, timeout=10)
 
         return {
-            "ok": True,
-            "output": f"Restored from {file.filename} ({size_mb:.1f} MB).\nService restarting..."
+            "ok": result.returncode == 0,
+            "output": result.stdout.strip()[-2000:] if result.stdout else "",
+            "manifest": manifest,
         }
     except subprocess.TimeoutExpired:
-        return {"ok": False, "output": "Restore timed out."}
+        return {"ok": False, "output": "Restore timed out (5min)."}
     except Exception as e:
         return {"ok": False, "output": f"Restore error: {e}"}
     finally:
