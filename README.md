@@ -191,23 +191,6 @@ KOVO ships with built-in skills and supports custom ones:
 | 🖥️ **server-health** | Linux server and Unraid health metrics |
 | ⚙️ **shell** | Execute commands, manage files, install packages |
 
-### Create Custom Skills
-
-Drop a `SKILL.md` file in `workspace/skills/<name>/`:
-
-```yaml
----
-name: my-skill
-description: What this skill does
-tools: [shell, browser]
-trigger: keyword1, keyword2, keyword3
----
-
-# My Skill
-
-Instructions for how KOVO should use this skill...
-```
-
 ## 🛡️ Security
 
 KOVO includes built-in security features:
