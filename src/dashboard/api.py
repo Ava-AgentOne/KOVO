@@ -521,18 +521,16 @@ async def get_env():
 
 @router.post("/service/restart")
 async def restart_service():
-    """Attempt to restart the kovo systemd service."""
-    for svc in ("kovo", "kovo.service"):
-        try:
-            r = subprocess.run(
-                ["sudo", "systemctl", "restart", svc],
-                capture_output=True, text=True, timeout=10,
-            )
-            if r.returncode == 0:
-                return {"restarted": True, "service": svc}
-        except Exception:
-            pass
-    return {"restarted": False, "error": "systemctl restart failed — check service name"}
+    """Restart the kovo service with a 2s delay so the API can respond first."""
+    try:
+        subprocess.Popen(
+            ["bash", "-c", "sleep 2 && sudo systemctl restart kovo"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return {"restarted": True, "service": "kovo"}
+    except Exception as e:
+        return {"restarted": False, "error": str(e)}
 
 
 @router.get("/service/status")
