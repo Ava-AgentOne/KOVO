@@ -78,7 +78,7 @@ function StructuredConfig() {
             if (currentSection) {
               const kvMatch = line.match(/^\s+(\w[\w_]*)\s*:\s*(.+)/)
               if (kvMatch) {
-                const val = kvMatch[2].trim().replace(/^["']|["']$/g, '')
+                const val = kvMatch[2].replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '')
                 parsed[currentSection][kvMatch[1]] = val
               }
             }
