@@ -41,3 +41,20 @@ data/security/
 
 # Backup archives
 data/backups/
+
+# ─── Personal workspace data (NEVER commit) ──────────────────
+# These files accumulate personal information at runtime.
+# The repo ships .template versions; bootstrap copies them on install.
+workspace/USER.md
+workspace/MEMORY.md
+workspace/SOUL.md
+workspace/IDENTITY.md
+workspace/HEARTBEAT.md
+workspace/AGENTS.md
+workspace/TOOLS.md
+
+# Memory archives (contain personal conversation history)
+workspace/memory/
+
+# Runtime state files
+data/*.json

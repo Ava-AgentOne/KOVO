@@ -698,7 +698,18 @@ ENV_EOF
     ok "Permissions secured"
 
     # ── Workspace ────────────────────────────────────────────────
-    info "Workspace files..."
+    info "Copying workspace templates..."
+    # Copy .template files to live files (first install only)
+    for tmpl in "$WORKSPACE"/*.md.template; do
+        [ -f "$tmpl" ] || continue
+        live="${tmpl%.template}"
+        if [[ ! -f "$live" ]]; then
+            cp "$tmpl" "$live"
+            ok "template → live: $(basename "$live")"
+        fi
+    done
+
+        info "Workspace files..."
     [[ ! -f "$WORKSPACE/SOUL.md" ]] && printf "# SOUL.md\n## UNCONFIGURED\nSend any message on Telegram to start onboarding.\n" > "$WORKSPACE/SOUL.md"
     [[ ! -f "$WORKSPACE/USER.md" ]] && printf "# USER.md\n## UNCONFIGURED\n" > "$WORKSPACE/USER.md"
     [[ ! -f "$WORKSPACE/IDENTITY.md" ]] && printf "# IDENTITY.md\n## Name\nKovo\n## Creature Type\nBlue alien\n## UNCONFIGURED\n" > "$WORKSPACE/IDENTITY.md"
