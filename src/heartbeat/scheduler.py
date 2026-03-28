@@ -22,6 +22,7 @@ from src.heartbeat.checks import check_thresholds, fetch_weather, gather_full_he
 from src.heartbeat.reporter import HeartbeatReporter
 from src.memory.manager import MemoryManager
 from src.tools.ollama import OllamaClient
+from src.heartbeat.version_check import check_and_notify as _version_check
 
 log = logging.getLogger(__name__)
 

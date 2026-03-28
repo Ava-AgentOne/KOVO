@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import UpdateChecker from '../components/UpdateChecker'
 import { Link } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { Sun, Moon, RefreshCw, ChevronDown, ChevronUp, Save, Download, Upload, Trash2, Archive, Loader2, AlertTriangle } from 'lucide-react'
@@ -589,6 +590,10 @@ export default function Settings() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+
+      <Section title="Updates">
+        <UpdateChecker />
+      </Section>
 
       <Section title="Service">
         <ServiceControls />

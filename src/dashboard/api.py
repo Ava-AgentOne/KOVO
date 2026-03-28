@@ -1027,3 +1027,59 @@ async def security_fix(payload: SecurityFixRequest):
         return {"ok": False, "output": "Command timed out (30s)"}
     except Exception as e:
         return {"ok": False, "output": f"Error: {e}"}
+
+
+# ── Updates ───────────────────────────────────────────────────────────────────
+
+_UPDATE_SCRIPT = Path("/opt/kovo/scripts/update.sh")
+_UPDATE_LOG = Path("/opt/kovo/logs/update.log")
+
+
+@router.get("/update/check")
+async def update_check():
+    """Check for available KOVO updates."""
+    if not _UPDATE_SCRIPT.exists():
+        return {"error": "update.sh not found"}
+    try:
+        result = subprocess.run(
+            ["bash", str(_UPDATE_SCRIPT), "--json"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return json.loads(result.stdout.strip())
+        return {"update_available": False, "error": result.stderr.strip() or "Check failed"}
+    except subprocess.TimeoutExpired:
+        return {"update_available": False, "error": "Timed out reaching GitHub"}
+    except json.JSONDecodeError:
+        return {"update_available": False, "error": "Invalid response from update script"}
+    except Exception as e:
+        return {"update_available": False, "error": str(e)}
+
+
+@router.post("/update/apply")
+async def update_apply():
+    """Apply a KOVO update. Runs in background — check /update/log for progress."""
+    if not _UPDATE_SCRIPT.exists():
+        return {"ok": False, "error": "update.sh not found"}
+    try:
+        # Run in background so the API can respond immediately
+        subprocess.Popen(
+            ["bash", str(_UPDATE_SCRIPT), "--apply"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return {"ok": True, "message": "Update started. The service will restart automatically."}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/update/log")
+async def update_log(lines: int = 50):
+    """Get the update log."""
+    if not _UPDATE_LOG.exists():
+        return {"lines": []}
+    try:
+        all_lines = _UPDATE_LOG.read_text(encoding="utf-8", errors="ignore").splitlines()
+        return {"lines": all_lines[-lines:]}
+    except Exception as e:
+        return {"lines": [], "error": str(e)}
