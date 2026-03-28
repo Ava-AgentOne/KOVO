@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
-KOVO_VERSION="0.5.0"
+KOVO_VERSION="0.5"
 # KOVO — Self-Hosted AI Agent Installer v5.1
 # https://github.com/Ava-AgentOne/kovo
 #
@@ -644,10 +644,10 @@ google:
     - https://www.googleapis.com/auth/calendar
     - https://www.googleapis.com/auth/spreadsheets
 heartbeat:
-  enabled: false          # Enable in dashboard settings
-  # quick_interval: 30   # minutes — quick system checks
-  # full_interval: 6     # hours — full health reports  
-  # morning_time: "08:00" # daily morning briefing
+  enabled: false
+  quick_interval: 30
+  full_interval: 6
+  morning_time: "08:00"
   use_ollama: false
 security_audit:
   enabled: true

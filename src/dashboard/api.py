@@ -525,7 +525,7 @@ async def restart_service():
     for svc in ("kovo", "kovo.service"):
         try:
             r = subprocess.run(
-                ["systemctl", "restart", svc],
+                ["sudo", "systemctl", "restart", svc],
                 capture_output=True, text=True, timeout=10,
             )
             if r.returncode == 0:
@@ -991,7 +991,7 @@ async def restore_backup(file: UploadFile = File(...)):
         except Exception:
             pass
 
-        subprocess.run(["systemctl", "restart", "kovo"], capture_output=True, timeout=10)
+        subprocess.run(["sudo", "systemctl", "restart", "kovo"], capture_output=True, timeout=10)
 
         return {
             "ok": result.returncode == 0,
