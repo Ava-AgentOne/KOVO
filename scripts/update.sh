@@ -2,10 +2,12 @@
 # ═══════════════════════════════════════════════════════════════════
 # KOVO Update Script — Safe self-updater
 #
+# Only triggers on VERSION changes (releases), not every commit.
+#
 # Usage:
 #   bash /opt/kovo/scripts/update.sh --check     # Check only
 #   bash /opt/kovo/scripts/update.sh --apply      # Apply update
-#   bash /opt/kovo/scripts/update.sh --json       # Check (JSON output for API)
+#   bash /opt/kovo/scripts/update.sh --json       # Check (JSON for API)
 # ═══════════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -33,18 +35,15 @@ log() {
     $JSON || echo "$msg"
 }
 
-# ── Get current version ────────────────────────────────────────
 get_local_version() {
-    grep -m1 'KOVO_VERSION=' bootstrap.sh 2>/dev/null | sed 's/.*="\(.*\)"/\1/' || echo "0.0.0"
+    grep -m1 'KOVO_VERSION=' bootstrap.sh 2>/dev/null | sed 's/.*="\(.*\)"/\1/' || echo "0.0"
 }
 
-# ── Get latest version from GitHub ─────────────────────────────
 get_remote_version() {
     curl -sf --max-time 10 "$REPO_URL/bootstrap.sh" 2>/dev/null | \
         grep -m1 'KOVO_VERSION=' | sed 's/.*="\(.*\)"/\1/' || echo ""
 }
 
-# ── Get latest commit info ─────────────────────────────────────
 get_latest_commit() {
     curl -sf --max-time 10 "$GITHUB_API/commits/main" 2>/dev/null | \
         python3 -c "
@@ -55,24 +54,20 @@ try:
         'sha': d['sha'][:7],
         'message': d['commit']['message'].split('\n')[0],
         'date': d['commit']['committer']['date'],
-        'author': d['commit']['committer']['name'],
     }))
 except: print('{}')
 " 2>/dev/null || echo "{}"
 }
 
-# ── Get local commit SHA ───────────────────────────────────────
 get_local_sha() {
     git rev-parse --short HEAD 2>/dev/null || echo "unknown"
 }
 
-# ── Version comparison ─────────────────────────────────────────
 version_gt() {
-    # Returns 0 if $1 > $2
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$1" ]
 }
 
-# ── CHECK MODE ─────────────────────────────────────────────────
+# ── CHECK ──────────────────────────────────────────────────────
 if [ "$MODE" = "check" ]; then
     LOCAL_VER=$(get_local_version)
     REMOTE_VER=$(get_remote_version)
@@ -93,12 +88,6 @@ if [ "$MODE" = "check" ]; then
         UPDATE_AVAILABLE=true
     fi
 
-    # Also check if commits differ even if version is same
-    REMOTE_SHA=$(echo "$COMMIT_INFO" | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
-    if [ "$LOCAL_SHA" != "$REMOTE_SHA" ] && [ -n "$REMOTE_SHA" ]; then
-        UPDATE_AVAILABLE=true
-    fi
-
     if $JSON; then
         cat << JSONEOF
 {
@@ -112,133 +101,91 @@ JSONEOF
     else
         echo ""
         echo "  Current: v$LOCAL_VER ($LOCAL_SHA)"
-        echo "  Latest:  v$REMOTE_VER"
+        echo "  Latest release: v$REMOTE_VER"
         if $UPDATE_AVAILABLE; then
             echo ""
-            echo "  ✓ Update available!"
+            echo "  ✓ New release available!"
             echo "  Run: bash /opt/kovo/scripts/update.sh --apply"
         else
-            echo ""
-            echo "  · You're up to date."
+            echo "  · You're on the latest release."
         fi
         echo ""
     fi
     exit 0
 fi
 
-# ── APPLY MODE ─────────────────────────────────────────────────
+# ── APPLY ──────────────────────────────────────────────────────
 if [ "$MODE" = "apply" ]; then
     LOCAL_VER=$(get_local_version)
     REMOTE_VER=$(get_remote_version)
 
     log "Starting update: v$LOCAL_VER → v$REMOTE_VER"
 
-    # Step 1: Pre-flight checks
-    log "Step 1: Pre-flight checks..."
-    if [ ! -d "$KOVO_DIR/.git" ]; then
-        log "ERROR: Not a git repository. Cannot update."
-        exit 1
-    fi
+    log "Step 1: Pre-flight..."
+    [ -d "$KOVO_DIR/.git" ] || { log "ERROR: Not a git repo"; exit 1; }
 
-    # Step 2: Backup before update
-    log "Step 2: Creating pre-update backup..."
+    log "Step 2: Pre-update backup..."
     BACKUP_DIR="$KOVO_DIR/data/backups"
     mkdir -p "$BACKUP_DIR"
     BACKUP_NAME="pre-update_${LOCAL_VER}_$(date +%Y%m%d_%H%M%S).tar.gz"
-    tar czf "$BACKUP_DIR/$BACKUP_NAME" \
-        -C "$KOVO_DIR" \
+    tar czf "$BACKUP_DIR/$BACKUP_NAME" -C "$KOVO_DIR" \
         workspace/ config/settings.yaml config/.env \
         --ignore-failed-read 2>/dev/null || true
     log "  Backup: $BACKUP_NAME"
 
-    # Step 3: Stash any local changes to tracked files
     log "Step 3: Stashing local changes..."
     STASH_NEEDED=false
     if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
         git stash push -m "pre-update-$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
         STASH_NEEDED=true
-        log "  Local changes stashed"
+        log "  Stashed"
     else
-        log "  No local changes to stash"
+        log "  Clean"
     fi
 
-    # Step 4: Pull latest code
-    log "Step 4: Pulling latest code..."
+    log "Step 4: Pulling latest..."
     git fetch origin main 2>&1 | tail -2 | while read line; do log "  $line"; done
 
-    # Check what changed before merging
     CHANGED_FILES=$(git diff --name-only HEAD origin/main 2>/dev/null || echo "")
     REQUIREMENTS_CHANGED=false
     FRONTEND_CHANGED=false
-
     echo "$CHANGED_FILES" | grep -q "requirements.txt" && REQUIREMENTS_CHANGED=true
     echo "$CHANGED_FILES" | grep -q "src/dashboard/frontend/" && FRONTEND_CHANGED=true
 
     git merge origin/main --no-edit 2>&1 | while read line; do log "  $line"; done
     NEW_VER=$(get_local_version)
-    log "  Updated to v$NEW_VER ($(get_local_sha))"
+    log "  Now at v$NEW_VER ($(get_local_sha))"
 
-    # Step 5: Restore stashed changes
     if $STASH_NEEDED; then
-        log "Step 5: Restoring local changes..."
-        if git stash pop 2>/dev/null; then
-            log "  Stash applied cleanly"
-        else
-            log "  ⚠ Stash conflict — your local changes are in git stash"
-            log "  Run 'cd /opt/kovo && git stash show' to review"
-        fi
-    else
-        log "Step 5: No stash to restore (skipped)"
+        log "Step 5: Restoring stash..."
+        git stash pop 2>/dev/null && log "  Applied" || log "  ⚠ Conflict — check git stash"
     fi
 
-    # Step 6: Install new dependencies
     if $REQUIREMENTS_CHANGED; then
-        log "Step 6: Installing new Python dependencies..."
-        "$KOVO_DIR/venv/bin/pip" install -r "$KOVO_DIR/requirements.txt" -q 2>&1 | tail -3 | while read line; do log "  $line"; done
-        log "  Dependencies updated"
-    else
-        log "Step 6: No new Python dependencies (skipped)"
+        log "Step 6: Installing new dependencies..."
+        "$KOVO_DIR/venv/bin/pip" install -r "$KOVO_DIR/requirements.txt" -q 2>&1 | tail -3
     fi
 
-    # Step 7: Rebuild dashboard
     if $FRONTEND_CHANGED; then
         log "Step 7: Rebuilding dashboard..."
         cd "$KOVO_DIR/src/dashboard/frontend"
         npm install --silent 2>&1 | tail -1
-        npm run build 2>&1 | tail -3 | while read line; do log "  $line"; done
+        npm run build 2>&1 | tail -3
         cd "$KOVO_DIR"
-        log "  Dashboard rebuilt"
-    else
-        log "Step 7: No frontend changes (skipped)"
     fi
 
-    # Step 8: Copy new templates (don't overwrite live files)
-    log "Step 8: Checking for new workspace templates..."
+    log "Step 8: Checking new templates..."
     for tmpl in workspace/*.md.template; do
         [ -f "$tmpl" ] || continue
         live="${tmpl%.template}"
-        if [ ! -f "$live" ]; then
-            cp "$tmpl" "$live"
-            log "  New template → live: $(basename "$live")"
-        fi
+        [ ! -f "$live" ] && cp "$tmpl" "$live" && log "  New: $(basename "$live")"
     done
 
-    # Step 9: Restart service
-    log "Step 9: Restarting KOVO service..."
-    sudo systemctl restart kovo 2>/dev/null && log "  Service restarted" || log "  ⚠ Service restart failed"
+    log "Step 9: Restarting service..."
+    sudo systemctl restart kovo 2>/dev/null && log "  Service restarted" || log "  ⚠ Restart failed"
 
     log ""
-    log "═══════════════════════════════════════════════════════"
-    log " ✓ Update complete: v$LOCAL_VER → v$NEW_VER"
-    log "═══════════════════════════════════════════════════════"
+    log "✓ Update complete: v$LOCAL_VER → v$NEW_VER"
     log ""
-    log " Changed files:"
-    echo "$CHANGED_FILES" | head -20 | while read f; do [ -n "$f" ] && log "   • $f"; done
-    log ""
-    log " Pre-update backup: $BACKUP_NAME"
-    [ "$REQUIREMENTS_CHANGED" = true ] && log " Python dependencies: updated"
-    [ "$FRONTEND_CHANGED" = true ] && log " Dashboard: rebuilt"
-    log ""
-
     exit 0
 fi
