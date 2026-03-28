@@ -1,6 +1,6 @@
 # Kovo — Personal AI Agent System
 
-> **Document version**: 0.5 (2026-03-27)
+> **Document version**: 0.6 (2026-03-28)
 
 ## Overview
 

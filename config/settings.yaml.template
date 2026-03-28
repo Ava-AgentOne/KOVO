@@ -11,6 +11,7 @@ telegram:
 ollama:
   url: http://<OLLAMA-HOST>:11434
   default_model: llama3.1:8b
+  enabled: false
 
 claude:
   default_model: sonnet
