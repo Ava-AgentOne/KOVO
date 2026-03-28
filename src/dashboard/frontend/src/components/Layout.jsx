@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquare, Wrench, Bot, Brain,
@@ -44,7 +44,15 @@ function NavItem({ to, label, Icon, onClick }) {
 export default function Layout({ children }) {
   const { theme, toggle } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [version, setVersion] = useState(null)
   const closeMobile = () => setMobileOpen(false)
+
+  useEffect(() => {
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(d => { if (d.version) setVersion(d.version) })
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
@@ -65,11 +73,14 @@ export default function Layout({ children }) {
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        {/* Logo — bigger mascot */}
+        {/* Logo + version */}
         <div className="flex flex-col items-center gap-2 px-4 py-5 border-b border-gray-200 dark:border-gray-800">
           <KovoLogo size={94} />
           <div className="text-center">
             <div className="text-2xl font-bold text-brand-500 tracking-wide">KOVO</div>
+            {version && (
+              <div className="text-[11px] text-gray-400 dark:text-gray-500 font-mono mt-0.5">v{version}</div>
+            )}
           </div>
           <button
             onClick={closeMobile}
@@ -110,6 +121,7 @@ export default function Layout({ children }) {
           </button>
           <KovoLogo size={32} />
           <span className="text-sm font-bold text-brand-500 tracking-wide">KOVO</span>
+          {version && <span className="text-[10px] text-gray-400 font-mono">v{version}</span>}
           <button
             onClick={toggle}
             className="ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"

@@ -157,14 +157,37 @@ function StructuredConfig() {
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-gray-400 uppercase">Heartbeat</p>
-        <FieldRow label="Quick check" hint="Minutes between health checks">
-          <input type="number" className={inputCls} value={config.heartbeat?.quick_interval || '30'} onChange={e => updateField('heartbeat', 'quick_interval', e.target.value)} />
+        <FieldRow label="Enabled" hint="Enable periodic health checks">
+          <select className={selectCls} value={config.heartbeat?.enabled || 'false'} onChange={e => updateField('heartbeat', 'enabled', e.target.value)}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
         </FieldRow>
-        <FieldRow label="Full report" hint="Hours between full reports">
-          <input type="number" className={inputCls} value={config.heartbeat?.full_interval || '6'} onChange={e => updateField('heartbeat', 'full_interval', e.target.value)} />
+        {config.heartbeat?.enabled === 'true' && (
+          <>
+            <FieldRow label="Quick check" hint="Minutes between health checks">
+              <input type="number" className={inputCls} value={config.heartbeat?.quick_interval || '30'} onChange={e => updateField('heartbeat', 'quick_interval', e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Full report" hint="Hours between full reports">
+              <input type="number" className={inputCls} value={config.heartbeat?.full_interval || '6'} onChange={e => updateField('heartbeat', 'full_interval', e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Morning briefing" hint="Time in 24h format">
+              <input className={inputCls} value={config.heartbeat?.morning_time || '08:00'} onChange={e => updateField('heartbeat', 'morning_time', e.target.value)} placeholder="08:00" />
+            </FieldRow>
+          </>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase">Security Audit</p>
+        <FieldRow label="Enabled">
+          <select className={selectCls} value={config.security_audit?.enabled || 'true'} onChange={e => updateField('security_audit', 'enabled', e.target.value)}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
         </FieldRow>
-        <FieldRow label="Morning briefing" hint="Time in 24h format">
-          <input className={inputCls} value={config.heartbeat?.morning_time || '08:00'} onChange={e => updateField('heartbeat', 'morning_time', e.target.value)} placeholder="08:00" />
+        <FieldRow label="Schedule" hint="Day + time (e.g. sun 07:00)">
+          <input className={inputCls} value={config.security_audit?.schedule || 'sun 07:00'} onChange={e => updateField('security_audit', 'schedule', e.target.value)} placeholder="sun 07:00" />
         </FieldRow>
       </div>
 

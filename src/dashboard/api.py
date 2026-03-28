@@ -27,6 +27,19 @@ from pydantic import BaseModel
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
+# Read KOVO version from bootstrap.sh
+def _read_version() -> str:
+    try:
+        bs = Path("/opt/kovo/bootstrap.sh").read_text()
+        import re
+        m = re.search(r'KOVO_VERSION="([^"]+)"', bs)
+        return m.group(1) if m else "0.0.0"
+    except Exception:
+        return "0.0.0"
+
+_KOVO_VERSION = _read_version()
+
+
 # In-memory chat history for the dashboard chat (dashboard user_id = 0)
 _chat_history: List[dict] = []
 _MAX_HISTORY = 200
@@ -59,6 +72,7 @@ async def get_status(request: Request):
 
     return {
         "status": "ok",
+        "version": _KOVO_VERSION,
         "ollama": ollama_ok,
         "telegram": bool(tg_app),
         "heartbeat_running": bool(heartbeat and heartbeat._started),
