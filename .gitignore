@@ -20,6 +20,7 @@ logs/
 
 # Secrets & config (never commit)
 config/.env
+config/settings.yaml
 config/.env.template
 config/google-credentials.json
 config/google-token.json

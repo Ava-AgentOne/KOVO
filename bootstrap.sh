@@ -609,7 +609,7 @@ EOF
 
     # ── settings.yaml ────────────────────────────────────────────
     info "settings.yaml..."
-    cat > "$KOVO_DIR/config/settings.yaml" << SETTINGS_EOF
+    cat > "$KOVO_DIR/config/settings.yaml.template" << SETTINGS_EOF
 kovo:
   workspace: $KOVO_DIR/workspace
   data_dir: $KOVO_DIR/data
@@ -681,7 +681,15 @@ memory:
     custom_table_prefix: "user_"
     schema_in_prompt: "on_demand"
 SETTINGS_EOF
-    ok "settings.yaml"
+    ok "settings.yaml.template"
+
+    # Copy template to live file (first install only — never overwrite user config)
+    if [[ ! -f "$KOVO_DIR/config/settings.yaml" ]]; then
+        cp "$KOVO_DIR/config/settings.yaml.template" "$KOVO_DIR/config/settings.yaml"
+        ok "settings.yaml (from template)"
+    else
+        ok "settings.yaml preserved (existing config)"
+    fi
 
     # ── .env ─────────────────────────────────────────────────────
     cat > "$KOVO_DIR/config/.env.template" << 'ENV_EOF'
