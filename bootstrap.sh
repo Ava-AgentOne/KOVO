@@ -644,10 +644,18 @@ google:
     - https://www.googleapis.com/auth/calendar
     - https://www.googleapis.com/auth/spreadsheets
 heartbeat:
-  quick_interval: 30
-  full_interval: 6
-  morning_time: "08:00"
+  enabled: false          # Enable in dashboard settings
+  # quick_interval: 30   # minutes — quick system checks
+  # full_interval: 6     # hours — full health reports  
+  # morning_time: "08:00" # daily morning briefing
   use_ollama: false
+security_audit:
+  enabled: true
+  schedule: "sun 07:00"   # weekly security scan
+  tools:
+    - clamav
+    - chkrootkit
+    - rkhunter
 transcription:
   groq_api_key: \${GROQ_API_KEY}
   whisper_model: base
