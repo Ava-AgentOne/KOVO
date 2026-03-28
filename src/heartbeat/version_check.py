@@ -50,7 +50,7 @@ async def check_and_notify(tg_bot, owner_user_id: int) -> dict | None:
         local_ver = info.get("local_version", "?")
 
         message = (
-            f"🔄 *KOVO Update Available*\n\n"
+            f"🔄 *New KOVO Release Available*\n\n"
             f"Current: v{local_ver}\n"
             f"Latest: v{remote_ver}\n"
         )
