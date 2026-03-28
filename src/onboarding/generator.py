@@ -79,7 +79,8 @@ async def _generate_soul(
 
     prompt = (
         f"Write a SOUL.md file for an AI assistant named {agent_name}.\n"
-        f"The user's name is {user_name}, based in {city}, {country}.\n"
+        f"The user's name is {user_name}.\n"
+        f"{(f'Based in {city}, {country}. ' if city and country else '')}\n"
         f"Occupation: {occupation or 'not specified'}.\n"
         f"Personality style: {style_desc}.\n"
         f"Emoji policy: {emoji_line}\n"
