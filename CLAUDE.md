@@ -1,6 +1,6 @@
 # Kovo — Personal AI Agent System
 
-> **Document version**: 0.6 (2026-03-28)
+> **Document version**: 0.6 (2026-03-29)
 
 ## Overview
 
@@ -315,9 +315,10 @@ The router classifies incoming messages and routes them:
 │   ├── screenshots/           # Browser automation (auto-purge: 7 days)
 │   └── backups/               # workspace/ backups from backup.sh (keep: 30 days)
 ├── scripts/
-│   ├── migrate_openclaw.sh    # Copy + patch OpenClaw workspace
+│   ├── update.sh              # Safe self-updater (--check, --apply, --json)
 │   ├── backup.sh              # Two-tier backup (core/full) with manifest
-│   └── restore.sh             # Smart restore with .env merge + package reinstall
+│   ├── restore.sh             # Smart restore with .env merge + package reinstall
+│   └── migrate_openclaw.sh    # Copy + patch OpenClaw workspace
 ├── .claude/
 │   └── settings.local.json    # Claude Code sandbox permissions (61 entries)
 ├── tests/
@@ -433,14 +434,29 @@ Reads and writes OpenClaw-compatible Markdown files, plus a SQLite structured st
 - Always: SOUL.md, USER.md, IDENTITY.md (~300 tokens)
 - On-demand: MEMORY.md (remembering keywords), daily log (today/earlier keywords), best-matching skill, TOOLS.md, AGENTS.md, DB schema
 
+**Pinned + Learnings Memory** (`auto_extract.py`, `manager.py`):
+
+MEMORY.md has two sections:
+- `## Pinned` — key-value facts that update in place (always loaded by brain, never archived)
+  Example: `- preferred_language: English`, `- timezone: Asia/Dubai`
+  When a fact changes, the old value is replaced — zero token waste.
+- `## Learnings` — rolling log of extracted insights (loaded on demand, archived when >500 lines)
+  Example: `- 2026-03-28: [project] Fixed restart button with 2s delay`
+
 **Auto-memory extraction** (`auto_extract.py`):
 - Runs daily at 23:00 (triggered by heartbeat scheduler)
 - One Claude Sonnet call per day; input capped at 3200 chars (~4000 tokens)
-- Extracts 3–8 bullet points in `[category] content` format
-- Deduplication: SQL LIKE coarse filter + `difflib.SequenceMatcher` ratio > 0.8 (no LLM call)
-- Stores to both `workspace/MEMORY.md` and SQLite `memories` table
-- Budget: archives MEMORY.md to `workspace/memory/archive/memories_archived.md` when >500 lines
+- Claude outputs `### PINNED` (key-value pairs for profile changes) + `### LEARNINGS` (bullets)
+- Pinned entries: `update_pinned(key, value)` replaces old values in place
+- Learnings: deduplication via SQL LIKE + `difflib.SequenceMatcher` ratio > 0.8 (no LLM call)
+- Stores learnings to both `workspace/MEMORY.md` (Learnings section) and SQLite
+- Budget check: archives only Learnings when >500 lines, never touches Pinned
 - Manual trigger: `/flush` command
+
+**Smart context loading in KovoAgent.build_system_prompt():**
+- Pinned section: ALWAYS loaded (core facts, compact, always current)
+- Learnings section: loaded only when memory-related keywords detected
+- Fallback (ambiguous message): loads recent learnings + TOOLS.md
 
 **Structured store** (`structured_store.py`):
 - SQLite at `data/kovo.db`, WAL mode, `row_factory = sqlite3.Row`
@@ -503,30 +519,25 @@ Second built-in skill: **security-audit** — comprehensive VM security scan (ne
 
 ### 7. Heartbeat System (src/heartbeat/)
 
-Uses APScheduler with cron triggers.
+Uses APScheduler (in-process, not system cron). All 4 core jobs run automatically.
+Timezone is configurable via `settings.yaml` → `kovo.timezone`.
 
-Default schedule (configurable in HEARTBEAT.md):
+Schedule:
 
 | Schedule | Job | Description |
 |----------|-----|-------------|
-| Every 30 min | **Quick check** | CPU, RAM, disk via Ollama |
-| Every 6 hours | **Full report** | Health summary via Claude |
-| Every 6 hours | **Auto-purge** | Storage Tier 1 cleanup + disk alert if free < 15% |
-| Every morning 8 AM | **Briefing** | Daily summary, yesterday's activity |
-| Daily 3 AM | **Log archive** | Archive daily logs older than 30 days |
-| Daily 9 AM | **SIM reminder** | Alert if prepaid SIM approaching 90-day expiry |
-| Daily 11 PM | **Auto-extract** | Extract learnings → MEMORY.md + SQLite (Claude Sonnet, deduped) |
-| Sunday 3 AM | **Storage review** | Scan Tier 2 files, notify if old files found |
-| Sunday 3:30 AM | **Memory budget** | Archive MEMORY.md if >500 lines |
-| Sunday 7 AM | **Security audit** | Full VM security scan, baseline comparison, call on suspicious activity |
-| Every 80 days | **SIM top-up** | Remind the owner to top up prepaid SIM |
+| Daily 3:00 AM | **archive_logs** | Archive daily logs older than 30 days |
+| Daily 11:00 PM | **auto_extract** | Extract learnings → Pinned + Learnings in MEMORY.md + SQLite |
+| Sunday 3:30 AM | **weekly_memory_consolidation** | Archive MEMORY.md Learnings section if >500 lines (never touches Pinned) |
+| Daily 10:00 AM | **version_check** | Check GitHub for new KOVO releases, notify via Telegram |
+
+Note: All schedule times use the timezone from `settings.yaml` (`kovo.timezone`, default: `Asia/Dubai`).
+Manual triggers `run_quick_check_now()` and `run_full_report_now()` are still available via dashboard buttons.
 
 Heartbeat flow:
-1. Cron fires → read HEARTBEAT.md checklist
-2. Ollama evaluates: does anything need attention?
-3. If yes → escalate to Claude for detailed analysis
-4. Send findings to the owner via Telegram
-5. Log to memory/YYYY-MM-DD.md
+1. APScheduler fires job at scheduled time
+2. Job executes (archive logs, extract memory, check versions)
+3. Results logged; notifications sent to Telegram if needed
 
 ### 7b. Storage Management (src/tools/storage.py)
 
@@ -703,7 +714,7 @@ async def check_caller_session_health():
 
 **Re-authentication command:** When the owner sends `/reauth_caller` in Telegram, Kovo triggers the Pyrogram re-auth flow (sends OTP to the prepaid SIM number, the owner enters the code via Telegram).
 
-**Prepaid SIM reminder:** Kovo tracks when the last top-up reminder was sent. Every 80 days it sends: "Reminder: top up your prepaid SIM (xxx-xxxx) to keep the caller account alive. Prepaid SIMs may expire after 90 days without top-up (varies by carrier)."
+
 
 ### 9. Dashboard (src/dashboard/)
 
@@ -835,6 +846,7 @@ Playwright for headless browser automation:
 ### settings.yaml
 ```yaml
 kovo:
+  timezone: Asia/Dubai    # controls log timestamps, schedules, memory dates
   workspace: /opt/kovo/workspace
   data_dir: /opt/kovo/data
 
@@ -844,9 +856,9 @@ telegram:
     - ${OWNER_TELEGRAM_ID}
 
 ollama:
-  url: http://{YOUR_OLLAMA_IP}:11434  # your Ollama server IP
+  url: http://<OLLAMA-HOST>:11434  # your Ollama server IP
   default_model: llama3.1:8b
-  # NOTE: no classifier_model — Ollama is used only for heartbeats, not message routing
+  enabled: false                   # set to true if you have Ollama
 
 claude:
   # Uses claude CLI subprocess — no API key needed
@@ -993,6 +1005,18 @@ KOVO renamed to **Kovo**. `ESAM_TELEGRAM_ID` renamed to `OWNER_TELEGRAM_ID` for 
 
 ### Phase 20: v0.5 — Backup & Restore, Setup Wizard, Dashboard Polish ✅
 `scripts/backup.sh` v2 — two-tier backups (core ~50KB, full ~3MB+) with manifest.json tracking skills, memory days, packages, auth status. `scripts/restore.sh` — smart .env merge (backup fills blanks, current wins), pip delta reinstall, crontab restore, auth status report. Dashboard backup UI with core/full buttons, tier badges, click-to-expand manifest viewer. Setup wizard enhancements: choice page (new install vs restore), city+timezone auto-detection, Telegram redirect on save, restore success screen with manifest details. CLI bootstrap mascot (15-line ANSI 256-color) with KOVO block letters. Splash screen animations: bounce-in mascot, staggered text timing, dual-direction shooting stars. Full personal data scrub — name, IPs, memory logs removed from public repo. DOCS.md removed (README + CLAUDE.md cover everything).
+
+### Phase 21: Personal Data Isolation + Update Mechanism ✅
+Converted 7 workspace files to `.template` pattern — repo ships `.template` files only, live files gitignored. `config/settings.yaml` → `config/settings.yaml.template` (same pattern). Pre-push git hook at `.git/hooks/pre-push` blocks workspace/*.md, .env, credentials, .db, .session files. `bootstrap.sh` copies templates → live files on first install only (never overwrites). `scripts/update.sh` — safe self-updater with `--check`, `--apply`, `--json` modes. Auto-backup before update, stashes local changes, pulls, installs pip deps if changed, rebuilds frontend if JSX changed, restarts service. `src/heartbeat/version_check.py` — daily GitHub check, Telegram notification on new releases. Dashboard Settings → Updates section with one-click update. Updates only trigger on `KOVO_VERSION` bump, not every commit SHA.
+
+### Phase 22: Pinned Memory System ✅
+MEMORY.md split into Pinned (always in brain, key-value, updates in place, never archived) + Learnings (rolling log, on-demand, archived when >500 lines). Auto-extractor outputs `### PINNED` + `### LEARNINGS` sections. `manager.py` gains `update_pinned()`, `remove_pinned()`, `pinned_memory()`, `learnings_memory()`. Budget check only archives Learnings.
+
+### Phase 23: Configurable Timezone ✅
+`kovo.timezone` in settings.yaml controls all timestamps — log output, APScheduler cron triggers, memory dates. Shared helper `src/utils/tz.py`. Removed hardcoded `Asia/Dubai` from all modules. Dashboard Settings → General → Timezone dropdown. Supports common timezone names + UTC+N format.
+
+### Phase 24: Scheduler Cleanup ✅
+Stripped to 4 core jobs: `archive_logs`, `auto_extract`, `weekly_memory_consolidation`, `version_check`. Removed: `quick_check`, `full_report`, `morning_briefing`, `sim_reminder`, `storage_check`, `storage_review`. Manual triggers kept for dashboard buttons. APScheduler noise suppressed (log level WARNING).
 
 ## Environment Variables (.env)
 ```
