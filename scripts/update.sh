@@ -12,8 +12,22 @@
 
 set -euo pipefail
 
-KOVO_DIR="/opt/kovo"
-LOG_FILE="/opt/kovo/logs/update.log"
+# ─── Cross-platform KOVO_DIR detection ────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -n "${KOVO_DIR:-}" ]; then
+    : # already set
+elif [ -f "$SCRIPT_DIR/../bootstrap.sh" ]; then
+    KOVO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+elif [ -d "/opt/kovo" ]; then
+    KOVO_DIR="/opt/kovo"
+elif [ -d "$HOME/.kovo" ]; then
+    KOVO_DIR="$HOME/.kovo"
+else
+    echo "ERROR: Cannot find KOVO installation"; exit 1
+fi
+
+OS_TYPE="$(uname -s)"
+LOG_FILE="$KOVO_DIR/logs/update.log"
 REPO_URL="https://raw.githubusercontent.com/Ava-AgentOne/kovo/main"
 GITHUB_API="https://api.github.com/repos/Ava-AgentOne/kovo"
 
@@ -67,6 +81,16 @@ version_gt() {
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$1" ]
 }
 
+restart_service() {
+    if [ "$OS_TYPE" = "Darwin" ]; then
+        local plist="$HOME/Library/LaunchAgents/com.kovo.agent.plist"
+        launchctl unload "$plist" 2>/dev/null || true
+        launchctl load "$plist" 2>/dev/null && log "  Service restarted (launchd)" || log "  ⚠ Restart failed"
+    else
+        sudo systemctl restart kovo 2>/dev/null && log "  Service restarted" || log "  ⚠ Restart failed"
+    fi
+}
+
 # ── CHECK ──────────────────────────────────────────────────────
 if [ "$MODE" = "check" ]; then
     LOCAL_VER=$(get_local_version)
@@ -105,7 +129,7 @@ JSONEOF
         if $UPDATE_AVAILABLE; then
             echo ""
             echo "  ✓ New release available!"
-            echo "  Run: bash /opt/kovo/scripts/update.sh --apply"
+            echo "  Run: bash $KOVO_DIR/scripts/update.sh --apply"
         else
             echo "  · You're on the latest release."
         fi
@@ -182,7 +206,7 @@ if [ "$MODE" = "apply" ]; then
     done
 
     log "Step 9: Restarting service..."
-    sudo systemctl restart kovo 2>/dev/null && log "  Service restarted" || log "  ⚠ Restart failed"
+    restart_service
 
     log ""
     log "✓ Update complete: v$LOCAL_VER → v$NEW_VER"

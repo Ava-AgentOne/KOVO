@@ -11,7 +11,21 @@
 # ═══════════════════════════════════════════════════════════════════
 set -e
 
-KOVO_DIR="/opt/kovo"
+# ─── Cross-platform KOVO_DIR detection ────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -n "${KOVO_DIR:-}" ]; then
+    : # already set
+elif [ -f "$SCRIPT_DIR/../bootstrap.sh" ]; then
+    KOVO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+elif [ -d "/opt/kovo" ]; then
+    KOVO_DIR="/opt/kovo"
+elif [ -d "$HOME/.kovo" ]; then
+    KOVO_DIR="$HOME/.kovo"
+else
+    echo "ERROR: Cannot find KOVO installation"; exit 1
+fi
+
+OS_TYPE="$(uname -s)"
 BACKUP_DIR="$KOVO_DIR/data/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 STAGE="/tmp/kovo-backup-$DATE"
@@ -77,7 +91,7 @@ done
 
 # Package manifests (for reinstalling user-added packages)
 ITEMS[_pip_freeze]="packages"
-ITEMS[_apt_packages]="packages"
+ITEMS[_system_packages]="packages"
 ITEMS[_npm_global]="packages"
 ITEMS[_crontab]="packages"
 
@@ -190,9 +204,18 @@ else
     skip "pip (no venv found)"
 fi
 
-# apt packages
-dpkg --get-selections 2>/dev/null | grep -v deinstall > "$STAGE/packages/apt_installed.txt"
-ok "packages: apt ($(wc -l < "$STAGE/packages/apt_installed.txt" | tr -d ' ') packages)"
+# System packages — cross-platform
+if [ "$OS_TYPE" = "Darwin" ]; then
+    if command -v brew &>/dev/null; then
+        brew list --formula 2>/dev/null > "$STAGE/packages/brew_installed.txt"
+        ok "packages: brew ($(wc -l < "$STAGE/packages/brew_installed.txt" | tr -d ' ') formulae)"
+    else
+        skip "brew (not found)"
+    fi
+else
+    dpkg --get-selections 2>/dev/null | grep -v deinstall > "$STAGE/packages/apt_installed.txt"
+    ok "packages: apt ($(wc -l < "$STAGE/packages/apt_installed.txt" | tr -d ' ') packages)"
+fi
 
 # npm global packages
 if command -v npm &>/dev/null; then
@@ -227,7 +250,8 @@ fi
 # ─── Generate manifest.json ──────────────────────────────────────
 info "Building manifest..."
 
-KOVO_VER=$(grep -oP 'KOVO_VERSION="\K[^"]+' "$KOVO_DIR/bootstrap.sh" 2>/dev/null || echo "unknown")
+KOVO_VER=$(grep -oP 'KOVO_VERSION="\K[^"]+' "$KOVO_DIR/bootstrap.sh" 2>/dev/null || \
+           grep -o 'KOVO_VERSION="[^"]*"' "$KOVO_DIR/bootstrap.sh" 2>/dev/null | sed 's/.*="//;s/"//' || echo "unknown")
 HOSTNAME=$(hostname 2>/dev/null || echo "unknown")
 PY_VER=$(python3 --version 2>/dev/null | cut -d' ' -f2 || echo "unknown")
 NODE_VER=$(node --version 2>/dev/null || echo "unknown")
@@ -241,7 +265,6 @@ STAGE_SIZE=$(du -sm "$STAGE" 2>/dev/null | cut -f1 || echo "0")
 # Check auth status
 has_file() { [ -f "$1" ] && echo "true" || echo "false"; }
 TBOT=$(grep -q "TELEGRAM_BOT_TOKEN=." "$KOVO_DIR/config/.env" 2>/dev/null && echo "true" || echo "false")
-TCALLER=$(ls "$KOVO_DIR"/*.session "$KOVO_DIR"/config/*.session "$KOVO_DIR"/data/*.session 2>/dev/null | head -1 && echo "true" || echo "false")
 GOAUTH=$(has_file "$KOVO_DIR/config/google-token.json")
 GROQ=$(grep -q "GROQ_API_KEY=." "$KOVO_DIR/config/.env" 2>/dev/null && echo "true" || echo "false")
 GHUB=$(grep -q "GITHUB_TOKEN=." "$KOVO_DIR/config/.env" 2>/dev/null && echo "true" || echo "false")
@@ -255,7 +278,7 @@ cat > "$STAGE/manifest.json" << MANIFEST_EOF
 {
   "kovo_version": "$KOVO_VER",
   "backup_version": "2.0",
-  "backup_date": "$(date -Iseconds)",
+  "backup_date": "$(date -Iseconds 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S')",
   "hostname": "$HOSTNAME",
   "tiers": $TIERS,
   "stats": {
@@ -313,7 +336,7 @@ echo -e "  ${D}  • Claude Code permissions${N}"
 echo -e "  ${D}  • Telegram caller session${N}"
 echo -e "  ${D}  • Workspace (${MEMORY_DAYS} days memory, ${SKILLS_COUNT} skills)${N}"
 echo -e "  ${D}  • SQLite database (${DB_SIZE}MB)${N}"
-echo -e "  ${D}  • Package manifests (pip delta, apt, npm, crontab)${N}"
+echo -e "  ${D}  • Package manifests (pip delta, system packages, npm, crontab)${N}"
 $INCLUDE_MEDIA && echo -e "  ${D}  • Media files (photos, documents, audio, images)${N}"
 echo ""
 echo -e "  ${D}Restore on new machine:${N}"
