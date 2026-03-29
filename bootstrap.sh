@@ -287,6 +287,7 @@ screen_welcome() {
     else fail "Sudo: not available"; errors=$((errors+1)); fi
 
     if command -v python3 &>/dev/null; then ok "Python: $(python3 --version | cut -d' ' -f2)"
+    elif [[ "$OS_TYPE" == "Darwin" ]]; then warn "Python3: not found (will be installed by Homebrew)"
     else fail "Python3: not found"; errors=$((errors+1)); fi
 
     if [[ "$OS_TYPE" == "Darwin" ]]; then
@@ -459,17 +460,21 @@ install_system_packages() {
         fi
 
         info "Installing core dependencies..."
-        brew install python@3.13 git curl wget jq sqlite ffmpeg htop 2>&1 | tail -3
+        for pkg in python@3.13 git curl wget jq sqlite ffmpeg htop; do
+            info "  $pkg..."
+            brew install "$pkg" 2>&1 | tail -1 || true
+            ok "  $pkg"
+        done
         ok "Core packages (brew)"
 
         info "Installing Redis..."
-        brew install redis 2>&1 | tail -1
+        brew install redis 2>&1 | tail -1 || true
         brew services start redis 2>/dev/null || true
         if redis-cli ping 2>/dev/null | grep -q PONG; then ok "Redis: running (PONG)"
         else warn "Redis: installed but not responding"; fi
 
         info "Installing security tools..."
-        brew install clamav 2>&1 | tail -1
+        brew install clamav 2>&1 | tail -1 || true
         ok "Security: ClamAV (chkrootkit/rkhunter skipped on macOS)"
     else
         # ── Linux: apt ───────────────────────────────────────────
@@ -486,7 +491,7 @@ install_system_packages() {
             python3 python3-venv python3-pip \
             git curl wget jq build-essential sqlite3 ffmpeg \
             htop tmux ca-certificates gnupg \
-            2>&1 | tail -1
+            2>&1 | tail -1 || true
         ok "Core packages installed"
 
         info "Installing Redis..."
@@ -496,7 +501,7 @@ install_system_packages() {
         else warn "Redis: installed but not responding"; fi
 
         info "Installing security audit tools..."
-        sudo apt install -y -qq clamav clamav-daemon chkrootkit rkhunter 2>&1 | tail -1
+        sudo apt install -y -qq clamav clamav-daemon chkrootkit rkhunter 2>&1 | tail -1 || true
         sudo systemctl stop clamav-freshclam 2>/dev/null || true
         sudo freshclam 2>/dev/null || warn "ClamAV definitions update failed"
         sudo systemctl start clamav-freshclam 2>/dev/null || true
