@@ -310,7 +310,7 @@ if _FRONTEND_DIST.exists():
     async def dashboard_root_redirect():
         """Redirect /dashboard to /dashboard/setup if .env is unconfigured."""
         from fastapi.responses import RedirectResponse
-        from src.gateway.config import _ENV_PATH
+        from src.gateway.config import _ENV_FILE as _ENV_PATH
         try:
             env_text = _ENV_PATH.read_text() if _ENV_PATH.exists() else ""
             token = [l for l in env_text.splitlines() if l.startswith("TELEGRAM_BOT_TOKEN=")]
