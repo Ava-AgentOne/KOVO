@@ -25,6 +25,12 @@ case "$OS_TYPE" in
     Darwin) KOVO_DIR="$HOME/.kovo" ;;
     *)      echo "Unsupported OS: $OS_TYPE"; exit 1 ;;
 esac
+
+# On macOS, ensure Homebrew is in PATH for all phases
+if [[ "$OS_TYPE" == "Darwin" ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null || true)"
+fi
+
 VENV="$KOVO_DIR/venv"
 WORKSPACE="$KOVO_DIR/workspace"
 STATE_FILE="/tmp/.kovo-install-state"
@@ -1084,7 +1090,7 @@ SVCEOF
     echo -e "  ${BLUE}${BOLD}╚══════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "  ${CYAN}1${NC} Start the setup wizard:"
-    echo -e "     ${CYAN}cd /opt/kovo && source venv/bin/activate${NC}"
+    echo -e "     ${CYAN}cd $KOVO_DIR && source venv/bin/activate${NC}"
     echo -e "     ${CYAN}python scripts/setup-wizard.py${NC}"
     echo -e "     Then open: ${WHITE}http://${vm_ip}:9090/setup${NC}"
     echo ""
