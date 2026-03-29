@@ -24,13 +24,15 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile, WebSock
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
+from src.utils.platform import kovo_dir, service_restart_cmd, service_status as _platform_service_status, get_ram_info, get_disk_info
+
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 # Read KOVO version from bootstrap.sh
 def _read_version() -> str:
     try:
-        bs = Path("/opt/kovo/bootstrap.sh").read_text()
+        bs = (kovo_dir() / "bootstrap.sh").read_text()
         import re
         m = re.search(r'KOVO_VERSION="([^"]+)"', bs)
         return m.group(1) if m else "0.0.0"
@@ -385,7 +387,7 @@ async def run_full_report(request: Request):
 
 @router.get("/logs")
 async def get_logs(lines: int = 200):
-    log_file = Path("/opt/kovo/logs/gateway.log")
+    log_file = kovo_dir() / "logs" / "gateway.log"
     if not log_file.exists():
         return {"lines": []}
     try:
@@ -420,7 +422,7 @@ async def update_tool(request: Request, name: str, payload: UpdateToolRequest):
 
 # ── Workspace file save ────────────────────────────────────────────────────────
 
-_WORKSPACE_ROOT = Path("/opt/kovo/workspace")
+_WORKSPACE_ROOT = kovo_dir() / "workspace"
 _WORKSPACE_WRITEABLE = {
     "MEMORY.md", "SOUL.md", "USER.md", "IDENTITY.md",
     "AGENTS.md", "TOOLS.md", "HEARTBEAT.md",
@@ -472,8 +474,8 @@ async def save_workspace_file(filepath: str, payload: SaveFileRequest):
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 
-_SETTINGS_PATH = Path("/opt/kovo/config/settings.yaml")
-_ENV_PATH = Path("/opt/kovo/config/.env")
+_SETTINGS_PATH = kovo_dir() / "config" / "settings.yaml"
+_ENV_PATH = kovo_dir() / "config" / ".env"
 
 
 @router.get("/settings")
@@ -524,7 +526,7 @@ async def restart_service():
     """Restart the kovo service with a 2s delay so the API can respond first."""
     try:
         subprocess.Popen(
-            ["bash", "-c", "sleep 2 && sudo systemctl restart kovo"],
+            service_restart_cmd(),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -535,17 +537,7 @@ async def restart_service():
 
 @router.get("/service/status")
 async def service_status():
-    for svc in ("kovo", "kovo.service"):
-        try:
-            r = subprocess.run(
-                ["systemctl", "is-active", svc],
-                capture_output=True, text=True, timeout=5,
-            )
-            if r.returncode in (0, 3):  # 0=active, 3=inactive
-                return {"service": svc, "active": r.returncode == 0, "state": r.stdout.strip()}
-        except Exception:
-            pass
-    return {"service": "unknown", "active": False, "state": "unknown"}
+    return _platform_service_status()
 
 
 # ── System info ───────────────────────────────────────────────────────────────
@@ -560,26 +552,14 @@ async def system_info():
     except Exception:
         info["node"] = "unavailable"
     try:
-        usage = shutil.disk_usage("/opt/kovo")
+        usage = shutil.disk_usage(str(kovo_dir()))
         info["disk_total_gb"] = round(usage.total / 1e9, 1)
         info["disk_used_gb"] = round(usage.used / 1e9, 1)
         info["disk_free_gb"] = round(usage.free / 1e9, 1)
         info["disk_pct"] = round(usage.used / usage.total * 100, 1)
     except Exception:
         pass
-    try:
-        mem_info = Path("/proc/meminfo").read_text()
-        def _kb(key):
-            m = re.search(rf"^{key}:\s+(\d+)", mem_info, re.MULTILINE)
-            return int(m.group(1)) * 1024 if m else 0
-        total = _kb("MemTotal")
-        avail = _kb("MemAvailable")
-        info["ram_total_gb"] = round(total / 1e9, 1)
-        info["ram_used_gb"] = round((total - avail) / 1e9, 1)
-        info["ram_free_gb"] = round(avail / 1e9, 1)
-        info["ram_pct"] = round((total - avail) / total * 100, 1) if total else 0
-    except Exception:
-        pass
+    info.update(get_ram_info())
     return info
 
 
@@ -684,7 +664,7 @@ async def chat_websocket(websocket: WebSocket):
 
 # ── Security ──────────────────────────────────────────────────────────────────
 
-_SEC_DIR = Path("/opt/kovo/data/security")
+_SEC_DIR = kovo_dir() / "data" / "security"
 _SEC_LATEST = _SEC_DIR / "latest.json"
 _SEC_HISTORY = _SEC_DIR / "history.json"
 _SEC_BASELINE = _SEC_DIR / "baseline.json"
@@ -721,7 +701,7 @@ async def security_history():
 @router.post("/security/run")
 async def security_run():
     """Trigger the security audit skill via subprocess (non-blocking)."""
-    script = Path("/opt/kovo/workspace/skills/security-audit/run.sh")
+    script = kovo_dir() / "workspace" / "skills" / "security-audit" / "run.sh"
     if script.exists():
         try:
             subprocess.Popen(
@@ -834,8 +814,8 @@ async def clawhub_install(body: _ClawHubInstallReq, request: Request):
 
 # ── Backup ────────────────────────────────────────────────────────────────────
 
-_BACKUP_DIR = Path("/opt/kovo/data/backups")
-_BACKUP_SCRIPT = Path("/opt/kovo/scripts/backup.sh")
+_BACKUP_DIR = kovo_dir() / "data" / "backups"
+_BACKUP_SCRIPT = kovo_dir() / "scripts" / "backup.sh"
 
 
 def _human_size(size_bytes: int) -> str:
@@ -961,7 +941,7 @@ async def restore_backup(file: UploadFile = File(...)):
         _sh.copy2(tmp_path, _BACKUP_DIR / file.filename)
 
         # Use restore.sh v2 if available, fallback to raw extract
-        restore_script = Path("/opt/kovo/scripts/restore.sh")
+        restore_script = kovo_dir() / "scripts" / "restore.sh"
         if restore_script.exists():
             result = subprocess.run(
                 ["bash", str(restore_script), tmp_path],
@@ -969,7 +949,7 @@ async def restore_backup(file: UploadFile = File(...)):
             )
         else:
             result = subprocess.run(
-                ["tar", "xzf", tmp_path, "-C", "/opt/kovo", "--overwrite"],
+                ["tar", "xzf", tmp_path, "-C", str(kovo_dir()), "--overwrite"],
                 capture_output=True, text=True, timeout=60,
             )
 
@@ -989,7 +969,10 @@ async def restore_backup(file: UploadFile = File(...)):
         except Exception:
             pass
 
-        subprocess.run(["sudo", "systemctl", "restart", "kovo"], capture_output=True, timeout=10)
+        try:
+            subprocess.Popen(service_restart_cmd(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
 
         return {
             "ok": result.returncode == 0,
@@ -1043,8 +1026,8 @@ async def security_fix(payload: SecurityFixRequest):
 
 # ── Updates ───────────────────────────────────────────────────────────────────
 
-_UPDATE_SCRIPT = Path("/opt/kovo/scripts/update.sh")
-_UPDATE_LOG = Path("/opt/kovo/logs/update.log")
+_UPDATE_SCRIPT = kovo_dir() / "scripts" / "update.sh"
+_UPDATE_LOG = kovo_dir() / "logs" / "update.log"
 
 
 @router.get("/update/check")

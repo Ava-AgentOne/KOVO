@@ -12,6 +12,8 @@ import urllib.request
 
 import psutil
 
+from src.utils.platform import IS_MACOS, IS_LINUX
+
 log = logging.getLogger(__name__)
 
 
@@ -30,7 +32,10 @@ def gather_quick_health() -> str:
     parts: list[str] = []
 
     # Disk — filter to real filesystems
-    disk_out = _run("df -h --output=target,size,used,avail,pcent -x tmpfs -x devtmpfs -x udev 2>/dev/null | head -20")
+    if IS_MACOS:
+        disk_out = _run("df -h / /System/Volumes/Data 2>/dev/null | head -10")
+    else:
+        disk_out = _run("df -h --output=target,size,used,avail,pcent -x tmpfs -x devtmpfs -x udev 2>/dev/null | head -20")
     if disk_out:
         parts.append(f"DISK:\n{disk_out}")
 
@@ -66,25 +71,37 @@ def gather_full_health() -> str:
     parts = [gather_quick_health()]
 
     # Uptime
-    uptime_out = _run("uptime -p 2>/dev/null || uptime")
+    if IS_MACOS:
+        uptime_out = _run("uptime")
+    else:
+        uptime_out = _run("uptime -p 2>/dev/null || uptime")
     parts.append(f"UPTIME: {uptime_out}")
 
     # Top processes by CPU
-    top_cpu = _run("ps aux --sort=-%cpu | head -8 | awk '{print $1,$3,$4,$11}'")
+    if IS_MACOS:
+        top_cpu = _run("ps aux -r | head -8 | awk '{print $1,$3,$4,$11}'")
+    else:
+        top_cpu = _run("ps aux --sort=-%cpu | head -8 | awk '{print $1,$3,$4,$11}'")
     if top_cpu:
         parts.append(f"TOP PROCESSES (CPU):\n{top_cpu}")
 
     # Network interfaces
-    net_out = _run("ip -br addr show 2>/dev/null | grep -v '^lo'")
+    if IS_MACOS:
+        net_out = _run("ifconfig | grep -E '^[a-z]|inet ' | grep -v '^lo'")
+    else:
+        net_out = _run("ip -br addr show 2>/dev/null | grep -v '^lo'")
     if net_out:
         parts.append(f"NETWORK:\n{net_out}")
 
-    # Failed systemd services
-    failed = _run("systemctl --failed --no-legend 2>/dev/null | head -5")
-    if failed:
-        parts.append(f"FAILED SERVICES:\n{failed}")
+    # Failed services
+    if IS_LINUX:
+        failed = _run("systemctl --failed --no-legend 2>/dev/null | head -5")
+        if failed:
+            parts.append(f"FAILED SERVICES:\n{failed}")
+        else:
+            parts.append("FAILED SERVICES: none")
     else:
-        parts.append("FAILED SERVICES: none")
+        parts.append("FAILED SERVICES: (systemd not available on macOS)")
 
     # Disk I/O
     io = psutil.disk_io_counters()

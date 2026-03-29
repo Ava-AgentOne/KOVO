@@ -13,6 +13,8 @@ import logging
 import re
 import subprocess
 
+from src.utils.platform import kovo_dir
+
 log = logging.getLogger(__name__)
 
 # Prefixes/patterns that are always safe (read-only / harmless)
@@ -126,13 +128,15 @@ def classify(command: str) -> str:
 def run(
     command: str,
     timeout: int = 30,
-    cwd: str = "/opt/kovo",
+    cwd: str | None = None,
     allow_caution: bool = True,
 ) -> dict:
     """
     Execute a shell command.
     Returns: {ok, stdout, stderr, exit_code, command, classification}
     """
+    if cwd is None:
+        cwd = str(kovo_dir())
     safety = classify(command)
 
     if safety == "dangerous":
