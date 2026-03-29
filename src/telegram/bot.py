@@ -99,6 +99,8 @@ async def _handle_google_auth_code(
 
 
 _IMAGE_TAG_RE = re.compile(r"\[SEND_IMAGE:\s*(.+?)\]", re.IGNORECASE)
+_REMINDER_RE = re.compile(r"\[SET_REMINDER:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\]", re.IGNORECASE)
+_URL_RE = re.compile(r"https?://[^\s<>"']+")
 
 
 async def _handle_image_tags(update: Update, response_text: str) -> str:
@@ -136,6 +138,48 @@ async def _handle_image_tags(update: Update, response_text: str) -> str:
 
     # Strip all tags from the text response
     return _IMAGE_TAG_RE.sub("", response_text).strip()
+
+
+async def _handle_reminder_tags(update: Update, response_text: str, context) -> str:
+    """
+    Parse [SET_REMINDER: message | datetime | delivery] tags from agent response.
+    Creates reminders in SQLite and confirms to the user.
+    Returns cleaned response text (tags removed).
+    """
+    tags = _REMINDER_RE.findall(response_text)
+    if not tags:
+        return response_text
+
+    reminders = context.bot_data.get("reminders")
+    if not reminders:
+        return _REMINDER_RE.sub("", response_text).strip()
+
+    user_id = update.effective_user.id
+    for msg_text, due_at, delivery in tags:
+        msg_text = msg_text.strip()
+        due_at = due_at.strip()
+        delivery = delivery.strip().lower()
+        if delivery not in ("message", "call", "both"):
+            delivery = "message"
+
+        rid = reminders.create(user_id, msg_text, due_at, delivery)
+
+        try:
+            from datetime import datetime as _dt
+            dt = _dt.fromisoformat(due_at)
+            time_str = dt.strftime("%b %d, %I:%M %p")
+        except Exception:
+            time_str = due_at
+
+        emoji = {"message": "\U0001f4ac", "call": "\U0001f4de", "both": "\U0001f4de\U0001f4ac"}.get(delivery, "\U0001f4ac")
+        await update.message.reply_text(
+            f"\u23f0 Reminder #{rid} set!\n\n"
+            f"{emoji} {msg_text}\n"
+            f"\U0001f4c5 {time_str}\n"
+            f"\U0001f514 Delivery: {delivery}"
+        )
+
+    return _REMINDER_RE.sub("", response_text).strip()
 
 
 def _ffmpeg(args: list[str]) -> None:
@@ -335,6 +379,19 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         elif force_model == "opus":
             force_complexity = "complex"
 
+        # ── Auto-detect URLs and prepend page content ─────────────────
+        urls = _URL_RE.findall(message_text)
+        if urls and len(message_text) < 2000:  # skip if message is already huge
+            from src.tools.link_reader import extract_sync
+            for url in urls[:2]:
+                try:
+                    page = extract_sync(url, max_chars=3000)
+                    if page.get("content") and len(page["content"]) > 50:
+                        title = page.get("title") or url
+                        message_text += f"\n\n--- Content from: {title} ---\n{page['content']}"
+                except Exception as e:
+                    log.debug("link_reader failed for %s: %s", url, e)
+
         await _safe_action(msg.chat, ChatAction.TYPING)
 
         result = await agent.handle(
@@ -369,8 +426,9 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         agent_used = result.get("agent", "kovo")
         log.info("user=%s agent=%s model=%s len=%d", user_id, agent_used, model_used, len(response_text))
 
-        # Handle any [SEND_IMAGE: ...] tags before sending text
+        # Handle any [SEND_IMAGE: ...] or [SET_REMINDER: ...] tags
         response_text = await _handle_image_tags(update, response_text)
+        response_text = await _handle_reminder_tags(update, response_text, context)
 
         # Sub-agent recommendation → store pending + attach inline button to last chunk
         sub_topic = result.get("__sub_agent_topic__")
@@ -692,6 +750,7 @@ def build_application(
     storage=None,
     structured_store=None,
     auto_extractor=None,
+    reminders=None,
 ) -> Application:
     """Create and configure the Telegram bot application."""
     app = Application.builder().token(cfg.telegram_token()).build()
@@ -708,6 +767,7 @@ def build_application(
     app.bot_data["storage"] = storage              # None if not configured
     app.bot_data["structured_store"] = structured_store  # SQLite store
     app.bot_data["auto_extractor"] = auto_extractor     # memory extractor
+    app.bot_data["reminders"] = reminders              # reminder manager
 
     # Commands
     app.add_handler(CommandHandler("start", cmd.cmd_start))
@@ -732,6 +792,8 @@ def build_application(
     app.add_handler(CommandHandler("storage", cmd.cmd_storage))
     app.add_handler(CommandHandler("purge", cmd.cmd_purge))
     app.add_handler(CommandHandler("db", cmd.cmd_db))
+    app.add_handler(CommandHandler("reminders", cmd.cmd_reminders))
+    app.add_handler(CommandHandler("remind", cmd.cmd_remind))
 
     # Inline keyboard callbacks (permission, purge, sub-agent buttons)
     app.add_handler(CallbackQueryHandler(cmd.button_callback))

@@ -830,3 +830,65 @@ async def button_callback(update: Update, context: CallbackContext) -> None:
         return
 
     await query.answer("Unknown action.")
+
+
+# ── Reminders ──────────────────────────────────────────────────────────────
+
+async def cmd_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """List pending reminders."""
+    reminders = context.bot_data.get("reminders")
+    if not reminders:
+        await update.message.reply_text("Reminders not configured.")
+        return
+
+    user_id = update.effective_user.id
+    pending = reminders.list_pending(user_id)
+
+    if not pending:
+        await update.message.reply_text("\u2705 No pending reminders.")
+        return
+
+    lines = ["\u23f0 *Pending Reminders*\n"]
+    for r in pending:
+        delivery_emoji = {"message": "\U0001f4ac", "call": "\U0001f4de", "both": "\U0001f4de\U0001f4ac"}.get(r["delivery"], "\U0001f4ac")
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(r["due_at"])
+            time_str = dt.strftime("%b %d, %I:%M %p")
+        except Exception:
+            time_str = r["due_at"]
+        lines.append(f"  `#{r['id']}` {delivery_emoji} {r['message']}")
+        lines.append(f"        \U0001f4c5 {time_str}")
+        lines.append("")
+    lines.append("Cancel: `/remind cancel <number>`")
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+async def cmd_remind(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/remind cancel <id> — cancel a reminder."""
+    reminders = context.bot_data.get("reminders")
+    if not reminders:
+        await update.message.reply_text("Reminders not configured.")
+        return
+
+    args = (update.message.text or "").split()
+    # /remind cancel 5
+    if len(args) >= 3 and args[1].lower() == "cancel":
+        try:
+            rid = int(args[2])
+        except ValueError:
+            await update.message.reply_text("Usage: `/remind cancel <number>`", parse_mode="Markdown")
+            return
+
+        user_id = update.effective_user.id
+        if reminders.cancel(rid, user_id):
+            await update.message.reply_text(f"\u2705 Reminder #{rid} cancelled.")
+        else:
+            await update.message.reply_text(f"\u274c Reminder #{rid} not found or already done.")
+    else:
+        await update.message.reply_text(
+            "Usage:\n"
+            "  `/reminders` — list pending\n"
+            "  `/remind cancel <number>` — cancel a reminder",
+            parse_mode="Markdown",
+        )

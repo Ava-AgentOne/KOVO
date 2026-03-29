@@ -16,6 +16,7 @@ from src.utils.tz import today as _tz_today
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from src.memory.manager import MemoryManager
 from src.tools.ollama import OllamaClient
@@ -55,6 +56,10 @@ class HeartbeatScheduler:
         # For version_check notifications
         self._tg_bot = None
         self._owner_user_id = None
+
+        # For reminder delivery
+        self._reminders = None
+        self._agent = None
 
     @staticmethod
     def _get_tz_name() -> str:
@@ -108,6 +113,15 @@ class HeartbeatScheduler:
             id="version_check",
             replace_existing=True,
         )
+
+        # Check reminders — every 60 seconds
+        if self._reminders is not None:
+            self._scheduler.add_job(
+                self._check_reminders,
+                trigger=IntervalTrigger(seconds=60),
+                id="check_reminders",
+                replace_existing=True,
+            )
 
         self._scheduler.start()
         self._started = True
@@ -163,6 +177,72 @@ class HeartbeatScheduler:
                 await _version_check(tg_bot, owner_id)
         except Exception as e:
             log.warning("Version check job failed: %s", e)
+
+    async def _check_reminders(self) -> None:
+        """Fire due reminders — message, call, or both."""
+        if self._reminders is None:
+            return
+
+        due = self._reminders.get_due()
+        if not due:
+            return
+
+        for r in due:
+            rid = r["id"]
+            msg = r["message"]
+            delivery = r.get("delivery", "message")
+            user_id = r["user_id"]
+
+            log.info("Firing reminder #%d: '%s' (%s)", rid, msg[:40], delivery)
+
+            # --- Telegram message ---
+            if delivery in ("message", "both"):
+                try:
+                    if self._tg_bot:
+                        await self._tg_bot.send_message(
+                            chat_id=user_id,
+                            text=f"\u23f0 *Reminder*\n\n{msg}",
+                            parse_mode="Markdown",
+                        )
+                except Exception as e:
+                    log.error("Reminder #%d message failed: %s", rid, e)
+
+            # --- Voice call ---
+            if delivery in ("call", "both"):
+                try:
+                    agent = self._agent
+                    if agent and getattr(agent, "caller", None) and getattr(agent, "tts", None):
+                        from pathlib import Path
+                        import asyncio
+                        audio_dir = Path("/opt/kovo/data/audio")
+                        audio_dir.mkdir(parents=True, exist_ok=True)
+                        mp3 = str(audio_dir / f"reminder_{rid}.mp3")
+                        await agent.tts.speak(msg[:500], mp3)
+                        try:
+                            await agent.caller.call(user_id, mp3, timeout=30)
+                        except Exception as call_err:
+                            log.warning("Reminder #%d call failed, sending voice msg: %s", rid, call_err)
+                            if self._tg_bot:
+                                try:
+                                    await self._tg_bot.send_voice(
+                                        chat_id=user_id,
+                                        voice=open(mp3, "rb"),
+                                        caption=f"\u23f0 Reminder: {msg[:200]}",
+                                    )
+                                except Exception:
+                                    pass
+                    elif self._tg_bot:
+                        # No caller configured — fall back to message
+                        await self._tg_bot.send_message(
+                            chat_id=user_id,
+                            text=f"\U0001f4de *Reminder (call unavailable)*\n\n{msg}",
+                            parse_mode="Markdown",
+                        )
+                except Exception as e:
+                    log.error("Reminder #%d call delivery failed: %s", rid, e)
+
+            self._reminders.mark_done(rid)
+            log.info("Reminder #%d delivered and marked done", rid)
 
     # ------------------------------------------------------------------
     # Manual triggers (dashboard API / Telegram)

@@ -80,6 +80,9 @@ def _build_deps():
     )
     memory = MemoryManager(workspace_dir=workspace)
     store = StructuredStore()
+
+    from src.tools.reminders import ReminderManager
+    reminder_mgr = ReminderManager(db_path=cfg.data_dir() / "kovo.db")
     auto_extractor = AutoMemoryExtractor(memory_manager=memory, structured_store=store)
     skills = SkillRegistry(skills_dir=skills_dir)
     creator = SkillCreator(skills_dir=skills_dir, registry=skills)
@@ -119,6 +122,7 @@ def _build_deps():
         "agent": agent,
         "sub_agent_runner": sub_agent_runner,
         "transcriber": transcriber,
+        "reminders": reminder_mgr,
     }
 
 
@@ -150,6 +154,7 @@ async def lifespan(app: FastAPI):
     from src.tools.storage import StorageManager
     storage = StorageManager()
     app.state.storage = storage
+    app.state.reminders = deps.get("reminders")
 
     # First-run onboarding (no-op for already-configured systems)
     from src.onboarding.flow import OnboardingFlow
@@ -173,6 +178,7 @@ async def lifespan(app: FastAPI):
         storage=storage,
         structured_store=deps["store"],
         auto_extractor=deps["auto_extractor"],
+        reminders=deps.get("reminders"),
     )
     app.state.tg_app = tg_app
 
@@ -217,6 +223,10 @@ async def lifespan(app: FastAPI):
     heartbeat.start()
     app.state.heartbeat = heartbeat
     tg_app.bot_data["heartbeat"] = heartbeat
+
+    # Wire reminders into heartbeat scheduler
+    heartbeat._reminders = deps.get("reminders")
+    heartbeat._agent = deps["agent"]
 
     # Attach caller to heartbeat for session health monitoring
     agent = deps["agent"]
