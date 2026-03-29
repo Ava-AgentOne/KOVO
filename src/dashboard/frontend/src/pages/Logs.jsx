@@ -14,16 +14,16 @@ function getLevel(line) {
 }
 
 const LEVEL_CLASSES = {
-  critical:     'text-red-300 font-bold',
-  error:        'text-red-400',
-  warning:      'text-amber-400',
-  info:         'text-gray-300',
-  debug:        'text-gray-600',
-  continuation: 'text-gray-500 pl-4',
+  critical:     'text-red-700 dark:text-red-300 font-bold',
+  error:        'text-red-600 dark:text-red-400',
+  warning:      'text-amber-600 dark:text-amber-400',
+  info:         'text-gray-700 dark:text-gray-300',
+  debug:        'text-gray-400 dark:text-gray-600',
+  continuation: 'text-red-400 dark:text-red-500/60 pl-4',
 }
 
 function colorize(line) {
-  const cls = LEVEL_CLASSES[getLevel(line)] || 'text-gray-400'
+  const cls = LEVEL_CLASSES[getLevel(line)] || 'text-gray-600 dark:text-gray-400'
   return <span className={cls}>{line}</span>
 }
 
@@ -131,18 +131,18 @@ export default function Logs() {
         </div>
       </div>
 
-      {/* Log output — always dark terminal style */}
-      <div className="flex-1 bg-[#0d1117] border border-gray-300 dark:border-gray-700 rounded-xl overflow-auto p-3">
+      {/* Log output */}
+      <div className="flex-1 bg-gray-50 dark:bg-[#0d1117] border border-gray-200 dark:border-gray-700 rounded-xl overflow-auto p-3">
         <div className="font-mono text-xs leading-5 min-w-0">
           {filtered.map((line, i) => (
-            <div key={i} className="whitespace-nowrap hover:bg-white/5 px-1 rounded">
+            <div key={i} className="whitespace-nowrap hover:bg-gray-100 dark:hover:bg-white/5 px-1 rounded">
               {colorize(line)}
             </div>
           ))}
           <div ref={bottomRef} />
         </div>
         {filtered.length === 0 && (
-          <p className="text-gray-500 italic text-sm p-2">
+          <p className="text-gray-400 dark:text-gray-500 italic text-sm p-2">
             {textFilter || preset !== 'all' ? 'No lines match current filters.' : 'No log entries.'}
           </p>
         )}
