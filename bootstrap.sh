@@ -70,6 +70,34 @@ fail() { echo -e "  ${RED}✗${NC} $1"; }
 info() { echo -e "  ${BLUE}→${NC} $1"; }
 dim()  { echo -e "  ${GRAY}$1${NC}"; }
 
+# Background spinner for long-running commands (bash 3.2 safe)
+spin() {
+    local pid=$1 label="${2:-Working...}"
+    local i=0
+    while kill -0 "$pid" 2>/dev/null; do
+        case $((i % 4)) in
+            0) printf "  ${BLUE}-${NC} %s " "$label" ;;
+            1) printf "  ${BLUE}\\${NC} %s " "$label" ;;
+            2) printf "  ${BLUE}|${NC} %s " "$label" ;;
+            3) printf "  ${BLUE}/${NC} %s " "$label" ;;
+        esac
+        i=$((i + 1))
+        sleep 0.2
+    done
+    printf "%*s" 70 ""
+}
+
+# Run a command with a spinner — usage: run_with_spin "label" command arg1 arg2
+run_with_spin() {
+    local label="$1"; shift
+    "$@" > /tmp/.kovo-cmd-out 2>&1 &
+    local pid=$!
+    spin $pid "$label"
+    local rc=0
+    wait $pid || rc=$?
+    return $rc
+}
+
 progress_bar() {
     local current="$1" total="$2"
     local pct=$((current * 100 / total))
@@ -460,21 +488,28 @@ install_system_packages() {
         fi
 
         info "Installing core dependencies..."
-        for pkg in python@3.13 git curl wget jq sqlite ffmpeg htop cmake; do
-            info "  $pkg..."
-            brew install "$pkg" 2>&1 | tail -1 || true
-            ok "  $pkg"
+        local brew_pkgs=(python@3.13 git curl wget jq sqlite ffmpeg htop cmake)
+        local brew_total=${#brew_pkgs[@]}
+        local brew_i=0
+        for pkg in "${brew_pkgs[@]}"; do
+            brew_i=$((brew_i + 1))
+            if brew list --formula 2>/dev/null | grep -qx "$pkg"; then
+                ok "  $pkg (already installed) [$brew_i/$brew_total]"
+            else
+                run_with_spin "Installing $pkg... [$brew_i/$brew_total]" brew install "$pkg" || true
+                ok "  $pkg [$brew_i/$brew_total]"
+            fi
         done
         ok "Core packages (brew)"
 
         info "Installing Redis..."
-        brew install redis 2>&1 | tail -1 || true
+        run_with_spin "Installing Redis..." brew install redis || true
         brew services start redis 2>/dev/null || true
         if redis-cli ping 2>/dev/null | grep -q PONG; then ok "Redis: running (PONG)"
         else warn "Redis: installed but not responding"; fi
 
         info "Installing security tools..."
-        brew install clamav 2>&1 | tail -1 || true
+        run_with_spin "Installing ClamAV..." brew install clamav || true
         ok "Security: ClamAV (chkrootkit/rkhunter skipped on macOS)"
     else
         # ── Linux: apt ───────────────────────────────────────────
@@ -487,11 +522,11 @@ install_system_packages() {
         ok "System upgraded"
 
         info "Installing core dependencies..."
-        sudo apt install -y -qq \
+        run_with_spin "apt: core packages..." \
+            sudo apt install -y -qq \
             python3 python3-venv python3-pip \
             git curl wget jq build-essential sqlite3 ffmpeg \
-            htop tmux ca-certificates gnupg \
-            2>&1 | tail -1 || true
+            htop tmux ca-certificates gnupg || true
         ok "Core packages installed"
 
         info "Installing Redis..."
@@ -501,7 +536,8 @@ install_system_packages() {
         else warn "Redis: installed but not responding"; fi
 
         info "Installing security audit tools..."
-        sudo apt install -y -qq clamav clamav-daemon chkrootkit rkhunter 2>&1 | tail -1 || true
+        run_with_spin "apt: security tools..." \
+            sudo apt install -y -qq clamav clamav-daemon chkrootkit rkhunter || true
         sudo systemctl stop clamav-freshclam 2>/dev/null || true
         sudo freshclam 2>/dev/null || warn "ClamAV definitions update failed"
         sudo systemctl start clamav-freshclam 2>/dev/null || true
@@ -581,13 +617,21 @@ install_node_and_structure() {
         git -C "$KOVO_DIR" pull origin main 2>/dev/null || warn "Git pull failed — using existing"
         ok "Source code up to date"
     else
-        if git clone "$KOVO_REPO" "$KOVO_DIR/repo-tmp" 2>/dev/null; then
-            cp -r "$KOVO_DIR/repo-tmp/src" "$KOVO_DIR/src" 2>/dev/null || true
+        if run_with_spin "Cloning from GitHub..." git clone "$KOVO_REPO" "$KOVO_DIR/repo-tmp"; then
+            # Copy source (use /* to avoid nested src/src/)
+            cp -r "$KOVO_DIR/repo-tmp/src/"* "$KOVO_DIR/src/" 2>/dev/null || true
+            # Copy ALL scripts from repo (update.sh, restore.sh, backup.sh, etc.)
+            cp -r "$KOVO_DIR/repo-tmp/scripts/"* "$KOVO_DIR/scripts/" 2>/dev/null || true
+            chmod +x "$KOVO_DIR/scripts/"*.sh 2>/dev/null || true
+            # Copy requirements.txt for pip install -r
+            [ -f "$KOVO_DIR/repo-tmp/requirements.txt" ] && cp "$KOVO_DIR/repo-tmp/requirements.txt" "$KOVO_DIR/requirements.txt"
+            # Copy docs and assets
             [ -f "$KOVO_DIR/repo-tmp/CLAUDE.md" ] && cp "$KOVO_DIR/repo-tmp/CLAUDE.md" "$KOVO_DIR/CLAUDE.md"
             [ -f "$KOVO_DIR/repo-tmp/DOCS.md" ] && cp "$KOVO_DIR/repo-tmp/DOCS.md" "$KOVO_DIR/DOCS.md"
+            [ -f "$KOVO_DIR/repo-tmp/README.md" ] && cp "$KOVO_DIR/repo-tmp/README.md" "$KOVO_DIR/README.md"
             [ -d "$KOVO_DIR/repo-tmp/assets" ] && cp -r "$KOVO_DIR/repo-tmp/assets/"* "$KOVO_DIR/assets/" 2>/dev/null
             rm -rf "$KOVO_DIR/repo-tmp"
-            ok "Source cloned from GitHub"
+            ok "Source cloned (src/, scripts/, requirements.txt, docs)"
         else warn "Git clone failed — will be built by Claude Code later"; fi
     fi
 
@@ -633,56 +677,76 @@ install_python_env() {
     pip install --upgrade pip -q 2>&1 | tail -1
     ok "venv at $VENV"
 
-    progress_bar 1 5
-    info "Installing core packages..."
-    pip install -q \
-        fastapi "uvicorn[standard]" "python-telegram-bot[webhooks]" \
-        httpx pydantic python-dotenv PyYAML apscheduler psutil \
-        pyrogram tgcrypto edge-tts \
-        google-api-python-client google-auth-httplib2 google-auth-oauthlib \
-        PyGithub pytest pytest-asyncio Pillow
-    ok "Core Python packages"
+    # ── Group 1: Framework + API (fast, pure-python) ────────────
+    progress_bar 1 7
+    info "Installing web framework..."
+    run_with_spin "pip: FastAPI + uvicorn + httpx..." \
+        pip install -q fastapi "uvicorn[standard]" httpx pydantic python-dotenv PyYAML python-multipart
+    ok "FastAPI + dependencies"
 
-    info "Installing voice call support (py-tgcalls)..."
-    if pip install -q py-tgcalls 2>/dev/null; then
+    # ── Group 2: Telegram + Google + GitHub ───────────────────
+    progress_bar 2 7
+    info "Installing integrations..."
+    run_with_spin "pip: Telegram + Google + GitHub..." \
+        pip install -q "python-telegram-bot[webhooks]" pyrogram tgcrypto edge-tts \
+        google-api-python-client google-auth-httplib2 google-auth-oauthlib PyGithub
+    ok "Telegram + Google + GitHub"
+
+    # ── Group 3: Tools + testing ──────────────────────────────
+    progress_bar 3 7
+    info "Installing tools..."
+    run_with_spin "pip: scheduler + psutil + testing..." \
+        pip install -q apscheduler psutil pytest pytest-asyncio Pillow ddgs beautifulsoup4
+    ok "Scheduler + tools + testing"
+
+    # ── Group 4: Voice calls (optional, may fail on macOS) ────
+    progress_bar 4 7
+    info "Installing voice call support..."
+    if run_with_spin "pip: py-tgcalls..." pip install -q py-tgcalls 2>/dev/null; then
         ok "py-tgcalls"
     else
         warn "py-tgcalls failed to build (voice calls disabled — other features unaffected)"
     fi
 
-    progress_bar 2 5
-    info "Installing PyTorch (CPU-only)..."
+    # ── Group 5: PyTorch (optional on macOS) ──────────────────
+    progress_bar 5 7
+    info "Installing PyTorch..."
     if [[ "$OS_TYPE" == "Darwin" ]]; then
-        if pip install -q torch 2>/dev/null; then
+        if run_with_spin "pip: PyTorch..." pip install -q torch 2>/dev/null; then
             ok "PyTorch"
         else
-            warn "PyTorch not available for Python $(python3 --version | cut -d' ' -f2) on macOS (local Whisper disabled — Groq transcription still works)"
+            warn "PyTorch not available for this Python version (Groq transcription still works)"
         fi
     else
-        pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+        run_with_spin "pip: PyTorch CPU..." pip install -q torch --index-url https://download.pytorch.org/whl/cpu
         ok "PyTorch CPU-only"
     fi
 
-    progress_bar 3 5
+    # ── Group 6: Whisper (optional, depends on PyTorch) ───────
+    progress_bar 6 7
     info "Installing Whisper..."
-    if pip install -q openai-whisper --no-deps 2>/dev/null && pip install -q tiktoken more-itertools numba tqdm numpy regex 2>/dev/null; then
+    if run_with_spin "pip: Whisper..." pip install -q openai-whisper --no-deps 2>/dev/null; then
+        pip install -q tiktoken more-itertools numba tqdm numpy regex 2>/dev/null || true
         ok "Whisper"
     else
-        warn "Whisper install failed (Groq API transcription still works)"
+        warn "Whisper not available (Groq API transcription still works)"
     fi
 
-    progress_bar 4 5
+    # ── Group 7: Playwright + Chromium ────────────────────────
+    progress_bar 7 7
     info "Installing Playwright + Chromium..."
-    pip install -q playwright
-    "$VENV/bin/playwright" install chromium 2>&1 | tail -2
+    run_with_spin "pip: Playwright..." pip install -q playwright
+    run_with_spin "Downloading Chromium..." "$VENV/bin/playwright" install chromium
     if [[ "$OS_TYPE" != "Darwin" ]]; then
         "$VENV/bin/playwright" install-deps chromium 2>&1 | tail -2
     fi
     ok "Playwright + Chromium"
 
-    [ -f "$KOVO_DIR/requirements.txt" ] && { "$VENV/bin/pip" install -r "$KOVO_DIR/requirements.txt" -q; ok "requirements.txt"; }
-
-    progress_bar 5 5
+    # ── requirements.txt (extra deps from repo) ──────────────
+    if [ -f "$KOVO_DIR/requirements.txt" ]; then
+        run_with_spin "pip: requirements.txt..." "$VENV/bin/pip" install -r "$KOVO_DIR/requirements.txt" -q || true
+        ok "requirements.txt"
+    fi
     echo ""
     ok "Python environment complete"
 
@@ -1059,37 +1123,62 @@ SVCEOF
     echo ""
     echo -e "  ${BOLD}${WHITE}Verification${NC}"
     echo ""
-    local passed=0 failed=0
+    local passed=0 failed=0 opt_passed=0 opt_failed=0
     v() { if eval "$2" &>/dev/null; then ok "$1"; passed=$((passed+1)); else fail "$1"; failed=$((failed+1)); fi }
+    o() { if eval "$2" &>/dev/null; then ok "$1"; opt_passed=$((opt_passed+1)); else warn "$1 (optional)"; opt_failed=$((opt_failed+1)); fi }
+
+    echo -e "  ${WHITE}Required:${NC}"
     v "Python 3.11+"     "$VENV/bin/python --version | grep -qE '3\.1[1-9]'"
     v "Node.js 22+"      "node --version | grep -qE 'v2[2-9]'"
     v "Claude CLI"       "command -v claude"
-    v "Redis"            "redis-cli ping 2>/dev/null | grep -q PONG"
     v "venv"             "[ -f $VENV/bin/python ]"
     v "FastAPI"          "$VENV/bin/python -c 'import fastapi'"
+    v "python-multipart" "$VENV/bin/python -c 'import multipart'"
     v "Telegram"         "$VENV/bin/python -c 'import telegram'"
-    v "PyTorch"          "$VENV/bin/python -c 'import torch'"
     v "Playwright"       "$VENV/bin/python -c 'import playwright'"
     v "Pillow"           "$VENV/bin/python -c 'import PIL'"
     v "ffmpeg"           "command -v ffmpeg"
-    v "ClamAV"           "command -v clamscan"
     v "SOUL.md"          "[ -f $WORKSPACE/SOUL.md ]"
     v "settings.yaml"    "[ -f $KOVO_DIR/config/settings.yaml ]"
+    v "scripts"          "[ -f $KOVO_DIR/scripts/update.sh ]"
     if [[ "$OS_TYPE" == "Darwin" ]]; then
         v "launchd"        "[ -f ~/Library/LaunchAgents/com.kovo.agent.plist ]"
     else
         v "systemd"          "[ -f /etc/systemd/system/kovo.service ]"
     fi
     v "6 skills"         "[ $(find $WORKSPACE/skills -name SKILL.md | wc -l) -ge 6 ]"
+
     echo ""
-    echo -e "  ${GREEN}${BOLD}$passed/$((passed+failed)) checks passed${NC}"
+    echo -e "  ${WHITE}Optional:${NC}"
+    o "Redis"            "redis-cli ping 2>/dev/null | grep -q PONG"
+    o "PyTorch"          "$VENV/bin/python -c 'import torch'"
+    o "Whisper"          "$VENV/bin/python -c 'import whisper'"
+    o "py-tgcalls"       "$VENV/bin/python -c 'import pytgcalls'"
+    o "ClamAV"           "command -v clamscan"
+
+    echo ""
+    echo -e "  ${GREEN}${BOLD}$passed/$((passed+failed)) required passed${NC}"
+    if (( opt_failed > 0 )); then
+        echo -e "  ${YELLOW}$opt_passed/$((opt_passed+opt_failed)) optional passed${NC} ${DIM}(warnings above are non-blocking)${NC}"
+    else
+        echo -e "  ${GREEN}$opt_passed/$((opt_passed+opt_failed)) optional passed${NC}"
+    fi
 
     # ── Dashboard Build ──────────────────────────────────────────
     local dash_dir="$KOVO_DIR/src/dashboard/frontend"
     if [ -d "$dash_dir" ] && [ -f "$dash_dir/package.json" ]; then
         info "Building dashboard..."
-        cd "$dash_dir" && npm install --silent 2>&1 | tail -1
-        npm run build 2>/dev/null && ok "Dashboard built" || warn "Dashboard build failed"
+        # Fix npm cache permissions (may have root ownership from prior sudo npm)
+        if [[ "$OS_TYPE" == "Darwin" ]] && [ -d "$HOME/.npm" ]; then
+            chown -R "$(whoami)" "$HOME/.npm" 2>/dev/null || true
+        fi
+        cd "$dash_dir"
+        run_with_spin "npm install..." npm install --silent || true
+        if npm run build 2>/dev/null; then
+            ok "Dashboard built"
+        else
+            warn "Dashboard build failed (can be built later with: cd $dash_dir && npm run build)"
+        fi
         cd "$KOVO_DIR"
     else warn "Dashboard frontend not found — will be built by Claude Code"; fi
 
