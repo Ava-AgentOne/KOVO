@@ -76,21 +76,15 @@ spin() {
     local i=0
     while kill -0 "$pid" 2>/dev/null; do
         case $((i % 4)) in
-            0) printf "
-  ${BLUE}-${NC} %s " "$label" ;;
-            1) printf "
-  ${BLUE}\\${NC} %s " "$label" ;;
-            2) printf "
-  ${BLUE}|${NC} %s " "$label" ;;
-            3) printf "
-  ${BLUE}/${NC} %s " "$label" ;;
+            0) printf "\r  ${BLUE}-${NC} %s " "$label" > /dev/tty ;;
+            1) printf "\r  ${BLUE}\\${NC} %s " "$label" > /dev/tty ;;
+            2) printf "\r  ${BLUE}|${NC} %s " "$label" > /dev/tty ;;
+            3) printf "\r  ${BLUE}/${NC} %s " "$label" > /dev/tty ;;
         esac
         i=$((i + 1))
         sleep 0.2
     done
-    printf "
-%*s
-" 70 ""
+    printf "\r%*s\r" 70 "" > /dev/tty
 }
 
 # Run a command with a spinner — usage: run_with_spin "label" command arg1 arg2
