@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 def search(query: str, max_results: int = 5) -> list[dict]:
     """Search the web and return results as a list of dicts."""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
         results = []
         with DDGS() as ddgs:
             for r in ddgs.text(query, max_results=max_results):
