@@ -4,7 +4,7 @@
 
 ## Overview
 
-Kovo is a self-hosted personal AI agent inspired by OpenClaw and GoBot. It runs on an Ubuntu 25.10 (Questing) VM (8GB RAM, 50GB disk) on an Unraid server. It uses the **Claude Code CLI as a subprocess** (`claude -p`) for complex tasks and **Ollama** (running on a NUC — see `ollama.url` in settings.yaml) for cheap/simple tasks like heartbeats and quick answers.
+Kovo is a self-hosted personal AI agent inspired by OpenClaw and GoBot. It runs on an Ubuntu 25.10 (Questing) VM (8GB RAM, 50GB disk) on an Unraid server. It uses the **Claude Code CLI as a subprocess** (`claude -p`) for complex tasks and **Ollama** (optional local LLM — see `ollama.url` in settings.yaml) for cheap/simple tasks like heartbeats and quick answers.
 
 ## System Requirements (already installed by bootstrap.sh)
 - **OS**: Ubuntu 25.10 (Questing)
@@ -44,7 +44,7 @@ Gateway (Python FastAPI)
       │     └── Status: installed | not_installed | configured | not_configured
       │
       ├── Smart Model Router
-      │     ├── Ollama (NUC)    → heartbeats, simple Q&A, classification
+      │     ├── Local LLM       → heartbeats, simple Q&A, classification
       │     ├── Claude Sonnet   → medium tasks (via claude -p --model sonnet)
       │     └── Claude Opus     → complex reasoning (via claude -p --model opus)
       │
@@ -158,7 +158,7 @@ def call_claude(prompt: str, session_id: str = None, model: str = None, system_p
 ```
 
 ### Ollama for Cheap Tasks
-Simple tasks go to Ollama on the NUC to save Claude usage:
+Simple tasks go to a local LLM (Ollama, LM Studio, or any OpenAI-compatible endpoint) to save Claude usage:
 - Heartbeat checks
 - Message classification (is this simple or complex?)
 - Quick factual answers
