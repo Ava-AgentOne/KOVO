@@ -100,7 +100,7 @@ async def _handle_google_auth_code(
 
 _IMAGE_TAG_RE = re.compile(r"\[SEND_IMAGE:\s*(.+?)\]", re.IGNORECASE)
 _REMINDER_RE = re.compile(r"\[SET_REMINDER:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\]", re.IGNORECASE)
-_URL_RE = re.compile(r"https?://[^\s<>"']+")
+_URL_RE = re.compile(r"https?://\S+")
 
 
 async def _handle_image_tags(update: Update, response_text: str) -> str:
