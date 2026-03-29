@@ -161,6 +161,20 @@ Credentials are saved to `config/.env` on your machine — never transmitted.
 
 > **Prefer manual setup?** Copy `config/.env.template` to `config/.env` and fill in your tokens, then restart: `sudo systemctl restart kovo`
 
+### Upgrade
+
+KOVO has a built-in update mechanism. From the dashboard (Settings → Updates), click **Check for Updates** and **Apply Update**. Or from the command line:
+
+```bash
+# Check if an update is available
+bash /opt/kovo/scripts/update.sh --check
+
+# Apply the update (auto-backup, pull, rebuild, restart)
+bash /opt/kovo/scripts/update.sh --apply
+```
+
+Updates only trigger on version bumps, not every commit. Your personal data (workspace files, settings, `.env`, database) is never overwritten.
+
 ## 📱 Telegram Commands
 
 KOVO uses a persistent reply keyboard with emoji buttons:
@@ -200,6 +214,8 @@ KOVO includes built-in security features:
 - **File permissions** — `.env`, credentials, and DB set to `chmod 600`
 - **Shell blocklist** — dangerous commands blocked or require confirmation
 - **Security audits** — automated port scan, user check, ClamAV, chkrootkit
+- **Pre-push git hook** — blocks personal data, `.env`, credentials, and database files from being committed
+- **Personal data isolation** — repo ships `.template` files only; live workspace files are gitignored
 - **Claude Code sandbox** — pre-approved command allowlist, runtime approval via Telegram
 
 ## 📁 Project Structure
@@ -221,11 +237,12 @@ KOVO includes built-in security features:
 │   ├── telegram/    # Bot, commands, formatting
 │   └── tools/       # Tool registry (Claude CLI, shell, browser, etc.)
 ├── workspace/
-│   ├── memory/      # Daily log files (YYYY-MM-DD.md)
-│   ├── skills/      # Skill definitions (SKILL.md per skill)
-│   ├── SOUL.md      # Agent personality
-│   ├── IDENTITY.md  # Agent identity card
-│   └── MEMORY.md    # Long-term learnings
+│   ├── memory/              # Daily log files (YYYY-MM-DD.md)
+│   ├── skills/              # Skill definitions (SKILL.md per skill)
+│   ├── SOUL.md.template     # Agent personality (template)
+│   ├── USER.md.template     # Owner profile (template)
+│   ├── IDENTITY.md.template # Agent identity card (template)
+│   └── MEMORY.md.template   # Long-term learnings (template)
 ├── bootstrap.sh     # One-line installer
 ├── requirements.txt # Python dependencies
 └── README.md        # You are here
@@ -259,7 +276,7 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 
 - Check your `TELEGRAM_BOT_TOKEN` is correct in `.env`
 - Verify `OWNER_TELEGRAM_ID` matches your Telegram user ID
-- Check logs: `journalctl -u kovo -f`
+- Check logs: `tail -f /opt/kovo/logs/gateway.log` or `journalctl -u kovo -f`
 </details>
 
 <details>
