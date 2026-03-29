@@ -10,14 +10,21 @@ KOVO_VERSION="0.8"
 #   bash bootstrap.sh --yes        # Auto-accept all prompts
 #   bash bootstrap.sh --uninstall  # Clean removal
 #
-# Requirements: Ubuntu 24.04+ · 8GB+ RAM · 30GB+ free disk
+# Requirements: Ubuntu 24.04+ or macOS 13+ · 8GB+ RAM · 30GB+ free disk
 # License: GNU AGPLv3
 # ═══════════════════════════════════════════════════════════════════
 
 set -euo pipefail
 
-INSTALLER_VERSION="5.1"
-KOVO_DIR="/opt/kovo"
+INSTALLER_VERSION="5.2"
+
+# ─── Cross-platform detection ────────────────────────────────────
+OS_TYPE="$(uname -s)"
+case "$OS_TYPE" in
+    Linux)  KOVO_DIR="/opt/kovo" ;;
+    Darwin) KOVO_DIR="$HOME/.kovo" ;;
+    *)      echo "Unsupported OS: $OS_TYPE"; exit 1 ;;
+esac
 VENV="$KOVO_DIR/venv"
 WORKSPACE="$KOVO_DIR/workspace"
 STATE_FILE="/tmp/.kovo-install-state"
@@ -186,13 +193,22 @@ if $UNINSTALL; then
     if ! confirm "Are you sure?"; then echo "  Cancelled."; exit 0; fi
     echo ""
     info "Stopping service..."
-    sudo systemctl stop kovo 2>/dev/null || true
-    sudo systemctl disable kovo 2>/dev/null || true
-    sudo rm -f /etc/systemd/system/kovo.service
-    sudo systemctl daemon-reload
-    info "Removing /opt/kovo..."
-    sudo rm -rf "$KOVO_DIR"
-    sudo rm -f /etc/sudoers.d/kovo /etc/logrotate.d/kovo
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        launchctl unload ~/Library/LaunchAgents/com.kovo.agent.plist 2>/dev/null || true
+        rm -f ~/Library/LaunchAgents/com.kovo.agent.plist
+    else
+        sudo systemctl stop kovo 2>/dev/null || true
+        sudo systemctl disable kovo 2>/dev/null || true
+        sudo rm -f /etc/systemd/system/kovo.service
+        sudo systemctl daemon-reload
+        sudo rm -f /etc/sudoers.d/kovo /etc/logrotate.d/kovo
+    fi
+    info "Removing $KOVO_DIR..."
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        rm -rf "$KOVO_DIR"
+    else
+        sudo rm -rf "$KOVO_DIR"
+    fi
     echo ""
     ok "KOVO has been uninstalled."
     exit 0
@@ -225,7 +241,10 @@ screen_welcome() {
 
     local errors=0
 
-    if [[ -f /etc/os-release ]]; then
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        local mac_ver=$(sw_vers -productVersion 2>/dev/null || echo "unknown")
+        ok "OS: macOS $mac_ver"
+    elif [[ -f /etc/os-release ]]; then
         source /etc/os-release
         if [[ "$ID" == "ubuntu" ]]; then
             local ver_major="${VERSION_ID%%.*}"
@@ -234,12 +253,20 @@ screen_welcome() {
         else warn "Non-Ubuntu OS ($ID)"; fi
     else fail "Cannot detect OS"; errors=$((errors+1)); fi
 
-    local ram_mb=$(free -m | awk '/^Mem:/{print $2}')
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        local ram_mb=$(( $(sysctl -n hw.memsize) / 1048576 ))
+    else
+        local ram_mb=$(free -m | awk '/^Mem:/{print $2}')
+    fi
     if (( ram_mb >= 7000 )); then ok "RAM: ${ram_mb}MB ($(( ram_mb / 1024 ))GB)"
     elif (( ram_mb >= 4000 )); then warn "RAM: ${ram_mb}MB — 8GB+ recommended"
     else fail "RAM: ${ram_mb}MB — minimum 4GB"; errors=$((errors+1)); fi
 
-    local disk_gb=$(( $(df / --output=avail | tail -1 | tr -d ' ') / 1048576 ))
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        local disk_gb=$(df -g / | tail -1 | awk '{print $4}')
+    else
+        local disk_gb=$(( $(df / --output=avail | tail -1 | tr -d ' ') / 1048576 ))
+    fi
     if (( disk_gb >= 30 )); then ok "Disk: ${disk_gb}GB available"
     elif (( disk_gb >= 15 )); then warn "Disk: ${disk_gb}GB — 30GB+ recommended"
     else fail "Disk: ${disk_gb}GB — need 15GB+"; errors=$((errors+1)); fi
@@ -247,17 +274,26 @@ screen_welcome() {
     if curl -sf --max-time 5 https://pypi.org > /dev/null 2>&1; then ok "Internet: connected"
     else fail "Internet: no connection"; errors=$((errors+1)); fi
 
-    if sudo -n true 2>/dev/null; then ok "Sudo: available"
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        ok "Sudo: not required on macOS"
+    elif sudo -n true 2>/dev/null; then ok "Sudo: available"
     elif sudo true; then ok "Sudo: available"
     else fail "Sudo: not available"; errors=$((errors+1)); fi
 
     if command -v python3 &>/dev/null; then ok "Python: $(python3 --version | cut -d' ' -f2)"
     else fail "Python3: not found"; errors=$((errors+1)); fi
 
-    if ! ss -tlnp | grep -q ':8080 ' 2>/dev/null; then ok "Port 8080: available"
-    else warn "Port 8080: in use"; fi
-    if ! ss -tlnp | grep -q ':3000 ' 2>/dev/null; then ok "Port 3000: available"
-    else warn "Port 3000: in use"; fi
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        if ! lsof -i :8080 -sTCP:LISTEN &>/dev/null; then ok "Port 8080: available"
+        else warn "Port 8080: in use"; fi
+        if ! lsof -i :3000 -sTCP:LISTEN &>/dev/null; then ok "Port 3000: available"
+        else warn "Port 3000: in use"; fi
+    else
+        if ! ss -tlnp | grep -q ':8080 ' 2>/dev/null; then ok "Port 8080: available"
+        else warn "Port 8080: in use"; fi
+        if ! ss -tlnp | grep -q ':3000 ' 2>/dev/null; then ok "Port 3000: available"
+        else warn "Port 3000: in use"; fi
+    fi
 
     if [[ -d "$KOVO_DIR" ]] && ! $RESUME; then
         warn "Existing KOVO install at $KOVO_DIR"
@@ -332,7 +368,7 @@ screen_network() {
     echo -e "    The main API server. Handles Telegram webhooks,"
     echo -e "    the chat WebSocket, and serves the production"
     echo -e "    dashboard. This is the port you'll access KOVO on."
-    echo -e "    Example: ${CYAN}http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'your-ip'):8080${NC}"
+    echo -e "    Example: ${CYAN}http://$({ hostname -I 2>/dev/null || ipconfig getifaddr en0 2>/dev/null; } | awk '{print $1}' || echo 'your-ip'):8080${NC}"
     echo ""
     echo -e "  ${WHITE}Dashboard dev server${NC} ${DIM}(default: 3000)${NC}"
     echo -e "    Only used during development. The gateway serves"
@@ -405,34 +441,61 @@ install_system_packages() {
     echo -e "  ${BOLD}${WHITE}Phase 5/8${NC}  ${CYAN}System Packages${NC}"
     echo ""
 
-    info "Updating package lists..."
-    sudo apt update -y -qq 2>&1 | tail -1
-    ok "Package lists updated"
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        # ── macOS: Homebrew ──────────────────────────────────────
+        if ! command -v brew &>/dev/null; then
+            info "Installing Homebrew..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
+            eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)"
+            ok "Homebrew installed"
+        else
+            ok "Homebrew: $(brew --version | head -1)"
+        fi
 
-    info "Upgrading system packages..."
-    sudo apt upgrade -y -qq 2>&1 | tail -1
-    ok "System upgraded"
+        info "Installing core dependencies..."
+        brew install python@3.13 git curl wget jq sqlite ffmpeg htop 2>&1 | tail -3
+        ok "Core packages (brew)"
 
-    info "Installing core dependencies..."
-    sudo apt install -y -qq \
-        python3 python3-venv python3-pip \
-        git curl wget jq build-essential sqlite3 ffmpeg \
-        htop tmux ca-certificates gnupg \
-        2>&1 | tail -1
-    ok "Core packages installed"
+        info "Installing Redis..."
+        brew install redis 2>&1 | tail -1
+        brew services start redis 2>/dev/null || true
+        if redis-cli ping 2>/dev/null | grep -q PONG; then ok "Redis: running (PONG)"
+        else warn "Redis: installed but not responding"; fi
 
-    info "Installing Redis..."
-    sudo apt install -y -qq redis-tools redis-server 2>&1 | tail -1
-    sudo systemctl enable --now redis-server 2>/dev/null || true
-    if redis-cli ping 2>/dev/null | grep -q PONG; then ok "Redis: running (PONG)"
-    else warn "Redis: installed but not responding"; fi
+        info "Installing security tools..."
+        brew install clamav 2>&1 | tail -1
+        ok "Security: ClamAV (chkrootkit/rkhunter skipped on macOS)"
+    else
+        # ── Linux: apt ───────────────────────────────────────────
+        info "Updating package lists..."
+        sudo apt update -y -qq 2>&1 | tail -1
+        ok "Package lists updated"
 
-    info "Installing security audit tools..."
-    sudo apt install -y -qq clamav clamav-daemon chkrootkit rkhunter 2>&1 | tail -1
-    sudo systemctl stop clamav-freshclam 2>/dev/null || true
-    sudo freshclam 2>/dev/null || warn "ClamAV definitions update failed"
-    sudo systemctl start clamav-freshclam 2>/dev/null || true
-    ok "Security: ClamAV, chkrootkit, rkhunter"
+        info "Upgrading system packages..."
+        sudo apt upgrade -y -qq 2>&1 | tail -1
+        ok "System upgraded"
+
+        info "Installing core dependencies..."
+        sudo apt install -y -qq \
+            python3 python3-venv python3-pip \
+            git curl wget jq build-essential sqlite3 ffmpeg \
+            htop tmux ca-certificates gnupg \
+            2>&1 | tail -1
+        ok "Core packages installed"
+
+        info "Installing Redis..."
+        sudo apt install -y -qq redis-tools redis-server 2>&1 | tail -1
+        sudo systemctl enable --now redis-server 2>/dev/null || true
+        if redis-cli ping 2>/dev/null | grep -q PONG; then ok "Redis: running (PONG)"
+        else warn "Redis: installed but not responding"; fi
+
+        info "Installing security audit tools..."
+        sudo apt install -y -qq clamav clamav-daemon chkrootkit rkhunter 2>&1 | tail -1
+        sudo systemctl stop clamav-freshclam 2>/dev/null || true
+        sudo freshclam 2>/dev/null || warn "ClamAV definitions update failed"
+        sudo systemctl start clamav-freshclam 2>/dev/null || true
+        ok "Security: ClamAV, chkrootkit, rkhunter"
+    fi
 
     save_state 5
 }
@@ -452,14 +515,22 @@ install_node_and_structure() {
         if (( node_major >= 22 )); then ok "Node.js: $node_ver"
         else
             info "Upgrading Node.js to v22..."
-            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - 2>&1 | tail -3
-            sudo apt install -y -qq nodejs 2>&1 | tail -1
+            if [[ "$OS_TYPE" == "Darwin" ]]; then
+                brew install node@22 2>&1 | tail -3
+            else
+                curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - 2>&1 | tail -3
+                sudo apt install -y -qq nodejs 2>&1 | tail -1
+            fi
             ok "Node.js: $(node --version)"
         fi
     else
         info "Installing Node.js 22..."
-        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - 2>&1 | tail -3
-        sudo apt install -y -qq nodejs 2>&1 | tail -1
+        if [[ "$OS_TYPE" == "Darwin" ]]; then
+            brew install node@22 2>&1 | tail -3
+        else
+            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - 2>&1 | tail -3
+            sudo apt install -y -qq nodejs 2>&1 | tail -1
+        fi
         ok "Node.js: $(node --version)"
     fi
 
@@ -469,14 +540,22 @@ install_node_and_structure() {
     if command -v claude &>/dev/null; then ok "Claude Code CLI: already installed"
     else
         info "Installing Claude Code CLI..."
-        sudo npm install -g @anthropic-ai/claude-code 2>&1 | tail -3
+        if [[ "$OS_TYPE" == "Darwin" ]]; then
+            npm install -g @anthropic-ai/claude-code 2>&1 | tail -3
+        else
+            sudo npm install -g @anthropic-ai/claude-code 2>&1 | tail -3
+        fi
         if command -v claude &>/dev/null; then ok "Claude Code CLI: installed"
         else fail "Claude Code CLI installation failed"; exit 1; fi
     fi
 
     info "Creating directory tree..."
-    sudo mkdir -p "$KOVO_DIR"
-    sudo chown "$USER:$USER" "$KOVO_DIR"
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        mkdir -p "$KOVO_DIR"
+    else
+        sudo mkdir -p "$KOVO_DIR"
+        sudo chown "$USER:$USER" "$KOVO_DIR"
+    fi
     mkdir -p "$KOVO_DIR"/{src,config,scripts,scripts/experiments,tests,logs,systemd,assets}
     mkdir -p "$KOVO_DIR"/data/{tmp,audio,photos,documents,images,screenshots,backups}
     touch "$KOVO_DIR/data/kovo.db"
@@ -501,9 +580,13 @@ install_node_and_structure() {
         else warn "Git clone failed — will be built by Claude Code later"; fi
     fi
 
-    echo "$USER ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/kovo > /dev/null
-    sudo chmod 440 /etc/sudoers.d/kovo
-    ok "Sudo NOPASSWD for $USER"
+    if [[ "$OS_TYPE" != "Darwin" ]]; then
+        echo "$USER ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/kovo > /dev/null
+        sudo chmod 440 /etc/sudoers.d/kovo
+        ok "Sudo NOPASSWD for $USER"
+    else
+        ok "Sudo: not needed on macOS (user-owned install)"
+    fi
 
     save_state 6
 }
@@ -534,7 +617,11 @@ install_python_env() {
 
     progress_bar 2 5
     info "Installing PyTorch (CPU-only)..."
-    pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        pip install -q torch
+    else
+        pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+    fi
     ok "PyTorch CPU-only"
 
     progress_bar 3 5
@@ -547,7 +634,9 @@ install_python_env() {
     info "Installing Playwright + Chromium..."
     pip install -q playwright
     "$VENV/bin/playwright" install chromium 2>&1 | tail -2
-    "$VENV/bin/playwright" install-deps chromium 2>&1 | tail -2
+    if [[ "$OS_TYPE" != "Darwin" ]]; then
+        "$VENV/bin/playwright" install-deps chromium 2>&1 | tail -2
+    fi
     ok "Playwright + Chromium"
 
     [ -f "$KOVO_DIR/requirements.txt" ] && { "$VENV/bin/pip" install -r "$KOVO_DIR/requirements.txt" -q; ok "requirements.txt"; }
@@ -829,16 +918,71 @@ HCEOF
     ok "Scripts: backup.sh, health-check.sh"
 
     # ── Logrotate + CLAUDE.md ────────────────────────────────────
-    [[ ! -f /etc/logrotate.d/kovo ]] && sudo tee /etc/logrotate.d/kovo > /dev/null << 'EOF'
+    if [[ "$OS_TYPE" != "Darwin" ]]; then
+        [[ ! -f /etc/logrotate.d/kovo ]] && sudo tee /etc/logrotate.d/kovo > /dev/null << 'EOF'
 /opt/kovo/logs/gateway.log { daily rotate 7 compress missingok notifempty copytruncate }
 EOF
+    fi
     if [[ -f /tmp/CLAUDE.md ]]; then cp /tmp/CLAUDE.md "$KOVO_DIR/CLAUDE.md"; ok "CLAUDE.md"
     elif [[ -f "$KOVO_DIR/CLAUDE.md" ]]; then ok "CLAUDE.md exists"
     else warn "CLAUDE.md not found"; fi
 
-    # ── Systemd ──────────────────────────────────────────────────
-    info "Systemd service..."
-    cat > "$KOVO_DIR/systemd/kovo.service" << SVCEOF
+    # ── Service (systemd on Linux, launchd on macOS) ────────────
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        info "LaunchAgent service..."
+        mkdir -p "$KOVO_DIR/launchd"
+        mkdir -p ~/Library/LaunchAgents
+
+        # Build .env as environment dict for plist
+        local env_args=""
+        if [[ -f "$KOVO_DIR/config/.env" ]]; then
+            while IFS='=' read -r key value; do
+                [[ -z "$key" || "$key" == \#* ]] && continue
+                value="${value%%\#*}"  # strip inline comments
+                value="$(echo "$value" | xargs)"  # trim whitespace
+                [[ -n "$value" ]] && env_args+="            <key>$key</key>\n            <string>$value</string>\n"
+            done < "$KOVO_DIR/config/.env"
+        fi
+
+        cat > "$KOVO_DIR/launchd/com.kovo.agent.plist" << PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kovo.agent</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$KOVO_DIR/venv/bin/python</string>
+        <string>-m</string>
+        <string>uvicorn</string>
+        <string>src.gateway.main:app</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>$GATEWAY_PORT</string>
+        <string>--log-level</string>
+        <string>info</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>$KOVO_DIR</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>$KOVO_DIR/logs/gateway.log</string>
+    <key>StandardErrorPath</key>
+    <string>$KOVO_DIR/logs/gateway.log</string>
+</dict>
+</plist>
+PLISTEOF
+        cp "$KOVO_DIR/launchd/com.kovo.agent.plist" ~/Library/LaunchAgents/com.kovo.agent.plist
+        ok "com.kovo.agent.plist"
+    else
+        info "Systemd service..."
+        cat > "$KOVO_DIR/systemd/kovo.service" << SVCEOF
 [Unit]
 Description=KOVO AI Agent
 After=network.target redis.service
@@ -857,9 +1001,10 @@ StandardError=append:$KOVO_DIR/logs/gateway.log
 [Install]
 WantedBy=multi-user.target
 SVCEOF
-    sudo cp "$KOVO_DIR/systemd/kovo.service" /etc/systemd/system/kovo.service
-    sudo systemctl daemon-reload
-    ok "kovo.service"
+        sudo cp "$KOVO_DIR/systemd/kovo.service" /etc/systemd/system/kovo.service
+        sudo systemctl daemon-reload
+        ok "kovo.service"
+    fi
 
     # ── Verification ─────────────────────────────────────────────
     echo ""
@@ -881,7 +1026,11 @@ SVCEOF
     v "ClamAV"           "command -v clamscan"
     v "SOUL.md"          "[ -f $WORKSPACE/SOUL.md ]"
     v "settings.yaml"    "[ -f $KOVO_DIR/config/settings.yaml ]"
-    v "systemd"          "[ -f /etc/systemd/system/kovo.service ]"
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        v "launchd"        "[ -f ~/Library/LaunchAgents/com.kovo.agent.plist ]"
+    else
+        v "systemd"          "[ -f /etc/systemd/system/kovo.service ]"
+    fi
     v "6 skills"         "[ $(find $WORKSPACE/skills -name SKILL.md | wc -l) -ge 6 ]"
     echo ""
     echo -e "  ${GREEN}${BOLD}$passed/$((passed+failed)) checks passed${NC}"
@@ -899,7 +1048,11 @@ SVCEOF
     save_state 8
 
     # ── DONE SCREEN ──────────────────────────────────────────────
-    local vm_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "your-ip")
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        local vm_ip=$(ipconfig getifaddr en0 2>/dev/null || echo "localhost")
+    else
+        local vm_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "your-ip")
+    fi
     echo ""
     echo -e "  ${BLUE}${BOLD}╔══════════════════════════════════════════════════╗${NC}"
     echo -e "  ${BLUE}${BOLD}║           KOVO is installed!                     ║${NC}"
@@ -919,7 +1072,11 @@ SVCEOF
     echo -e "  ${WHITE}Quick commands:${NC}"
     echo -e "  ${DIM}$KOVO_DIR/scripts/health-check.sh${NC}  ${GRAY}status${NC}"
     echo -e "  ${DIM}$KOVO_DIR/scripts/backup.sh${NC}        ${GRAY}backup${NC}"
-    echo -e "  ${DIM}sudo journalctl -fu kovo${NC}           ${GRAY}logs${NC}"
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        echo -e "  ${DIM}tail -f $KOVO_DIR/logs/gateway.log${NC}  ${GRAY}logs${NC}"
+    else
+        echo -e "  ${DIM}sudo journalctl -fu kovo${NC}           ${GRAY}logs${NC}"
+    fi
     echo ""
 }
 
