@@ -19,20 +19,31 @@ from src.gateway.routes import router as api_router
 from src.gateway.setup import router as setup_router
 from src.dashboard.api import router as dashboard_api_router
 
+# Unified log format — all loggers (app + uvicorn) use the same timestamped format
+_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+_LOG_DATEFMT = "%Y-%m-%d %H:%M:%S"
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    format=_LOG_FORMAT,
+    datefmt=_LOG_DATEFMT,
 )
 log = logging.getLogger(__name__)
 
-# Apply token mask filter to all handlers (root + uvicorn)
+# Force uvicorn loggers to use the same format and handler as the rest of the app
 from src.gateway.config import TokenMaskFilter as _TokenMaskFilter  # noqa: E402
 _mask = _TokenMaskFilter()
+_formatter = logging.Formatter(_LOG_FORMAT, datefmt=_LOG_DATEFMT)
+
 for _h in logging.root.handlers:
     _h.addFilter(_mask)
+    _h.setFormatter(_formatter)
+
 for _uvicorn_logger in ("uvicorn", "uvicorn.error", "uvicorn.access"):
-    for _h in logging.getLogger(_uvicorn_logger).handlers:
-        _h.addFilter(_mask)
+    _uv_log = logging.getLogger(_uvicorn_logger)
+    _uv_log.handlers.clear()
+    _uv_log.propagate = True  # inherit root handler (same format + file)
+    _uv_log.addFilter(_mask)
 
 _FRONTEND_DIST = Path(__file__).resolve().parents[2] / "src/dashboard/frontend/dist"
 
@@ -248,7 +259,7 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
         log.warning("Phone tools init failed (telegram_call may not be configured): %s", e)
 
 
-app = FastAPI(title="Kovo Gateway", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Kovo Gateway", version="0.6", lifespan=lifespan)
 
 # API routes
 app.include_router(api_router)
@@ -282,6 +293,7 @@ def main() -> None:
         port=cfg.gateway_port(),
         reload=False,
         log_level="info",
+        access_log=True,
     )
 
 

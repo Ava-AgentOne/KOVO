@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
 
+const TS_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/
+
 function colorize(line) {
+  const hasTimestamp = TS_REGEX.test(line)
+
+  if (line.includes(' CRITICAL ') || line.includes(' CRITICAL:')) {
+    return <span className="text-red-300 font-bold">{line}</span>
+  }
   if (line.includes(' ERROR ') || line.includes(' ERROR:') || line.includes('Traceback')) {
     return <span className="text-red-400">{line}</span>
   }
   if (line.includes(' WARNING ') || line.includes(' WARNING:') || line.includes(' WARN ')) {
     return <span className="text-amber-400">{line}</span>
-  }
-  if (line.includes(' CRITICAL ') || line.includes(' CRITICAL:')) {
-    return <span className="text-red-300 font-bold">{line}</span>
   }
   if (line.includes(' INFO ') || line.includes(' INFO:')) {
     return <span className="text-gray-300">{line}</span>
@@ -17,8 +21,9 @@ function colorize(line) {
   if (line.includes(' DEBUG ') || line.includes(' DEBUG:')) {
     return <span className="text-gray-600">{line}</span>
   }
-  if (line.startsWith('  ') || line.startsWith('\t')) {
-    return <span className="text-red-500/60">{line}</span>
+  // Continuation / stack trace lines (no timestamp)
+  if (!hasTimestamp) {
+    return <span className="text-gray-500 pl-4">{line}</span>
   }
   return <span className="text-gray-400">{line}</span>
 }
