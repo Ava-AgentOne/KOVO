@@ -638,10 +638,17 @@ install_python_env() {
     pip install -q \
         fastapi "uvicorn[standard]" "python-telegram-bot[webhooks]" \
         httpx pydantic python-dotenv PyYAML apscheduler psutil \
-        pyrogram tgcrypto py-tgcalls edge-tts \
+        pyrogram tgcrypto edge-tts \
         google-api-python-client google-auth-httplib2 google-auth-oauthlib \
         PyGithub pytest pytest-asyncio Pillow
     ok "Core Python packages"
+
+    info "Installing voice call support (py-tgcalls)..."
+    if pip install -q py-tgcalls 2>/dev/null; then
+        ok "py-tgcalls"
+    else
+        warn "py-tgcalls failed to build (voice calls disabled — other features unaffected)"
+    fi
 
     progress_bar 2 5
     info "Installing PyTorch (CPU-only)..."
