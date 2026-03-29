@@ -141,8 +141,6 @@ async def lifespan(app: FastAPI):
         log.warning("Starting in DASHBOARD-ONLY mode — configure .env via the dashboard then restart")
         _telegram_ok = False
     check_env_permissions()
-
-    deps = _build_deps()
     app.state.ollama = deps["ollama"]
     app.state.memory = deps["memory"]
     app.state.store = deps["store"]
@@ -168,10 +166,16 @@ async def lifespan(app: FastAPI):
     if not _telegram_ok:
         app.state.tg_app = None
         app.state.heartbeat = None
+        app.state.agent = None
+        app.state.tool_registry = None
+        app.state.sub_agent_runner = None
+        app.state.ollama = None
         log.info("Dashboard available at /dashboard — configure .env and restart to enable Telegram")
         yield
         log.info("Shutting down (dashboard-only mode)")
         return
+
+    deps = _build_deps()
 
     # Build and start Telegram app
     from src.telegram.bot import build_application
