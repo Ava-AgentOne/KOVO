@@ -42,6 +42,17 @@ for _uvicorn_logger in ("uvicorn", "uvicorn.error", "uvicorn.access"):
     _uv_log.propagate = True  # inherit root handler (same format + file)
     _uv_log.addFilter(_mask)
 
+# Set log timestamps to configured timezone (must be before first log call)
+import time as _time
+from src.utils.tz import get_tz as _get_log_tz
+try:
+    _offset_secs = int(_get_log_tz().utcoffset(None).total_seconds())
+    def _tz_log_converter(*args):
+        return _time.gmtime(_time.time() + _offset_secs)
+    logging.Formatter.converter = _tz_log_converter
+except Exception:
+    pass  # Fall back to system timezone if config not ready
+
 _FRONTEND_DIST = Path(__file__).resolve().parents[2] / "src/dashboard/frontend/dist"
 
 
@@ -114,14 +125,6 @@ def _build_deps():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── startup ──────────────────────────────────────────────────────────────
-    # Set log timestamps to configured timezone
-    import time as _time
-    from src.utils.tz import get_tz as _get_log_tz
-    _offset_secs = int(_get_log_tz().utcoffset(None).total_seconds())
-    def _tz_log_converter(*args):
-        return _time.gmtime(_time.time() + _offset_secs)
-    logging.Formatter.converter = _tz_log_converter
-
     log.info("Starting Kovo gateway...")
 
     # Validate environment before touching any external service
