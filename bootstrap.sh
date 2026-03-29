@@ -653,17 +653,23 @@ install_python_env() {
     progress_bar 2 5
     info "Installing PyTorch (CPU-only)..."
     if [[ "$OS_TYPE" == "Darwin" ]]; then
-        pip install -q torch
+        if pip install -q torch 2>/dev/null; then
+            ok "PyTorch"
+        else
+            warn "PyTorch not available for Python $(python3 --version | cut -d' ' -f2) on macOS (local Whisper disabled — Groq transcription still works)"
+        fi
     else
         pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+        ok "PyTorch CPU-only"
     fi
-    ok "PyTorch CPU-only"
 
     progress_bar 3 5
     info "Installing Whisper..."
-    pip install -q openai-whisper --no-deps
-    pip install -q tiktoken more-itertools numba tqdm numpy regex
-    ok "Whisper (no-GPU deps)"
+    if pip install -q openai-whisper --no-deps 2>/dev/null && pip install -q tiktoken more-itertools numba tqdm numpy regex 2>/dev/null; then
+        ok "Whisper"
+    else
+        warn "Whisper install failed (Groq API transcription still works)"
+    fi
 
     progress_bar 4 5
     info "Installing Playwright + Chromium..."
