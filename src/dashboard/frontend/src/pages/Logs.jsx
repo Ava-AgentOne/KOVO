@@ -1,41 +1,49 @@
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, AlertTriangle, AlertCircle, Filter } from 'lucide-react'
 
 const TS_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/
 
-function colorize(line) {
-  const hasTimestamp = TS_REGEX.test(line)
-
-  if (line.includes(' CRITICAL ') || line.includes(' CRITICAL:')) {
-    return <span className="text-red-300 font-bold">{line}</span>
-  }
-  if (line.includes(' ERROR ') || line.includes(' ERROR:') || line.includes('Traceback')) {
-    return <span className="text-red-400">{line}</span>
-  }
-  if (line.includes(' WARNING ') || line.includes(' WARNING:') || line.includes(' WARN ')) {
-    return <span className="text-amber-400">{line}</span>
-  }
-  if (line.includes(' INFO ') || line.includes(' INFO:')) {
-    return <span className="text-gray-300">{line}</span>
-  }
-  if (line.includes(' DEBUG ') || line.includes(' DEBUG:')) {
-    return <span className="text-gray-600">{line}</span>
-  }
-  // Continuation / stack trace lines (no timestamp)
-  if (!hasTimestamp) {
-    return <span className="text-gray-500 pl-4">{line}</span>
-  }
-  return <span className="text-gray-400">{line}</span>
+function getLevel(line) {
+  if (line.includes(' CRITICAL ') || line.includes(' CRITICAL:')) return 'critical'
+  if (line.includes(' ERROR ') || line.includes(' ERROR:') || line.includes('Traceback')) return 'error'
+  if (line.includes(' WARNING ') || line.includes(' WARNING:') || line.includes(' WARN ')) return 'warning'
+  if (line.includes(' DEBUG ') || line.includes(' DEBUG:')) return 'debug'
+  if (line.includes(' INFO ') || line.includes(' INFO:')) return 'info'
+  if (!TS_REGEX.test(line)) return 'continuation'
+  return 'info'
 }
+
+const LEVEL_CLASSES = {
+  critical:     'text-red-300 font-bold',
+  error:        'text-red-400',
+  warning:      'text-amber-400',
+  info:         'text-gray-300',
+  debug:        'text-gray-600',
+  continuation: 'text-gray-500 pl-4',
+}
+
+function colorize(line) {
+  const cls = LEVEL_CLASSES[getLevel(line)] || 'text-gray-400'
+  return <span className={cls}>{line}</span>
+}
+
+const PRESETS = [
+  { id: 'all',       label: 'All',           fn: () => true },
+  { id: 'errors',    label: 'Errors',        fn: l => { const lv = getLevel(l); return lv === 'error' || lv === 'critical' || lv === 'continuation' }, icon: AlertCircle, color: 'text-red-400' },
+  { id: 'warnings',  label: 'Warnings+',     fn: l => { const lv = getLevel(l); return lv !== 'info' && lv !== 'debug' }, icon: AlertTriangle, color: 'text-amber-400' },
+  { id: 'no-noise',  label: 'Hide Noise',    fn: l => !l.includes('/api/logs') && !l.includes('/api/metrics') && !l.includes('/api/status') && !l.includes('getUpdates') && !l.includes('/api/service/status') },
+  { id: 'agent',     label: 'Agent',         fn: l => l.includes('kovo') || l.includes('agent') || l.includes('claude') || l.includes('sonnet') || l.includes('opus') || l.includes('telegram') },
+]
 
 export default function Logs() {
   const [lines, setLines] = useState([])
-  const [filter, setFilter] = useState('')
+  const [textFilter, setTextFilter] = useState('')
+  const [preset, setPreset] = useState('all')
   const [autoScroll, setAutoScroll] = useState(true)
   const bottomRef = useRef(null)
 
   const loadLogs = () =>
-    fetch('/api/logs?lines=300')
+    fetch('/api/logs?lines=500')
       .then(r => r.json())
       .then(d => setLines(d.lines || []))
       .catch(console.error)
@@ -52,22 +60,32 @@ export default function Logs() {
     }
   }, [lines, autoScroll])
 
-  const filtered = filter
-    ? lines.filter(l => l.toLowerCase().includes(filter.toLowerCase()))
-    : lines
+  const presetFilter = PRESETS.find(p => p.id === preset)?.fn || (() => true)
+  const filtered = lines
+    .filter(presetFilter)
+    .filter(l => !textFilter || l.toLowerCase().includes(textFilter.toLowerCase()))
+
+  const errorCount = lines.filter(l => { const lv = getLevel(l); return lv === 'error' || lv === 'critical' }).length
+  const warnCount = lines.filter(l => getLevel(l) === 'warning').length
 
   return (
-    <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col">
+    <div className="space-y-3 h-[calc(100vh-140px)] flex flex-col">
       <div className="flex items-center justify-between flex-shrink-0">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Logs</h1>
         <div className="flex items-center gap-3">
-          <input
-            placeholder="Filter…"
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-brand-500 w-48"
-          />
-          <label className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Logs</h1>
+          {errorCount > 0 && (
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+              <AlertCircle size={11} /> {errorCount}
+            </span>
+          )}
+          {warnCount > 0 && (
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <AlertTriangle size={11} /> {warnCount}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
             <input
               type="checkbox"
               checked={autoScroll}
@@ -78,13 +96,42 @@ export default function Logs() {
           </label>
           <button
             onClick={loadLogs}
-            className="flex items-center gap-1 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
+            className="flex items-center gap-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
           >
-            <RefreshCw size={12} /> Refresh
+            <RefreshCw size={11} /> Refresh
           </button>
         </div>
       </div>
 
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+        {PRESETS.map(p => (
+          <button
+            key={p.id}
+            onClick={() => setPreset(p.id)}
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+              preset === p.id
+                ? 'bg-brand-500/10 text-brand-400 border-brand-500/30'
+                : 'bg-gray-800/50 text-gray-400 border-gray-700 hover:border-gray-600 hover:text-gray-300'
+            }`}
+          >
+            {p.icon && <p.icon size={11} className={preset === p.id ? 'text-brand-400' : (p.color || '')} />}
+            {p.label}
+          </button>
+        ))}
+        <div className="flex-1" />
+        <div className="relative">
+          <Filter size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            placeholder="Search logs…"
+            value={textFilter}
+            onChange={e => setTextFilter(e.target.value)}
+            className="bg-gray-800/50 border border-gray-700 rounded-lg pl-7 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 w-52"
+          />
+        </div>
+      </div>
+
+      {/* Log output */}
       <div className="flex-1 bg-[#0d1117] border border-gray-700 rounded-xl overflow-auto p-3">
         <div className="font-mono text-xs leading-5 min-w-0">
           {filtered.map((line, i) => (
@@ -96,12 +143,12 @@ export default function Logs() {
         </div>
         {filtered.length === 0 && (
           <p className="text-gray-500 italic text-sm p-2">
-            {filter ? 'No lines match filter.' : 'No log entries.'}
+            {textFilter || preset !== 'all' ? 'No lines match current filters.' : 'No log entries.'}
           </p>
         )}
       </div>
       <p className="text-xs text-gray-400 flex-shrink-0">
-        {filtered.length} lines · refreshes every 5s
+        {filtered.length} / {lines.length} lines · refreshes every 5s
       </p>
     </div>
   )
