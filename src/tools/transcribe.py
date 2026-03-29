@@ -15,12 +15,13 @@ import logging
 import subprocess
 from functools import partial
 from pathlib import Path
+from src.utils.platform import kovo_dir
 
 import httpx
 
 log = logging.getLogger(__name__)
 
-_AUDIO_DIR = Path("/opt/kovo/data/audio")
+_AUDIO_DIR = Path(str(kovo_dir()) + "/data/audio")
 _AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 _GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions"

@@ -10,11 +10,12 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from src.utils.platform import kovo_dir
 
 log = logging.getLogger(__name__)
 
 _DUBAI_TZ = timezone(timedelta(hours=4))
-_DB_PATH = Path("/opt/kovo/data/kovo.db")
+_DB_PATH = Path(str(kovo_dir()) + "/data/kovo.db")
 
 _SCHEMA = """\
 PRAGMA journal_mode=WAL;
