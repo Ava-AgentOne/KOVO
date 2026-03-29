@@ -21,6 +21,7 @@ from src.tools.ollama import OllamaClient
 from src.heartbeat.version_check import check_and_notify as _version_check
 
 log = logging.getLogger(__name__)
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 _DUBAI_TZ = timezone(timedelta(hours=4))
 

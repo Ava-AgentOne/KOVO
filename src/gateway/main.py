@@ -281,9 +281,9 @@ if _FRONTEND_DIST.exists():
         # SPA fallback: always serve index.html so React Router handles the path
         return _FileResponse(_FRONTEND_DIST / "index.html")
 
-    log.info("Dashboard SPA served from %s", _FRONTEND_DIST)
+    pass  # SPA route registered — logged at startup
 else:
-    log.info("Dashboard not built yet (run: cd src/dashboard/frontend && npm run build)")
+    log.warning("Dashboard not built yet (run: cd src/dashboard/frontend && npm run build)")
 
 
 def main() -> None:
