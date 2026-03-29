@@ -379,6 +379,25 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         elif force_model == "opus":
             force_complexity = "complex"
 
+        # ── Auto web search for current-info questions ──────────────
+        _SEARCH_KW = {"weather", "news", "price", "stock", "score",
+                       "latest", "current", "trending", "today",
+                       "who is", "what is", "how much", "when is"}
+        msg_lower = message_text.lower()
+        needs_search = any(kw in msg_lower for kw in _SEARCH_KW)
+        if needs_search and len(message_text) < 200:
+            try:
+                from src.tools.web_search import search, format_results
+                import asyncio
+                loop = asyncio.get_event_loop()
+                results = await loop.run_in_executor(None, search, message_text, 5)
+                if results and not results[0].get("error"):
+                    formatted = format_results(results)
+                    message_text += f"\n\n--- Web Search Results ---\n{formatted}"
+                    log.info("Auto-search: %d results for: %s", len(results), message_text[:60])
+            except Exception as e:
+                log.debug("Auto-search failed: %s", e)
+
         # ── Auto-detect URLs and prepend page content ─────────────────
         urls = _URL_RE.findall(message_text)
         if urls and len(message_text) < 2000:  # skip if message is already huge
