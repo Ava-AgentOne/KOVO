@@ -224,7 +224,9 @@ async def lifespan(app: FastAPI):
     app.state.heartbeat = heartbeat
     tg_app.bot_data["heartbeat"] = heartbeat
 
-    # Wire reminders into heartbeat scheduler
+    # Wire bot + reminders into heartbeat scheduler
+    heartbeat._tg_bot = tg_app.bot
+    heartbeat._owner_user_id = cfg.allowed_users()[0]
     heartbeat._reminders = deps.get("reminders")
     heartbeat._agent = deps["agent"]
 
