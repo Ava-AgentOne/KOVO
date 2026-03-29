@@ -13,6 +13,41 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
+# Common city → timezone mapping for auto-detection
+_CITY_TZ = {
+    "dubai": "Asia/Dubai", "abu dhabi": "Asia/Dubai", "al ain": "Asia/Dubai",
+    "sharjah": "Asia/Dubai", "ajman": "Asia/Dubai", "muscat": "Asia/Muscat",
+    "riyadh": "Asia/Riyadh", "jeddah": "Asia/Riyadh", "mecca": "Asia/Riyadh",
+    "doha": "Asia/Qatar", "kuwait": "Asia/Kuwait", "manama": "Asia/Riyadh",
+    "cairo": "Africa/Cairo", "amman": "Asia/Riyadh",
+    "london": "Europe/London", "manchester": "Europe/London",
+    "berlin": "Europe/Berlin", "munich": "Europe/Berlin",
+    "paris": "Europe/Paris", "lyon": "Europe/Paris",
+    "istanbul": "Europe/Istanbul", "ankara": "Europe/Istanbul",
+    "moscow": "Europe/Moscow",
+    "mumbai": "Asia/Kolkata", "delhi": "Asia/Kolkata", "bangalore": "Asia/Kolkata",
+    "karachi": "Asia/Karachi", "lahore": "Asia/Karachi",
+    "tokyo": "Asia/Tokyo", "osaka": "Asia/Tokyo",
+    "seoul": "Asia/Seoul", "busan": "Asia/Seoul",
+    "beijing": "Asia/Shanghai", "shanghai": "Asia/Shanghai",
+    "hong kong": "Asia/Hong_Kong", "singapore": "Asia/Singapore",
+    "sydney": "Australia/Sydney", "melbourne": "Australia/Sydney",
+    "auckland": "Pacific/Auckland",
+    "new york": "US/Eastern", "boston": "US/Eastern", "miami": "US/Eastern",
+    "chicago": "US/Central", "houston": "US/Central", "dallas": "US/Central",
+    "denver": "US/Mountain", "phoenix": "US/Mountain",
+    "los angeles": "US/Pacific", "san francisco": "US/Pacific", "seattle": "US/Pacific",
+    "toronto": "US/Eastern", "vancouver": "US/Pacific",
+}
+
+
+def _tz_from_city(city: str) -> str:
+    """Return timezone string from city name, or 'UTC' if unknown."""
+    if not city:
+        return "UTC"
+    return _CITY_TZ.get(city.lower().strip(), "UTC")
+
+
 _STYLE_EMOJI = {
     "professional": "🎯",
     "friendly":     "😊",
@@ -197,7 +232,7 @@ def _write_user(workspace_dir: Path, profile: dict) -> None:
     name = profile.get("name") or "Unknown"
     city = profile.get("city") or "Unknown"
     country = profile.get("country") or "Unknown"
-    tz = profile.get("timezone") or "UTC"
+    tz = profile.get("timezone") or _tz_from_city(city) or "UTC"
     langs = profile.get("languages") or "English"
     occ = profile.get("occupation") or "Not specified"
     email = profile.get("email") or "Not provided"
@@ -220,6 +255,20 @@ def _write_user(workspace_dir: Path, profile: dict) -> None:
     (workspace_dir / "USER.md").write_text(content)
     log.info("USER.md written")
 
+    # Auto-update settings.yaml timezone if we detected one from the city
+    if tz != "UTC":
+        try:
+            settings_path = workspace_dir.parent / "config" / "settings.yaml"
+            if settings_path.exists():
+                s = settings_path.read_text()
+                if "timezone:" in s:
+                    import re
+                    s = re.sub(r"(timezone:\s*).+", f"\\1{tz}", s, count=1)
+                    settings_path.write_text(s)
+                    log.info("settings.yaml timezone auto-set to %s (from city: %s)", tz, city)
+        except Exception as e:
+            log.warning("Could not auto-set timezone in settings.yaml: %s", e)
+
 
 def _write_memory(
     workspace_dir: Path,
@@ -232,16 +281,18 @@ def _write_memory(
     user_name = profile.get("name") or "User"
     city = profile.get("city") or ""
     country = profile.get("country") or ""
-    tz = profile.get("timezone") or "UTC"
+    tz = profile.get("timezone") or _tz_from_city(city) or "UTC"
     location = ", ".join(part for part in (city, country) if part) or "Unknown"
 
     content = (
         f"# MEMORY.md\n\n"
-        f"## {today}\n"
-        f"- First-run onboarding completed\n"
-        f"- Agent configured as: {agent_name}\n"
-        f"- User: {user_name} ({location}, {tz})\n"
-        f"- All workspace files initialised: SOUL.md, USER.md, IDENTITY.md, MEMORY.md\n"
+        f"## Pinned\n"
+        f"- preferred_language: {profile.get('languages', 'English').split(',')[0].strip()}\n"
+        f"- timezone: {tz}\n"
+        f"- city: {location}\n"
+        f"- occupation: {profile.get('occupation', 'Not specified')}\n"
+        f"\n## Learnings\n"
+        f"- {today}: First-run onboarding completed. Agent configured as {agent_name} for {user_name}.\n"
     )
 
     (workspace_dir / "MEMORY.md").write_text(content)

@@ -36,6 +36,7 @@ _DEFAULTS: dict = {
     "agent_name": "Assistant",
     "user_profile": {
         "name":       "User",
+        "city":       None,
         "languages":  "English",
         "occupation": "Not specified",
         "email":      None,
@@ -188,9 +189,10 @@ class OnboardingFlow:
             f"Now let me get to know you. Answer these quick questions "
             f"(all at once or one by one):\n\n"
             f"1️⃣ What's your name?\n"
-            f"2️⃣ What languages do you speak?\n"
-            f"3️⃣ What do you do? (job, hobby, or just \"student\")\n"
-            f"4️⃣ Email address? (for Google integration — say \"skip\" to skip)"
+            f"2️⃣ What city do you live in?\n"
+            f"3️⃣ What languages do you speak?\n"
+            f"4️⃣ What do you do? (job, hobby, or just \"student\")\n"
+            f"5️⃣ Email address? (for Google integration — say \"skip\" to skip)"
         )
 
     async def _phase_user_profile(self, message: str, send_fn: SendFn) -> None:
@@ -208,6 +210,7 @@ class OnboardingFlow:
         self._set_state({**self._state, "phase": "personality", "user_profile": profile})
 
         name = profile.get("name", "—")
+        city = profile.get("city", "—")
         langs = profile.get("languages", "—")
         occ = profile.get("occupation", "—")
         email = profile.get("email") or "skipped"
@@ -215,6 +218,7 @@ class OnboardingFlow:
         await send_fn(
             f"Nice to meet you, *{name}*! Here's what I've got:\n\n"
             f"👤 {name}\n"
+            f"📍 {city}\n"
             f"🗣️ {langs}\n"
             f"💼 {occ}\n"
             f"📧 {email}\n\n"
@@ -322,6 +326,7 @@ class OnboardingFlow:
             f"*Perfect! Here's the full setup:*\n\n"
             f"🏷️ My name: *{agent_name}*\n"
             f"👤 Your name: {p.get('name', '—')}\n"
+            f"📍 City: {p.get('city', '—')}\n"
             f"🗣️ Languages: {p.get('languages', '—')}\n"
             f"💼 Role: {p.get('occupation', '—')}\n"
             f"📧 Email: {p.get('email') or 'skipped'}\n"
@@ -338,8 +343,10 @@ class OnboardingFlow:
         system = (
             "Extract user profile from this message. "
             "Return JSON only, no markdown, no code fences: "
-            '{"name":string|null,"languages":string|null,'
+            '{"name":string|null,"city":string|null,'
+            '"languages":string|null,'
             '"occupation":string|null,"email":string|null}. '
+            "city should be the city name only (e.g. 'Dubai', 'London', 'New York'). "
             "Set email to null if missing or skipped. "
             "Set unknown fields to null."
         )
