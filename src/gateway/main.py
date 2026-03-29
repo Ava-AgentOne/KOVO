@@ -309,14 +309,16 @@ if _FRONTEND_DIST.exists():
     @app.get("/dashboard", include_in_schema=False)
     async def dashboard_root_redirect():
         """Redirect /dashboard to /dashboard/setup if .env is unconfigured."""
-        from src.gateway.config import _ENV_PATH
-        env_content = _ENV_PATH.read_text() if _ENV_PATH.exists() else ""
-        needs_setup = not env_content or "TELEGRAM_BOT_TOKEN=" not in env_content or env_content.count("TELEGRAM_BOT_TOKEN=\n") > 0
-" in env_content or "TELEGRAM_BOT_TOKEN=" not in env_content
-        if needs_setup:
-            from fastapi.responses import RedirectResponse
-            return RedirectResponse("/dashboard/setup")
         from fastapi.responses import RedirectResponse
+        from src.gateway.config import _ENV_PATH
+        try:
+            env_text = _ENV_PATH.read_text() if _ENV_PATH.exists() else ""
+            token = [l for l in env_text.splitlines() if l.startswith("TELEGRAM_BOT_TOKEN=")]
+            has_token = token and token[0].split("=", 1)[1].strip()
+        except Exception:
+            has_token = False
+        if not has_token:
+            return RedirectResponse("/dashboard/setup")
         return RedirectResponse("/dashboard/overview")
 
     @app.get("/dashboard/{full_path:path}", include_in_schema=False)
