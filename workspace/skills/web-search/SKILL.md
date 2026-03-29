@@ -10,27 +10,28 @@ trigger: search, google, look up, find out, what is, news, weather, price, lates
 ## When to Use
 - Questions about current events, news, weather, or prices
 - "What is...", "Who is...", "When did..." questions about things you don't know
-- Anything that might have changed since your training data
+- Anything requiring real-time or recent information
 
 ## How to Search
-Run the web search tool from the command line:
+Run the web search command:
 
 ```bash
-python3 -m src.tools.web_search "your search query"
+/opt/kovo/scripts/web-search.sh "Al Ain weather today"
 ```
 
-This returns JSON with title, url, and snippet for each result.
+This returns JSON with title, url, and snippet for each result. Parse the JSON and summarize the findings for the user.
 
 ## How to Read a URL
-If a search result looks promising and you need more detail:
+If you need the full text of a webpage:
 
 ```bash
-python3 -m src.tools.link_reader "https://example.com/article"
+/opt/kovo/scripts/link-reader.sh "https://example.com/article"
 ```
 
-This returns the full text content of the page.
+This returns the readable text content of the page.
 
 ## Response Style
-- Cite your sources naturally: "According to [source]..."
 - Give the answer first, then supporting details
+- Cite sources naturally: "According to [source]..."
 - If results are unclear, say so honestly
+- ALWAYS try searching before saying you can't find information
