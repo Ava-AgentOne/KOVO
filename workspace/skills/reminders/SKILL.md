@@ -34,6 +34,12 @@ User: "Remind me in 30 minutes to check the oven"
 User: "Set an alarm for 6am tomorrow, call me and message me"
 → `[SET_REMINDER: Morning alarm - time to get up! | 2026-03-30T06:00 | both]`
 
+## Timezone
+IMPORTANT: Always use the user's configured timezone when computing reminder times.
+The user's timezone is in USER.md or settings.yaml. Currently: Asia/Dubai (UTC+4).
+When the user says "in 5 minutes" or "at 3pm", compute the datetime in their local timezone.
+The ISO datetime in the SET_REMINDER tag must be in LOCAL time (not UTC).
+
 ## Important Rules
 - ALWAYS use ISO format for datetime: YYYY-MM-DDTHH:MM
 - Use the user's configured timezone (from USER.md or settings)
