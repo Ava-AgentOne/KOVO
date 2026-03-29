@@ -497,7 +497,7 @@ install_system_packages() {
                 ok "  $pkg (already installed) [$brew_i/$brew_total]"
             else
                 run_with_spin "Installing $pkg... [$brew_i/$brew_total]" brew install "$pkg" || true
-                ok "  $pkg [$brew_i/$brew_total]"
+                ok "  $pkg"
             fi
         done
         ok "Core packages (brew)"
