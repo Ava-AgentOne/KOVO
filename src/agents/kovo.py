@@ -148,11 +148,16 @@ class KovoAgent:
         if identity:
             parts.append(identity)
 
-        # ── Conditional: long-term memory ─────────────────────────────────
+        # ── Always: pinned memory (core facts about the owner) ──────────
+        pinned = self.memory.pinned_memory()
+        if pinned:
+            parts.append(f"## Key Facts\n{pinned}")
+
+        # ── Conditional: learnings (rolling log) ─────────────────────────
         if self._needs_memory(msg):
-            main_mem = self.memory.main_memory()
-            if main_mem:
-                parts.append(f"## Long-term Memory\n{main_mem}")
+            learnings = self.memory.learnings_memory()
+            if learnings:
+                parts.append(f"## Learnings\n{learnings[-3000:]}")
                 conditional_loaded += 1
 
         # ── Conditional: daily logs ────────────────────────────────────────
@@ -220,9 +225,9 @@ class KovoAgent:
 
         # ── Fallback: ambiguous message — load MEMORY.md + TOOLS.md ───────
         if conditional_loaded == 0:
-            main_mem = self.memory.main_memory()
-            if main_mem:
-                parts.append(f"## Long-term Memory\n{main_mem}")
+            learnings = self.memory.learnings_memory()
+            if learnings:
+                parts.append(f"## Recent Learnings\n{learnings[-2000:]}")
             tools_block = self.tool_registry.as_system_prompt_block()
             if tools_block:
                 parts.append(tools_block)

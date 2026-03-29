@@ -1,8 +1,9 @@
 """
-Auto-memory extraction.
-Once per day (triggered by scheduler at 23:00), reads today's conversation log,
-calls Claude Sonnet to extract key facts/learnings, deduplicates via SQL + difflib,
-and stores results to MEMORY.md + SQLite memories table.
+Auto-memory extraction with Pinned + Learnings system.
+
+Daily at 23:00, reads today's log, calls Claude Sonnet to extract:
+  - Pinned facts: key-value pairs that update in place
+  - Learnings: rolling log entries, archived when MEMORY.md grows large
 """
 from __future__ import annotations
 
@@ -18,29 +19,42 @@ if TYPE_CHECKING:
     from src.memory.structured_store import StructuredStore
 
 _DUBAI_TZ = timezone(timedelta(hours=4))
-
 log = logging.getLogger(__name__)
 
-# Capped at ~3200 chars ≈ 4000 tokens input budget
 _INPUT_CAP = 3200
-# Max lines in MEMORY.md before archival kicks in
 _MEMORY_BUDGET = 500
 
 _EXTRACTION_PROMPT = """\
-You are Kovo's memory extractor. Read the conversation log below and extract \
-the most important facts, preferences, and learnings about the owner and his projects.
+You are Kovo's memory extractor. Read the conversation log and extract \
+the most important facts and learnings about the owner.
+
+Output TWO sections:
+
+### PINNED
+Key facts about the owner that should be remembered permanently. \
+If a fact changes, output the NEW value — it replaces the old one.
+
+Format: - key: value
+Use lowercase keys with underscores.
+Examples:
+- preferred_language: Arabic and English
+- timezone: Asia/Dubai
+- occupation: Software Engineer
+
+Only output pinned entries for NEW or CHANGED owner info. \
+Skip if nothing about the owner's profile/preferences was mentioned.
+
+### LEARNINGS
+Project notes, decisions, and facts worth remembering.
+
+Format: - [category] fact here
+Categories: preference, project, tool, person, decision, reminder
 
 Rules:
-- Extract 3-8 bullet points maximum
-- Each bullet: concise, specific, factual (not vague like "the owner likes good code")
-- Focus on: preferences, decisions, project facts, recurring topics, things to remember
-- Skip: routine exchanges, errors already fixed, system metrics, transient info
-- Do NOT extract timestamps, permission grants, or trivial chat
-
-Format each bullet exactly like:
-- [category] fact or learning here
-
-Categories: preference, project, tool, person, decision, reminder
+- 0-5 pinned entries (only if new/changed)
+- 3-8 learning bullets
+- Be concise and specific
+- Skip routine exchanges, metrics, transient info
 
 Log:
 {log_content}
@@ -49,21 +63,13 @@ Extract:"""
 
 
 class AutoMemoryExtractor:
-    """Extracts key learnings from daily logs and stores them deduped in MEMORY.md + SQLite."""
 
     def __init__(self, memory_manager: "MemoryManager", structured_store: "StructuredStore | None" = None):
         self.memory = memory_manager
         self.store = structured_store
         self._last_extract_date: date | None = None
 
-    # ── Public API ────────────────────────────────────────────────────────
-
     async def extract_and_store(self, force: bool = False) -> str:
-        """
-        Extract learnings from today's log and store them.
-        Skips if already run today unless force=True.
-        Returns a human-readable status string.
-        """
         today = datetime.now(_DUBAI_TZ).date()
         if not force and self._last_extract_date == today:
             return "Already extracted today."
@@ -74,32 +80,35 @@ class AutoMemoryExtractor:
 
         log.info("Auto-memory extraction starting for %s", today)
         try:
-            bullets = await self._call_extraction(today_log)
+            pinned, learnings = await self._call_extraction(today_log)
         except Exception as e:
             log.error("Extraction call failed: %s", e)
             return f"Extraction failed: {e}"
 
-        if not bullets:
-            return "No learnings extracted."
+        pinned_count = 0
+        for key, value in pinned:
+            try:
+                self.memory.update_pinned(key, value)
+                pinned_count += 1
+            except Exception as e:
+                log.warning("Failed to update pinned '%s': %s", key, e)
 
         stored, dupes = 0, 0
-        for bullet in bullets:
+        for bullet in learnings:
             if self._deduplicate(bullet):
                 dupes += 1
                 continue
-            self._store_memory(bullet, source="auto_extract", date_str=today.isoformat())
+            self._store_learning(bullet, date_str=today.isoformat())
             stored += 1
 
         self._last_extract_date = today
         self._check_memory_budget()
 
-        log.info("Auto-extract complete: %d stored, %d duplicates", stored, dupes)
-        return f"Extracted {stored} new memories ({dupes} duplicates skipped)."
+        status = f"Pinned: {pinned_count} updated. Learnings: {stored} new, {dupes} duplicates."
+        log.info("Auto-extract: %s", status)
+        return status
 
-    # ── Internal ──────────────────────────────────────────────────────────
-
-    async def _call_extraction(self, log_content: str) -> list[str]:
-        """Call Claude Sonnet to extract learnings. Input capped at _INPUT_CAP chars."""
+    async def _call_extraction(self, log_content: str) -> tuple[list[tuple[str, str]], list[str]]:
         import asyncio
         from src.tools.claude_cli import call_claude, extract_text
 
@@ -108,100 +117,113 @@ class AutoMemoryExtractor:
 
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
-            None,
-            lambda: call_claude(prompt, model="sonnet"),
+            None, lambda: call_claude(prompt, model="sonnet"),
         )
         text = extract_text(response)
 
-        bullets = []
+        pinned: list[tuple[str, str]] = []
+        learnings: list[str] = []
+        section = None
+
         for line in text.splitlines():
-            line = line.strip()
-            if line.startswith("- "):
-                bullets.append(line[2:].strip())
-        return bullets
+            s = line.strip()
+            if "PINNED" in s and s.startswith("#"):
+                section = "pinned"
+                continue
+            elif "LEARNINGS" in s and s.startswith("#"):
+                section = "learnings"
+                continue
+            if not s or s.startswith("#"):
+                continue
+
+            if section == "pinned" and s.startswith("- "):
+                entry = s[2:].strip()
+                ci = entry.find(":")
+                if ci > 0:
+                    k, v = entry[:ci].strip(), entry[ci+1:].strip()
+                    if k and v:
+                        pinned.append((k, v))
+
+            elif section == "learnings" and s.startswith("- "):
+                learnings.append(s[2:].strip())
+
+        return pinned, learnings
 
     def _deduplicate(self, candidate: str) -> bool:
-        """
-        Returns True if candidate is a near-duplicate of an existing memory.
-        Uses SQL LIKE for coarse match, then difflib ratio > 0.8 for confirmation.
-        No LLM call.
-        """
-        candidate_lower = candidate.lower()
-
-        # SQL coarse check against stored memories
+        cl = candidate.lower()
         if self.store:
             try:
-                # Use first 20 chars as a coarse search key
-                prefix = candidate_lower[:20].replace("%", "").replace("_", "")
+                prefix = cl[:20].replace("%", "").replace("_", "")
                 rows = self.store.execute(
                     "SELECT content FROM memories WHERE lower(content) LIKE ? LIMIT 20",
                     (f"%{prefix}%",),
                 )
                 for row in rows:
-                    ratio = SequenceMatcher(None, candidate_lower, row["content"].lower()).ratio()
-                    if ratio > 0.8:
+                    if SequenceMatcher(None, cl, row["content"].lower()).ratio() > 0.8:
                         return True
-            except Exception as e:
-                log.debug("Dedup SQL check failed: %s", e)
+            except Exception:
+                pass
 
-        # Fallback: scan MEMORY.md lines with difflib
-        existing = self.memory.main_memory()
+        existing = self.memory.learnings_memory()
         for line in existing.splitlines():
             stripped = line.strip()
-            if not stripped:
-                continue
-            ratio = SequenceMatcher(None, candidate_lower, stripped.lower()).ratio()
-            if ratio > 0.8:
+            if stripped and SequenceMatcher(None, cl, stripped.lower()).ratio() > 0.8:
                 return True
-
         return False
 
-    def _store_memory(self, content: str, source: str = "auto_extract", date_str: str | None = None) -> None:
-        """Store a memory bullet in both MEMORY.md and SQLite."""
+    def _store_learning(self, content: str, source: str = "auto_extract", date_str: str | None = None) -> None:
         if not date_str:
             date_str = datetime.now(_DUBAI_TZ).date().isoformat()
-
-        # Parse "[category] content" format
         category = "general"
-        cat_match = re.match(r"^\[(\w+)\]\s*(.*)", content)
-        if cat_match:
-            category = cat_match.group(1)
-
-        # Store in SQLite
+        m = re.match(r"^\[(\w+)\]\s*(.*)", content)
+        if m:
+            category = m.group(1)
         if self.store:
-            content_hash = hashlib.sha256(content.lower().encode()).hexdigest()[:32]
+            h = hashlib.sha256(content.lower().encode()).hexdigest()[:32]
             self.store.insert("memories", {
                 "content": content,
                 "category": category,
                 "source": source,
                 "created_at": f"{date_str} 00:00:00",
-                "hash": content_hash,
+                "hash": h,
             })
-
-        # Append to MEMORY.md (one bullet per call)
-        self.memory.flush_to_memory(f"- {content}")
+        self.memory.flush_to_memory(content)
 
     def _check_memory_budget(self) -> None:
-        """Archive MEMORY.md if it exceeds _MEMORY_BUDGET lines."""
+        """Archive Learnings if >500 lines. NEVER touches Pinned."""
         mem_path = self.memory.workspace / "MEMORY.md"
         if not mem_path.exists():
             return
         try:
-            lines = mem_path.read_text(encoding="utf-8").splitlines()
-            if len(lines) <= _MEMORY_BUDGET:
+            content = mem_path.read_text(encoding="utf-8")
+            lines = content.splitlines()
+
+            learnings_start = 0
+            for i, line in enumerate(lines):
+                if line.strip() == "## Learnings":
+                    learnings_start = i
+                    break
+
+            learnings_lines = lines[learnings_start:]
+            if len(learnings_lines) <= _MEMORY_BUDGET:
                 return
 
             archive_dir = self.memory.workspace / "memory" / "archive"
             archive_dir.mkdir(parents=True, exist_ok=True)
             archive_path = archive_dir / "memories_archived.md"
 
-            split_at = len(lines) - 200
-            to_archive = lines[:split_at]
-            to_keep = lines[split_at:]
+            keep_from = len(lines) - 200
+            if keep_from <= learnings_start:
+                return
+
+            to_archive = lines[learnings_start + 1:keep_from]
+            to_keep = lines[:learnings_start + 1] + lines[keep_from:]
 
             with open(archive_path, "a", encoding="utf-8") as f:
                 f.write("\n".join(to_archive) + "\n")
+
             mem_path.write_text("\n".join(to_keep), encoding="utf-8")
-            log.info("Memory archived %d lines, kept %d", split_at, len(to_keep))
+            log.info("Archived %d learnings, kept Pinned + %d recent",
+                     len(to_archive), len(lines[keep_from:]))
         except Exception as e:
             log.error("Memory budget check failed: %s", e)
