@@ -131,14 +131,15 @@ async def lifespan(app: FastAPI):
     # ── startup ──────────────────────────────────────────────────────────────
     log.info("Starting Kovo gateway...")
 
-    # Validate environment before touching any external service
+    # Validate environment — warn if unconfigured, don't crash
     from src.gateway.config import EnvValidationError, validate_env, check_env_permissions
+    _telegram_ok = True
     try:
         validate_env()
     except EnvValidationError as exc:
-        log.error("%s", exc)
-        import sys
-        sys.exit(1)
+        log.warning("%s", exc)
+        log.warning("Starting in DASHBOARD-ONLY mode — configure .env via the dashboard then restart")
+        _telegram_ok = False
     check_env_permissions()
 
     deps = _build_deps()
@@ -163,6 +164,14 @@ async def lifespan(app: FastAPI):
     app.state.onboarding = onboarding
     if onboarding.is_active():
         log.info("Onboarding: first-run setup will begin when the owner sends a message")
+
+    if not _telegram_ok:
+        app.state.tg_app = None
+        app.state.heartbeat = None
+        log.info("Dashboard available at /dashboard — configure .env and restart to enable Telegram")
+        yield
+        log.info("Shutting down (dashboard-only mode)")
+        return
 
     # Build and start Telegram app
     from src.telegram.bot import build_application
