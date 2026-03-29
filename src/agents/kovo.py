@@ -14,12 +14,11 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
+from src.utils.tz import get_tz as _get_configured_tz, today as _tz_today
 
 
 def _dubai_today():
-    from datetime import date
-    return datetime.now(_DUBAI_TZ).date()
+    return _tz_today()
 
 
 if TYPE_CHECKING:
@@ -391,7 +390,7 @@ class KovoAgent:
     # ── Internal helpers ──────────────────────────────────────────────────
 
     def _persist(self, user_id: int, message: str, result: dict) -> None:
-        timestamp = datetime.now(_DUBAI_TZ).strftime("%H:%M")
+        timestamp = datetime.now(_get_configured_tz()).strftime("%H:%M")
         model_used = result.get("model_used", "?")
         agent_used = result.get("agent", self.name)
         entry = (

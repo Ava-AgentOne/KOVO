@@ -176,3 +176,8 @@ def gateway_host() -> str:
 
 def gateway_port() -> int:
     return int(get()["gateway"]["port"])
+
+
+def kovo_timezone() -> str:
+    """Return configured timezone (e.g. Asia/Dubai). Default: UTC."""
+    return get().get("kovo", {}).get("timezone", "UTC")
