@@ -27,7 +27,7 @@ tools:
   name: tts
   status: configured
 - config_needed: null
-  description: "Ollama LLM on NUC at <OLLAMA-HOST>:11434 \u2014 used for heartbeat checks"
+  description: "Ollama LLM on local LLM server at <OLLAMA-HOST>:11434 \u2014 used for heartbeat checks"
   install_command: null
   name: ollama
   status: configured
@@ -78,7 +78,7 @@ Agents check this registry before using a tool and notify the owner if a tool is
 - **google_api**: Requires OAuth2. Run `/auth_google` in Telegram to configure.
 - **telegram_call**: Pyrogram userbot. Falls back to voice message if call not answered.
 - **tts**: edge-tts (Microsoft Azure voices, free). Voice: en-US-AriaNeural.
-- **ollama**: Runs on NUC. Used only for scheduled heartbeat health checks.
+- **ollama**: Runs on local LLM server. Used only for scheduled heartbeat health checks.
 - **claude_cli**: Uses the owner's Claude Max subscription. No API key needed.
 - **whisper**: Groq whisper-large-v3-turbo (primary) + local Whisper (fallback).
 - **github**: PyGithub. Set GITHUB_TOKEN in config/.env. Run `/auth_github` to verify.
