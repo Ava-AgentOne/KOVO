@@ -33,11 +33,8 @@ log = logging.getLogger(__name__)
 # Force uvicorn loggers to use the same format and handler as the rest of the app
 from src.gateway.config import TokenMaskFilter as _TokenMaskFilter  # noqa: E402
 _mask = _TokenMaskFilter()
-_formatter = logging.Formatter(_LOG_FORMAT, datefmt=_LOG_DATEFMT)
-
 for _h in logging.root.handlers:
     _h.addFilter(_mask)
-    _h.setFormatter(_formatter)
 
 for _uvicorn_logger in ("uvicorn", "uvicorn.error", "uvicorn.access"):
     _uv_log = logging.getLogger(_uvicorn_logger)
@@ -117,6 +114,14 @@ def _build_deps():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── startup ──────────────────────────────────────────────────────────────
+    # Set log timestamps to configured timezone
+    import time as _time
+    from src.utils.tz import get_tz as _get_log_tz
+    _offset_secs = int(_get_log_tz().utcoffset(None).total_seconds())
+    def _tz_log_converter(*args):
+        return _time.gmtime(_time.time() + _offset_secs)
+    logging.Formatter.converter = _tz_log_converter
+
     log.info("Starting Kovo gateway...")
 
     # Validate environment before touching any external service

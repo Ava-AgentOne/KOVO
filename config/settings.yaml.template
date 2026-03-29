@@ -1,4 +1,5 @@
 kovo:
+  timezone: Asia/Dubai
   workspace: /opt/kovo/workspace
   data_dir: /opt/kovo/data
   log_dir: /opt/kovo/logs

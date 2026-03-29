@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from src.memory.manager import MemoryManager
     from src.memory.structured_store import StructuredStore
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
+from src.utils.tz import get_tz as _get_configured_tz
 log = logging.getLogger(__name__)
 
 _INPUT_CAP = 3200
@@ -70,7 +70,7 @@ class AutoMemoryExtractor:
         self._last_extract_date: date | None = None
 
     async def extract_and_store(self, force: bool = False) -> str:
-        today = datetime.now(_DUBAI_TZ).date()
+        today = datetime.now(_get_configured_tz()).date()
         if not force and self._last_extract_date == today:
             return "Already extracted today."
 
@@ -173,7 +173,7 @@ class AutoMemoryExtractor:
 
     def _store_learning(self, content: str, source: str = "auto_extract", date_str: str | None = None) -> None:
         if not date_str:
-            date_str = datetime.now(_DUBAI_TZ).date().isoformat()
+            date_str = datetime.now(_get_configured_tz()).date().isoformat()
         category = "general"
         m = re.match(r"^\[(\w+)\]\s*(.*)", content)
         if m:

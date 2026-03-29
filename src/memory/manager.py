@@ -10,11 +10,11 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
+from src.utils.tz import get_tz, today as _tz_today
 
 
 def _dubai_today() -> date:
-    return datetime.now(_DUBAI_TZ).date()
+    return _tz_today()
 
 log = logging.getLogger(__name__)
 

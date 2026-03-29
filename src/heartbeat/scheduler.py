@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from src.utils.tz import today as _tz_today
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -23,11 +24,11 @@ from src.heartbeat.version_check import check_and_notify as _version_check
 log = logging.getLogger(__name__)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
+# Timezone from settings.yaml
 
 
 def _dubai_today() -> date:
-    return datetime.now(_DUBAI_TZ).date()
+    return _tz_today()
 
 
 class HeartbeatScheduler:
@@ -47,12 +48,21 @@ class HeartbeatScheduler:
         self.memory = memory
         self.storage = storage
         self.auto_extractor = auto_extractor
-        self._scheduler = AsyncIOScheduler(timezone="Asia/Dubai")
+        self._tz_name = self._get_tz_name()
+        self._scheduler = AsyncIOScheduler(timezone=self._tz_name)
         self._started = False
 
         # For version_check notifications
         self._tg_bot = None
         self._owner_user_id = None
+
+    @staticmethod
+    def _get_tz_name() -> str:
+        try:
+            from src.gateway.config import kovo_timezone
+            return kovo_timezone()
+        except Exception:
+            return "UTC"
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -65,7 +75,7 @@ class HeartbeatScheduler:
         # Archive old logs — daily at 03:00
         self._scheduler.add_job(
             self._archive_logs,
-            trigger=CronTrigger(hour=3, minute=0, timezone="Asia/Dubai"),
+            trigger=CronTrigger(hour=3, minute=0, timezone=self._tz_name),
             id="archive_logs",
             replace_existing=True,
         )
@@ -74,7 +84,7 @@ class HeartbeatScheduler:
         if self.auto_extractor is not None:
             self._scheduler.add_job(
                 self._auto_extract,
-                trigger=CronTrigger(hour=23, minute=0, timezone="Asia/Dubai"),
+                trigger=CronTrigger(hour=23, minute=0, timezone=self._tz_name),
                 id="auto_extract",
                 replace_existing=True,
             )
@@ -85,7 +95,7 @@ class HeartbeatScheduler:
                     day_of_week="sun",
                     hour=3,
                     minute=30,
-                    timezone="Asia/Dubai",
+                    timezone=self._tz_name,
                 ),
                 id="weekly_memory_consolidation",
                 replace_existing=True,
@@ -94,7 +104,7 @@ class HeartbeatScheduler:
         # Daily version check — 10:00
         self._scheduler.add_job(
             self._check_for_updates,
-            trigger=CronTrigger(hour=10, minute=0, timezone="Asia/Dubai"),
+            trigger=CronTrigger(hour=10, minute=0, timezone=self._tz_name),
             id="version_check",
             replace_existing=True,
         )
