@@ -1,21 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
 
-const LEVEL_COLOR = {
-  ERROR: 'text-red-500 dark:text-red-400',
-  WARNING: 'text-yellow-600 dark:text-yellow-400',
-  WARN: 'text-yellow-600 dark:text-yellow-400',
-  INFO: 'text-blue-600 dark:text-blue-300',
-  DEBUG: 'text-gray-400 dark:text-gray-500',
-}
-
 function colorize(line) {
-  for (const [key, cls] of Object.entries(LEVEL_COLOR)) {
-    if (line.includes(` ${key} `) || line.includes(` ${key}:`)) {
-      return <span className={cls}>{line}</span>
-    }
+  if (line.includes(' ERROR ') || line.includes(' ERROR:') || line.includes('Traceback')) {
+    return <span className="text-red-400">{line}</span>
   }
-  return <span className="text-gray-600 dark:text-gray-400">{line}</span>
+  if (line.includes(' WARNING ') || line.includes(' WARNING:') || line.includes(' WARN ')) {
+    return <span className="text-amber-400">{line}</span>
+  }
+  if (line.includes(' CRITICAL ') || line.includes(' CRITICAL:')) {
+    return <span className="text-red-300 font-bold">{line}</span>
+  }
+  if (line.includes(' INFO ') || line.includes(' INFO:')) {
+    return <span className="text-gray-300">{line}</span>
+  }
+  if (line.includes(' DEBUG ') || line.includes(' DEBUG:')) {
+    return <span className="text-gray-600">{line}</span>
+  }
+  if (line.startsWith('  ') || line.startsWith('\t')) {
+    return <span className="text-red-500/60">{line}</span>
+  }
+  return <span className="text-gray-400">{line}</span>
 }
 
 export default function Logs() {
@@ -75,17 +80,17 @@ export default function Logs() {
         </div>
       </div>
 
-      <div className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-auto p-3">
-        <div className="font-mono text-xs leading-5 space-y-0.5">
+      <div className="flex-1 bg-[#0d1117] border border-gray-700 rounded-xl overflow-auto p-3">
+        <div className="font-mono text-xs leading-5 min-w-0">
           {filtered.map((line, i) => (
-            <div key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800 px-1 rounded">
+            <div key={i} className="whitespace-nowrap hover:bg-white/5 px-1 rounded">
               {colorize(line)}
             </div>
           ))}
           <div ref={bottomRef} />
         </div>
         {filtered.length === 0 && (
-          <p className="text-gray-400 italic text-sm p-2">
+          <p className="text-gray-500 italic text-sm p-2">
             {filter ? 'No lines match filter.' : 'No log entries.'}
           </p>
         )}
