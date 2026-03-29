@@ -78,7 +78,18 @@ get_local_sha() {
 }
 
 version_gt() {
-    [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$1" ]
+    # Cross-platform version comparison (sort -V is GNU-only)
+    if printf '%s\n' "$1" "$2" | sort -V >/dev/null 2>&1; then
+        [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$1" ]
+    else
+        # Python fallback for macOS (BSD sort lacks -V)
+        python3 -c "
+import sys
+a = [int(x) for x in sys.argv[1].split('.')]
+b = [int(x) for x in sys.argv[2].split('.')]
+sys.exit(0 if a > b else 1)
+" "$1" "$2" 2>/dev/null
+    fi
 }
 
 restart_service() {

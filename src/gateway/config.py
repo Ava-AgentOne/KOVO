@@ -86,7 +86,7 @@ def validate_env() -> None:
         msg = (
             "Kovo startup aborted — fix your config/.env file:\n"
             + "\n".join(problems)
-            + "\n\nRun:  nano /opt/kovo/config/.env"
+            + "\n\nRun:  nano " + str(_ENV_FILE) + ""
         )
         raise EnvValidationError(msg)
 

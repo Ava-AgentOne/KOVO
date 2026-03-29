@@ -11,6 +11,18 @@
 # ═══════════════════════════════════════════════════════════════════
 set -e
 
+# ─── Bash 4+ required for associative arrays ─────────────────
+if [ "${BASH_VERSINFO:-0}" -lt 4 ] 2>/dev/null; then
+    # Try to find bash 4+ (brew installs to /opt/homebrew or /usr/local)
+    for try_bash in /opt/homebrew/bin/bash /usr/local/bin/bash; do
+        if [ -x "$try_bash" ]; then
+            exec "$try_bash" "$0" "$@"
+        fi
+    done
+    echo "ERROR: bash 4+ required for backup. Install via: brew install bash"
+    exit 1
+fi
+
 # ─── Cross-platform KOVO_DIR detection ────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -n "${KOVO_DIR:-}" ]; then
