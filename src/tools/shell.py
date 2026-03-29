@@ -28,7 +28,7 @@ _SAFE_PATTERNS = re.compile(
     r"systemctl status|systemctl is-active|systemctl list-units|"
     r"journalctl |dmesg |last |lastlog |who |w |"
     r"git status|git log|git diff|git show|git branch|git remote|"
-    r"python3? |pip |/opt/kovo/venv/bin/|"
+    r"python3? |pip |"
     r"cat /proc/|cat /sys/|"
     r"less |more |file |stat |readlink |realpath |"
     r"tar |zip |unzip |gzip |gunzip |"
@@ -121,6 +121,10 @@ def classify(command: str) -> str:
     if needs_confirmation(cmd):
         return "caution"
     if _SAFE_PATTERNS.match(cmd):
+        return "safe"
+    # Also treat commands from the KOVO venv as safe
+    venv_prefix = str(kovo_dir() / "venv" / "bin")
+    if cmd.startswith(venv_prefix):
         return "safe"
     return "caution"  # unknown — allowed but logged prominently
 

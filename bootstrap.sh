@@ -600,7 +600,24 @@ install_python_env() {
     echo ""
 
     info "Creating virtual environment..."
-    python3 -m venv "$VENV"
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        # Use brew python3.13 explicitly (macOS system python is older)
+        local brew_py="$(brew --prefix python@3.13 2>/dev/null)/bin/python3.13"
+        if [[ -x "$brew_py" ]]; then
+            "$brew_py" -m venv "$VENV"
+            ok "venv uses brew Python 3.13"
+        else
+            # Fallback: try python3.13 in PATH, then any python3
+            if command -v python3.13 &>/dev/null; then
+                python3.13 -m venv "$VENV"
+            else
+                python3 -m venv "$VENV"
+                warn "Using system Python ($(python3 --version)) — 3.13+ recommended"
+            fi
+        fi
+    else
+        python3 -m venv "$VENV"
+    fi
     source "$VENV/bin/activate"
     pip install --upgrade pip -q 2>&1 | tail -1
     ok "venv at $VENV"
@@ -670,12 +687,12 @@ install_configs_and_finish() {
 
     # ── Claude Code permissions ──────────────────────────────────
     info "Claude Code permissions..."
-    cat > "$KOVO_DIR/.claude/settings.local.json" << 'EOF'
+    cat > "$KOVO_DIR/.claude/settings.local.json" << EOF
 {
   "permissions": {
     "allow": [
-      "Bash(/opt/kovo/venv/bin/pip *)", "Bash(/opt/kovo/venv/bin/playwright *)",
-      "Bash(/opt/kovo/venv/bin/python *)", "Bash(apt *)", "Bash(cat *)",
+      "Bash($KOVO_DIR/venv/bin/pip *)", "Bash($KOVO_DIR/venv/bin/playwright *)",
+      "Bash($KOVO_DIR/venv/bin/python *)", "Bash(apt *)", "Bash(cat *)",
       "Bash(cd *)", "Bash(chmod *)", "Bash(chown *)", "Bash(cp *)",
       "Bash(curl *)", "Bash(cut *)", "Bash(date *)", "Bash(df *)",
       "Bash(diff *)", "Bash(dirname *)", "Bash(docker *)", "Bash(du *)",
@@ -781,7 +798,7 @@ SETTINGS_EOF
     fi
 
     # ── .env ─────────────────────────────────────────────────────
-    cat > "$KOVO_DIR/config/.env.template" << 'ENV_EOF'
+    cat > "$KOVO_DIR/config/.env.template" << ENV_EOF
 TELEGRAM_BOT_TOKEN=
 OWNER_TELEGRAM_ID=
 TELEGRAM_API_ID=
@@ -789,7 +806,7 @@ TELEGRAM_API_HASH=
 CLAUDE_CODE_OAUTH_TOKEN=
 GROQ_API_KEY=
 GITHUB_TOKEN=
-GOOGLE_CREDENTIALS_PATH=/opt/kovo/config/google-credentials.json
+GOOGLE_CREDENTIALS_PATH=$KOVO_DIR/config/google-credentials.json
 ENV_EOF
     if [[ ! -f "$KOVO_DIR/config/.env" ]]; then
         cp "$KOVO_DIR/config/.env.template" "$KOVO_DIR/config/.env"
@@ -872,7 +889,7 @@ trigger: call, phone, voice call, ring, urgent, emergency
 EOF
 
     [[ ! -f "$WORKSPACE/skills/report-builder/SKILL.md" ]] && printf -- "---\nname: report-builder\ndescription: Generate HTML reports — health, status, weekly.\ntools: [shell]\ntrigger: report, dashboard, health report, status page\n---\n# Report Builder\nSingle-file HTML with dark/light mode, charts, responsive layout.\n" > "$WORKSPACE/skills/report-builder/SKILL.md"
-    [[ ! -f "$WORKSPACE/skills/security-audit/SKILL.md" ]] && printf -- "---\nname: security-audit\ndescription: Deep security audit — network, packages, users, malware.\ntools: [shell]\ntrigger: security, audit, scan, vulnerability, malware, rootkit\n---\n# Security Audit\nBaseline at /opt/kovo/data/security_baseline.json. Schedule: Sunday 7am.\n" > "$WORKSPACE/skills/security-audit/SKILL.md"
+    [[ ! -f "$WORKSPACE/skills/security-audit/SKILL.md" ]] && printf -- "---\nname: security-audit\ndescription: Deep security audit — network, packages, users, malware.\ntools: [shell]\ntrigger: security, audit, scan, vulnerability, malware, rootkit\n---\n# Security Audit\nBaseline at $KOVO_DIR/data/security_baseline.json (path varies by OS). Schedule: Sunday 7am.\n" > "$WORKSPACE/skills/security-audit/SKILL.md"
     ok "6 skills"
 
     # ── TOOLS.md ─────────────────────────────────────────────────
@@ -894,25 +911,33 @@ EOF
     ok "TOOLS.md (9 tools)"
 
     # ── Scripts ──────────────────────────────────────────────────
-    cat > "$KOVO_DIR/scripts/backup.sh" << 'EOF'
+    cat > "$KOVO_DIR/scripts/backup.sh" << BKEOF
 #!/bin/bash
-D="/opt/kovo/data/backups"; mkdir -p "$D"
-tar czf "$D/workspace_$(date +%Y%m%d).tar.gz" -C /opt/kovo workspace/
-find "$D" -name "workspace_*.tar.gz" -mtime +30 -delete
-echo "✓ Backup: $D/workspace_$(date +%Y%m%d).tar.gz"
-EOF
+SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
+KOVO_DIR="\${KOVO_DIR:-\$(cd "\$SCRIPT_DIR/.." && pwd)}"
+D="\$KOVO_DIR/data/backups"; mkdir -p "\$D"
+tar czf "\$D/workspace_\$(date +%Y%m%d).tar.gz" -C "\$KOVO_DIR" workspace/
+find "\$D" -name "workspace_*.tar.gz" -mtime +30 -delete
+echo "✓ Backup: \$D/workspace_\$(date +%Y%m%d).tar.gz"
+BKEOF
     chmod +x "$KOVO_DIR/scripts/backup.sh"
 
-    cat > "$KOVO_DIR/scripts/health-check.sh" << 'HCEOF'
+    cat > "$KOVO_DIR/scripts/health-check.sh" << HCEOF
 #!/bin/bash
-G='\033[38;5;114m' R='\033[38;5;203m' B='\033[38;5;75m' N='\033[0m' D='\033[2m'
-echo -e "\n${B}KOVO Health Check${N} ${D}$(date '+%Y-%m-%d %H:%M')${N}\n"
-c() { if eval "$2" &>/dev/null; then echo -e "  ${G}✓${N} $1"; else echo -e "  ${R}✗${N} $1"; fi }
-c "KOVO service" "systemctl is-active --quiet kovo"
+SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
+KOVO_DIR="\${KOVO_DIR:-\$(cd "\$SCRIPT_DIR/.." && pwd)}"
+G='\033[38;5;114m' R='\033[38;5;203m' B='\033[38;5;75m' N='\033[0m' DM='\033[2m'
+echo -e "\n\${B}KOVO Health Check\${N} \${DM}\$(date '+%Y-%m-%d %H:%M')\${N}\n"
+c() { if eval "\$2" &>/dev/null; then echo -e "  \${G}✓\${N} \$1"; else echo -e "  \${R}✗\${N} \$1"; fi; }
+if [[ "\$(uname)" == "Darwin" ]]; then
+    c "KOVO service" "launchctl list com.kovo.agent 2>/dev/null | grep -q PID"
+else
+    c "KOVO service" "systemctl is-active --quiet kovo"
+fi
 c "Redis" "redis-cli ping | grep -q PONG"
-c "Python venv" "[ -f /opt/kovo/venv/bin/python ]"
+c "Python venv" "[ -f \$KOVO_DIR/venv/bin/python ]"
 c "Claude CLI" "command -v claude"
-echo -e "\n  RAM: $(free | awk '/^Mem:/{printf "%.0f",$3/$2*100}')%  Disk: $(df /opt --output=pcent | tail -1 | tr -d ' %')%  Load: $(cut -d' ' -f2 /proc/loadavg)\n"
+echo ""
 HCEOF
     chmod +x "$KOVO_DIR/scripts/health-check.sh"
     ok "Scripts: backup.sh, health-check.sh"
@@ -1012,7 +1037,7 @@ SVCEOF
     echo ""
     local passed=0 failed=0
     v() { if eval "$2" &>/dev/null; then ok "$1"; passed=$((passed+1)); else fail "$1"; failed=$((failed+1)); fi }
-    v "Python 3.13+"     "python3 --version | grep -qE '3\.1[3-9]'"
+    v "Python 3.11+"     "$VENV/bin/python --version | grep -qE '3\.1[1-9]'"
     v "Node.js 22+"      "node --version | grep -qE 'v2[2-9]'"
     v "Claude CLI"       "command -v claude"
     v "Redis"            "redis-cli ping 2>/dev/null | grep -q PONG"
