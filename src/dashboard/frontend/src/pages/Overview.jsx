@@ -148,7 +148,7 @@ export default function Overview() {
         <div className="space-y-4">
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Services</h2>
-            <ServiceDot name="Ollama" status={status?.ollama} sub="NUC <OLLAMA-HOST>" />
+            <ServiceDot name="Ollama" status={status?.ollama} sub="Local LLM" />
             <ServiceDot name="Telegram" status={status?.telegram} sub="Bot" />
             <ServiceDot name="Heartbeat" status={status?.heartbeat_running} sub="Scheduler" />
             <ServiceDot name="Tools" status={status && status.tools_ready === status.tool_count} sub={status ? `${status.tools_ready}/${status.tool_count} ready` : ''} />
