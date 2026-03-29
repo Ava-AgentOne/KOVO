@@ -306,6 +306,19 @@ app.include_router(dashboard_api_router)
 if _FRONTEND_DIST.exists():
     from fastapi.responses import FileResponse as _FileResponse
 
+    @app.get("/dashboard", include_in_schema=False)
+    async def dashboard_root_redirect():
+        """Redirect /dashboard to /dashboard/setup if .env is unconfigured."""
+        from src.gateway.config import _ENV_PATH
+        env_content = _ENV_PATH.read_text() if _ENV_PATH.exists() else ""
+        needs_setup = not env_content or "TELEGRAM_BOT_TOKEN=
+" in env_content or "TELEGRAM_BOT_TOKEN=" not in env_content
+        if needs_setup:
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse("/dashboard/setup")
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse("/dashboard/overview")
+
     @app.get("/dashboard/{full_path:path}", include_in_schema=False)
     async def serve_dashboard_spa(full_path: str):
         # Serve the exact file if it exists (assets, favicon, etc.)
