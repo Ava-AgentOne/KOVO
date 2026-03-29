@@ -460,7 +460,7 @@ install_system_packages() {
         fi
 
         info "Installing core dependencies..."
-        for pkg in python@3.13 git curl wget jq sqlite ffmpeg htop; do
+        for pkg in python@3.13 git curl wget jq sqlite ffmpeg htop cmake; do
             info "  $pkg..."
             brew install "$pkg" 2>&1 | tail -1 || true
             ok "  $pkg"
