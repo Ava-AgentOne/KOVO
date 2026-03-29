@@ -126,6 +126,35 @@ function StructuredConfig() {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase">General</p>
+        <FieldRow label="Timezone" hint="Used for logs, schedules, and memory timestamps">
+          <select className={selectCls} value={config.kovo?.timezone || 'Asia/Dubai'} onChange={e => updateField('kovo', 'timezone', e.target.value)}>
+            <option value="Asia/Dubai">Asia/Dubai (UTC+4)</option>
+            <option value="Asia/Riyadh">Asia/Riyadh (UTC+3)</option>
+            <option value="Asia/Kuwait">Asia/Kuwait (UTC+3)</option>
+            <option value="Asia/Qatar">Asia/Qatar (UTC+3)</option>
+            <option value="Asia/Muscat">Asia/Muscat (UTC+4)</option>
+            <option value="Asia/Kolkata">Asia/Kolkata (UTC+5:30)</option>
+            <option value="Asia/Karachi">Asia/Karachi (UTC+5)</option>
+            <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
+            <option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</option>
+            <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
+            <option value="Europe/London">Europe/London (UTC+0)</option>
+            <option value="Europe/Berlin">Europe/Berlin (UTC+1)</option>
+            <option value="Europe/Paris">Europe/Paris (UTC+1)</option>
+            <option value="Europe/Moscow">Europe/Moscow (UTC+3)</option>
+            <option value="Europe/Istanbul">Europe/Istanbul (UTC+3)</option>
+            <option value="US/Eastern">US/Eastern (UTC-5)</option>
+            <option value="US/Central">US/Central (UTC-6)</option>
+            <option value="US/Mountain">US/Mountain (UTC-7)</option>
+            <option value="US/Pacific">US/Pacific (UTC-8)</option>
+            <option value="Australia/Sydney">Australia/Sydney (UTC+11)</option>
+            <option value="UTC">UTC</option>
+          </select>
+        </FieldRow>
+      </div>
+
+      <div className="space-y-2">
         <p className="text-xs font-semibold text-gray-400 uppercase">Ollama (Local LLM)</p>
         <FieldRow label="URL" hint="Ollama API endpoint">
           <input className={inputCls} value={config.ollama?.url || ''} onChange={e => updateField('ollama', 'url', e.target.value)} />
