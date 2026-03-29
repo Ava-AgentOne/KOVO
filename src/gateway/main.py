@@ -142,12 +142,6 @@ async def lifespan(app: FastAPI):
         _telegram_ok = False
     check_env_permissions()
 
-    # Storage manager — GC, disk monitoring, Telegram /storage command
-    from src.tools.storage import StorageManager
-    storage = StorageManager()
-    app.state.storage = storage
-    app.state.reminders = deps.get("reminders")
-
     # First-run onboarding (no-op for already-configured systems)
     from src.onboarding.flow import OnboardingFlow
     workspace = cfg.workspace_dir()
@@ -169,6 +163,13 @@ async def lifespan(app: FastAPI):
         return
 
     deps = _build_deps()
+
+    # Storage manager — GC, disk monitoring
+    from src.tools.storage import StorageManager
+    storage = StorageManager()
+    app.state.storage = storage
+    app.state.reminders = deps.get("reminders")
+
     app.state.ollama = deps["ollama"]
     app.state.memory = deps["memory"]
     app.state.store = deps["store"]
