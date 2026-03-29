@@ -141,13 +141,6 @@ async def lifespan(app: FastAPI):
         log.warning("Starting in DASHBOARD-ONLY mode — configure .env via the dashboard then restart")
         _telegram_ok = False
     check_env_permissions()
-    app.state.ollama = deps["ollama"]
-    app.state.memory = deps["memory"]
-    app.state.store = deps["store"]
-    app.state.auto_extractor = deps["auto_extractor"]
-    app.state.agent = deps["agent"]
-    app.state.tool_registry = deps["tool_registry"]
-    app.state.sub_agent_runner = deps["sub_agent_runner"]
 
     # Storage manager — GC, disk monitoring, Telegram /storage command
     from src.tools.storage import StorageManager
@@ -176,6 +169,13 @@ async def lifespan(app: FastAPI):
         return
 
     deps = _build_deps()
+    app.state.ollama = deps["ollama"]
+    app.state.memory = deps["memory"]
+    app.state.store = deps["store"]
+    app.state.auto_extractor = deps["auto_extractor"]
+    app.state.agent = deps["agent"]
+    app.state.tool_registry = deps["tool_registry"]
+    app.state.sub_agent_runner = deps["sub_agent_runner"]
 
     # Build and start Telegram app
     from src.telegram.bot import build_application
