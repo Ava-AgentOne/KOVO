@@ -26,6 +26,14 @@ from src.telegram.middleware import auth_middleware
 log = logging.getLogger(__name__)
 
 
+async def _safe_action(chat, action) -> None:
+    """Send chat action (typing, uploading, etc.) silently — never raises on network errors."""
+    try:
+        await chat.send_action(action)
+    except Exception:
+        pass  # Cosmetic only — don't let a network blip crash the message handler
+
+
 async def _handle_reauth_otp(
     update: Update, context: ContextTypes.DEFAULT_TYPE, code: str
 ) -> None:
@@ -112,7 +120,7 @@ async def _handle_image_tags(update: Update, response_text: str) -> str:
     for query in tags:
         query = query.strip()
         log.info("image request: query=%r", query)
-        await update.message.chat.send_action(ChatAction.UPLOAD_PHOTO)
+        await _safe_action(update.message.chat, ChatAction.UPLOAD_PHOTO)
         try:
             path = await fetch_image(query, filename="tg_image")
             if path:
@@ -161,7 +169,7 @@ async def _handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     try:
         # ── 1. Download OGG ───────────────────────────────────────────────────
-        await msg.chat.send_action(ChatAction.RECORD_VOICE)
+        await _safe_action(msg.chat, ChatAction.RECORD_VOICE)
         tg_file = await context.bot.get_file(msg.voice.file_id)
         ogg_path = str(audio_dir / f"voice_{user_id}.ogg")
         await tg_file.download_to_drive(ogg_path)
@@ -193,7 +201,7 @@ async def _handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await msg.reply_text(f"🎤 _{text}_", parse_mode="Markdown")
 
         # ── 4. Agent ──────────────────────────────────────────────────────────
-        await msg.chat.send_action(ChatAction.TYPING)
+        await _safe_action(msg.chat, ChatAction.TYPING)
         result = await agent.handle(message=text, user_id=user_id)
         response_text = result.get("text", "(no response)")
         log.info("voice reply: user=%s model=%s len=%d", user_id, result.get("model_used", "?"), len(response_text))
@@ -205,7 +213,7 @@ async def _handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         tts = getattr(agent, "tts", None)
         tts_text = response_text[:800]
         if tts and tts_text:
-            await msg.chat.send_action(ChatAction.RECORD_VOICE)
+            await _safe_action(msg.chat, ChatAction.RECORD_VOICE)
             try:
                 mp3_out = await tts.speak(
                     tts_text,
@@ -327,7 +335,7 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         elif force_model == "opus":
             force_complexity = "complex"
 
-        await msg.chat.send_action(ChatAction.TYPING)
+        await _safe_action(msg.chat, ChatAction.TYPING)
 
         result = await agent.handle(
             message=message_text,
@@ -402,7 +410,7 @@ async def _handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     try:
-        await msg.chat.send_action(ChatAction.TYPING)
+        await _safe_action(msg.chat, ChatAction.TYPING)
 
         photo = msg.photo[-1]  # highest resolution
         tg_file = await context.bot.get_file(photo.file_id)
@@ -461,7 +469,7 @@ async def _handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     try:
-        await msg.chat.send_action(ChatAction.TYPING)
+        await _safe_action(msg.chat, ChatAction.TYPING)
 
         doc = msg.document
         filename = doc.file_name or "document"
@@ -589,7 +597,7 @@ async def _handle_approve(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Agent not available for retry.")
         return
 
-    await update.message.chat.send_action(ChatAction.TYPING)
+    await _safe_action(update.message.chat, ChatAction.TYPING)
     result = await agent.handle(
         message=pending["message"],
         user_id=pending["user_id"],
