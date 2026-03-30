@@ -3,6 +3,16 @@ import { RefreshCw, AlertTriangle, AlertCircle, Search } from 'lucide-react'
 
 const TS_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/
 
+// Convert 24h timestamps to 12h format in log lines
+function to12h(line) {
+  return line.replace(/^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2}):(\d{2})/, (_, date, h, m, s) => {
+    const hr = parseInt(h)
+    const ampm = hr >= 12 ? 'PM' : 'AM'
+    const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr
+    return date + ' ' + h12 + ':' + m + ':' + s + ' ' + ampm
+  })
+}
+
 function getLevel(line) {
   if (line.includes(' CRITICAL ') || line.includes(' CRITICAL:')) return 'critical'
   if (line.includes(' ERROR ') || line.includes(' ERROR:') || line.includes('Traceback')) return 'error'
@@ -24,7 +34,7 @@ const LEVEL_CLASSES = {
 
 function colorize(line) {
   const cls = LEVEL_CLASSES[getLevel(line)] || 'text-gray-600 dark:text-gray-400'
-  return <span className={cls}>{line}</span>
+  return <span className={cls}>{to12h(line)}</span>
 }
 
 const PRESETS = [
