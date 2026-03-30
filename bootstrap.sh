@@ -1,7 +1,7 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
 KOVO_VERSION="0.9"
-# KOVO — Self-Hosted AI Agent Installer v5.1
+# KOVO — Self-Hosted AI Agent Installer v5.3
 # https://github.com/Ava-AgentOne/kovo
 #
 # Usage:
@@ -629,6 +629,7 @@ install_node_and_structure() {
             [ -f "$KOVO_DIR/repo-tmp/CLAUDE.md" ] && cp "$KOVO_DIR/repo-tmp/CLAUDE.md" "$KOVO_DIR/CLAUDE.md"
             [ -f "$KOVO_DIR/repo-tmp/DOCS.md" ] && cp "$KOVO_DIR/repo-tmp/DOCS.md" "$KOVO_DIR/DOCS.md"
             [ -f "$KOVO_DIR/repo-tmp/README.md" ] && cp "$KOVO_DIR/repo-tmp/README.md" "$KOVO_DIR/README.md"
+            [ -d "$KOVO_DIR/repo-tmp/workspace" ] && cp -r "$KOVO_DIR/repo-tmp/workspace/"* "$KOVO_DIR/workspace/" 2>/dev/null || true
             [ -d "$KOVO_DIR/repo-tmp/assets" ] && cp -r "$KOVO_DIR/repo-tmp/assets/"* "$KOVO_DIR/assets/" 2>/dev/null
             rm -rf "$KOVO_DIR/repo-tmp"
             ok "Source cloned (src/, scripts/, requirements.txt, docs)"
@@ -805,6 +806,7 @@ EOF
     info "settings.yaml..."
     cat > "$KOVO_DIR/config/settings.yaml.template" << SETTINGS_EOF
 kovo:
+  timezone: UTC
   workspace: $KOVO_DIR/workspace
   data_dir: $KOVO_DIR/data
   log_dir: $KOVO_DIR/logs
@@ -924,7 +926,7 @@ ENV_EOF
     [[ ! -f "$WORKSPACE/USER.md" ]] && printf "# USER.md\n## UNCONFIGURED\n" > "$WORKSPACE/USER.md"
     # IDENTITY.md merged into SOUL.md — kept for backward compatibility
     [[ ! -f "$WORKSPACE/IDENTITY.md" ]] && printf "# Identity\n# This file is deprecated — identity is now part of SOUL.md\n" > "$WORKSPACE/IDENTITY.md"
-    [[ ! -f "$WORKSPACE/MEMORY.md" ]] && printf "# MEMORY.md\n\n## Preferences\n\n## Decisions\n\n## Facts\n\n## Projects\n\n## Action Items\n\n" > "$WORKSPACE/MEMORY.md"
+    [[ ! -f "$WORKSPACE/MEMORY.md" ]] && printf "# MEMORY.md\n\n## Pinned\n\n## Learnings\n" > "$WORKSPACE/MEMORY.md"
     printf "# Sub-Agent Registry\n## Main Agent\n- **Name**: Kovo\n- **Tools**: all\n- **Status**: active\n## Sub-Agents\n*None yet.*\n" > "$WORKSPACE/AGENTS.md"
     printf "# HEARTBEAT.md\n## Every 30min (Ollama)\n- [ ] Disk/RAM/CPU checks\n## Every 6h (Claude)\n- [ ] Health report, memory review, auto-purge\n## Every morning 8am\n- [ ] Briefing, pending tasks\n## Every Sunday 7am\n- [ ] Security audit\n" > "$WORKSPACE/HEARTBEAT.md"
     ok "Workspace files"
