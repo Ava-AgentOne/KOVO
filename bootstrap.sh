@@ -922,7 +922,8 @@ ENV_EOF
         info "Workspace files..."
     [[ ! -f "$WORKSPACE/SOUL.md" ]] && printf "# SOUL.md\n## UNCONFIGURED\nSend any message on Telegram to start onboarding.\n" > "$WORKSPACE/SOUL.md"
     [[ ! -f "$WORKSPACE/USER.md" ]] && printf "# USER.md\n## UNCONFIGURED\n" > "$WORKSPACE/USER.md"
-    [[ ! -f "$WORKSPACE/IDENTITY.md" ]] && printf "# IDENTITY.md\n## Name\nKovo\n## Creature Type\nBlue alien\n## UNCONFIGURED\n" > "$WORKSPACE/IDENTITY.md"
+    # IDENTITY.md merged into SOUL.md — kept for backward compatibility
+    [[ ! -f "$WORKSPACE/IDENTITY.md" ]] && printf "# Identity\n# This file is deprecated — identity is now part of SOUL.md\n" > "$WORKSPACE/IDENTITY.md"
     [[ ! -f "$WORKSPACE/MEMORY.md" ]] && printf "# MEMORY.md\n\n## Preferences\n\n## Decisions\n\n## Facts\n\n## Projects\n\n## Action Items\n\n" > "$WORKSPACE/MEMORY.md"
     printf "# Sub-Agent Registry\n## Main Agent\n- **Name**: Kovo\n- **Tools**: all\n- **Status**: active\n## Sub-Agents\n*None yet.*\n" > "$WORKSPACE/AGENTS.md"
     printf "# HEARTBEAT.md\n## Every 30min (Ollama)\n- [ ] Disk/RAM/CPU checks\n## Every 6h (Claude)\n- [ ] Health report, memory review, auto-purge\n## Every morning 8am\n- [ ] Briefing, pending tasks\n## Every Sunday 7am\n- [ ] Security audit\n" > "$WORKSPACE/HEARTBEAT.md"

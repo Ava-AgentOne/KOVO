@@ -143,7 +143,7 @@ export default function Agents() {
         <div>
           <p className="text-xs text-gray-400 mb-2">Always loaded</p>
           <div className="flex flex-wrap gap-1.5">
-            {['SOUL.md', 'USER.md', 'IDENTITY.md', 'Pinned Memory'].map(f => (
+            {['SOUL.md', 'USER.md', 'Pinned Memory'].map(f => (
               <span key={f} className="text-xs bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-2 py-0.5 rounded-full border border-brand-200 dark:border-brand-700">{f}</span>
             ))}
           </div>

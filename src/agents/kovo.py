@@ -2,7 +2,7 @@
 Kovo — the one and only main agent.
 
 Handles everything directly. Has access to ALL tools.
-Reads SOUL.md, USER.md, IDENTITY.md always; loads MEMORY.md, daily logs,
+Reads SOUL.md, USER.md always; loads MEMORY.md, daily logs,
 matching skill, TOOLS.md, AGENTS.md only when relevant keywords detected.
 Delegates to sub-agents when they exist.
 Recommends creating sub-agents when it notices repeated specialised requests.
@@ -124,7 +124,7 @@ class KovoAgent:
     def build_system_prompt(self, user_message: str = "") -> str:
         """
         Build a context-aware system prompt using keyword-based on-demand loading.
-        Always loads: SOUL.md, USER.md, IDENTITY.md (~300 tokens).
+        Always loads: SOUL.md, USER.md (~200 tokens).
         Loads on demand only when message keywords match:
           MEMORY.md, daily logs, best-matching skill, TOOLS.md, AGENTS.md,
           HEARTBEAT.md, DB schema, permissions info, storage info.
@@ -143,10 +143,6 @@ class KovoAgent:
         user_profile = self.memory.user_profile()
         if user_profile:
             parts.append(user_profile)
-
-        identity = self.memory.identity()
-        if identity:
-            parts.append(identity)
 
         # ── Always: pinned memory (core facts about the owner) ──────────
         pinned = self.memory.pinned_memory()
