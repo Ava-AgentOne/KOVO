@@ -11,13 +11,13 @@ import shutil
 import subprocess
 import sys
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
+from src.utils.tz import today as _tz_today, now as _tz_now
 
 
 def _dubai_today() -> date:
-    return datetime.now(_DUBAI_TZ).date()
-from pathlib import Path
+    return _tz_today()
 from typing import List
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
@@ -51,6 +51,18 @@ _MAX_HISTORY = 200
 
 def _app_state(request: Request):
     return request.app.state
+
+
+def _get_memory(request: Request):
+    """Get MemoryManager from app.state or tg_app.bot_data."""
+    state = _app_state(request)
+    mem = getattr(state, "memory", None)
+    if mem:
+        return mem
+    tg_app = getattr(state, "tg_app", None)
+    if tg_app:
+        return tg_app.bot_data.get("memory")
+    return None
 
 
 # ── Status / Overview ─────────────────────────────────────────────────────────
@@ -251,9 +263,7 @@ async def delete_skill(request: Request, name: str):
 
 @router.get("/memory/files")
 async def list_memory_files(request: Request):
-    state = _app_state(request)
-    tg_app = getattr(state, "tg_app", None)
-    memory = tg_app.bot_data.get("memory") if tg_app else None
+    memory = _get_memory(request)
     if not memory:
         return {"files": []}
     memory_dir = memory.workspace / "memory"
@@ -265,9 +275,7 @@ async def list_memory_files(request: Request):
 
 @router.get("/memory/today")
 async def get_today_log(request: Request):
-    state = _app_state(request)
-    tg_app = getattr(state, "tg_app", None)
-    memory = tg_app.bot_data.get("memory") if tg_app else None
+    memory = _get_memory(request)
     if not memory:
         return {"date": str(_dubai_today()), "content": ""}
     return {"date": str(_dubai_today()), "content": memory.daily_log()}
@@ -275,9 +283,7 @@ async def get_today_log(request: Request):
 
 @router.get("/memory/{filename}")
 async def get_memory_file(request: Request, filename: str):
-    state = _app_state(request)
-    tg_app = getattr(state, "tg_app", None)
-    memory = tg_app.bot_data.get("memory") if tg_app else None
+    memory = _get_memory(request)
     if not memory:
         raise HTTPException(503, "Memory not available")
     # Allow workspace root files too
@@ -300,10 +306,7 @@ class FlushRequest(BaseModel):
 
 @router.post("/memory/flush")
 async def flush_memory(request: Request, payload: FlushRequest):
-    state = _app_state(request)
-    tg_app = getattr(state, "tg_app", None)
-    memory = tg_app.bot_data.get("memory") if tg_app else None
-    ollama = getattr(state, "ollama", None)
+    memory = _get_memory(request)
     if not memory:
         raise HTTPException(503, "Memory not available")
 
@@ -312,9 +315,10 @@ async def flush_memory(request: Request, payload: FlushRequest):
     if not learnings:
         today_log = memory.daily_log()
         if not today_log:
-            raise HTTPException(400, "Nothing to flush — today's log is empty")
+            return {"flushed": False, "error": "Nothing to flush — today's log is empty. Send some messages first."}
 
         # Try summarising with the agent (Claude); fall back to raw log tail
+        state = _app_state(request)
         agent = getattr(state, "agent", None)
         if agent:
             try:
@@ -662,6 +666,32 @@ async def chat_websocket(websocket: WebSocket):
             pass
 
 
+# ── Storage purge ─────────────────────────────────────────────────────────────
+
+@router.post("/storage/purge")
+async def storage_purge(request: Request):
+    """Run tier-1 auto-purge (tmp, audio, screenshots, __pycache__)."""
+    state = _app_state(request)
+    storage = getattr(state, "storage", None)
+    if not storage:
+        # Fallback: create a temporary StorageManager
+        try:
+            from src.tools.storage import StorageManager
+            storage = StorageManager()
+        except Exception as e:
+            return {"ok": False, "error": f"StorageManager not available: {e}"}
+    try:
+        result = storage.auto_purge()
+        return {
+            "ok": True,
+            "deleted": result.get("deleted", 0),
+            "freed_bytes": result.get("freed_bytes", 0),
+            "details": result.get("details", []),
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 # ── Security ──────────────────────────────────────────────────────────────────
 
 _SEC_DIR = kovo_dir() / "data" / "security"
@@ -700,19 +730,83 @@ async def security_history():
 
 @router.post("/security/run")
 async def security_run():
-    """Trigger the security audit skill via subprocess (non-blocking)."""
-    script = kovo_dir() / "workspace" / "skills" / "security-audit" / "run.sh"
-    if script.exists():
+    """Run security checks (ClamAV, chkrootkit, rkhunter) and save results."""
+    import asyncio
+
+    async def _run_audit():
+        results = {}
+        timestamp = datetime.now().isoformat()
+
+        # ClamAV
         try:
-            subprocess.Popen(
-                ["bash", str(script)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+            r = subprocess.run(
+                ["clamscan", "--infected", "--recursive", "--no-summary", str(kovo_dir())],
+                capture_output=True, text=True, timeout=120,
             )
-            return {"started": True}
+            results["clamav"] = {
+                "status": "clean" if r.returncode == 0 else "warning",
+                "output": r.stdout.strip()[-500:] if r.stdout else "(no output)",
+            }
+        except FileNotFoundError:
+            results["clamav"] = {"status": "not_installed", "output": "clamscan not found"}
+        except subprocess.TimeoutExpired:
+            results["clamav"] = {"status": "timeout", "output": "Scan timed out (120s)"}
         except Exception as e:
-            return {"started": False, "error": str(e)}
-    return {"started": False, "error": "security-audit run.sh not found"}
+            results["clamav"] = {"status": "error", "output": str(e)}
+
+        # chkrootkit
+        try:
+            r = subprocess.run(
+                ["sudo", "chkrootkit", "-q"],
+                capture_output=True, text=True, timeout=60,
+            )
+            infected = [l for l in r.stdout.splitlines() if "INFECTED" in l]
+            results["chkrootkit"] = {
+                "status": "warning" if infected else "clean",
+                "output": "\n".join(infected) if infected else "No rootkits found",
+            }
+        except FileNotFoundError:
+            results["chkrootkit"] = {"status": "not_installed", "output": "chkrootkit not found"}
+        except Exception as e:
+            results["chkrootkit"] = {"status": "error", "output": str(e)}
+
+        # rkhunter
+        try:
+            r = subprocess.run(
+                ["sudo", "rkhunter", "--check", "--skip-keypress", "--report-warnings-only"],
+                capture_output=True, text=True, timeout=120,
+            )
+            warnings = r.stdout.strip()
+            results["rkhunter"] = {
+                "status": "warning" if warnings else "clean",
+                "output": warnings[-500:] if warnings else "No warnings",
+            }
+        except FileNotFoundError:
+            results["rkhunter"] = {"status": "not_installed", "output": "rkhunter not found"}
+        except Exception as e:
+            results["rkhunter"] = {"status": "error", "output": str(e)}
+
+        # Overall status
+        statuses = [v["status"] for v in results.values()]
+        if "warning" in statuses:
+            overall = "warning"
+        elif all(s in ("clean", "not_installed") for s in statuses):
+            overall = "clean"
+        else:
+            overall = "error"
+
+        report = {"status": overall, "timestamp": timestamp, "checks": results}
+
+        # Save to disk
+        _SEC_DIR.mkdir(parents=True, exist_ok=True)
+        _SEC_LATEST.write_text(json.dumps(report, indent=2))
+        _sec_append_history(report)
+
+        return report
+
+    # Run in background so the API responds immediately
+    asyncio.create_task(_run_audit())
+    return {"started": True}
 
 
 @router.post("/security/baseline")

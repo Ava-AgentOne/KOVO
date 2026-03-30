@@ -72,7 +72,7 @@ export default function Memory() {
         body: JSON.stringify({ learnings: '' }),
       })
       const d = await r.json()
-      setFlushMsg(d.flushed ? 'Flushed to MEMORY.md' : 'Flush failed')
+      setFlushMsg(d.flushed ? 'Flushed to MEMORY.md' : (d.error || 'Flush failed'))
     } catch (e) {
       setFlushMsg('Error: ' + e.message)
     }
