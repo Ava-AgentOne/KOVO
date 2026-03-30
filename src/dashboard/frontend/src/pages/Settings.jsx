@@ -185,26 +185,23 @@ function StructuredConfig() {
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Heartbeat</p>
-        <FieldRow label="Enabled" hint="Enable periodic health checks">
-          <select className={selectCls} value={config.heartbeat?.enabled || 'false'} onChange={e => updateField('heartbeat', 'enabled', e.target.value)}>
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </FieldRow>
-        {config.heartbeat?.enabled === 'true' && (
-          <>
-            <FieldRow label="Quick check" hint="Minutes between health checks">
-              <input type="number" className={inputCls} value={config.heartbeat?.quick_interval || '30'} onChange={e => updateField('heartbeat', 'quick_interval', e.target.value)} />
-            </FieldRow>
-            <FieldRow label="Full report" hint="Hours between full reports">
-              <input type="number" className={inputCls} value={config.heartbeat?.full_interval || '6'} onChange={e => updateField('heartbeat', 'full_interval', e.target.value)} />
-            </FieldRow>
-            <FieldRow label="Morning briefing" hint="Time in 24h format">
-              <input className={inputCls} value={config.heartbeat?.morning_time || '08:00'} onChange={e => updateField('heartbeat', 'morning_time', e.target.value)} placeholder="08:00" />
-            </FieldRow>
-          </>
-        )}
+        <p className="text-xs font-semibold text-gray-400 uppercase">Heartbeat Schedules</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {[
+            { job: 'Archive logs', schedule: 'Daily 3:00 AM', desc: 'Archive daily logs older than 30 days' },
+            { job: 'Auto-extract', schedule: 'Daily 11:00 PM', desc: 'Extract learnings → MEMORY.md + SQLite' },
+            { job: 'Memory consolidation', schedule: 'Sunday 3:30 AM', desc: 'Archive learnings if > 500 lines' },
+            { job: 'Version check', schedule: 'Daily 10:00 AM', desc: 'Check GitHub for new releases' },
+            { job: 'Reminders', schedule: 'Every 60 seconds', desc: 'Fire due reminders via message/call' },
+          ].map(({ job, schedule, desc }) => (
+            <div key={job} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+              <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{job}</p>
+              <p className="text-xs text-brand-500">{schedule}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 italic">All schedules use the configured timezone. Manual triggers available on the Heartbeat page.</p>
       </div>
 
       <div className="space-y-2">
@@ -221,6 +218,46 @@ function StructuredConfig() {
       </div>
 
       <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase">Transcription</p>
+        <FieldRow label="Whisper model" hint="Local fallback model (base, small, medium, large)">
+          <select className={selectCls} value={config.transcription?.whisper_model || 'base'} onChange={e => updateField('transcription', 'whisper_model', e.target.value)}>
+            <option value="base">base (fast, ~150MB)</option>
+            <option value="small">small (balanced, ~460MB)</option>
+            <option value="medium">medium (accurate, ~1.5GB)</option>
+            <option value="large">large (best, ~3GB)</option>
+          </select>
+        </FieldRow>
+        <p className="text-xs text-gray-400">Primary: Groq API (configured in .env). Fallback: local Whisper model above.</p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase">Memory Auto-Extract</p>
+        <FieldRow label="Schedule" hint="When to run daily extraction (24h format)">
+          <input className={inputCls} value={config.memory?.auto_extract?.schedule || config.memory?.schedule || '23:00'} onChange={e => updateField('memory', 'schedule', e.target.value)} placeholder="23:00" />
+        </FieldRow>
+        <FieldRow label="Dedup threshold" hint="Similarity threshold to skip duplicate learnings (0.0-1.0)">
+          <input type="number" step="0.1" min="0" max="1" className={inputCls} value={config.memory?.auto_extract?.dedup_threshold || config.memory?.dedup_threshold || '0.8'} onChange={e => updateField('memory', 'dedup_threshold', e.target.value)} />
+        </FieldRow>
+        <FieldRow label="Budget (lines)" hint="Max learnings before archiving old entries">
+          <input type="number" className={inputCls} value={config.memory?.structured_store?.memory_budget_lines || config.memory?.memory_budget_lines || '500'} onChange={e => updateField('memory', 'memory_budget_lines', e.target.value)} />
+        </FieldRow>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase">Voice / TTS</p>
+        <FieldRow label="TTS backend" hint="Text-to-speech engine">
+          <select className={selectCls} value={config.telegram_call?.tts?.backend || config.telegram_call?.backend || 'edge-tts'} onChange={e => updateField('telegram_call', 'backend', e.target.value)}>
+            <option value="edge-tts">edge-tts (free, Microsoft Azure)</option>
+            <option value="piper">piper (local, fast)</option>
+            <option value="elevenlabs">ElevenLabs (premium)</option>
+          </select>
+        </FieldRow>
+        <FieldRow label="Voice" hint="Voice name for the selected backend">
+          <input className={inputCls} value={config.telegram_call?.tts?.voice || config.telegram_call?.voice || 'en-US-AvaMultilingualNeural'} onChange={e => updateField('telegram_call', 'voice', e.target.value)} />
+        </FieldRow>
+      </div>
+
+      <div className="space-y-2">
         <p className="text-xs font-semibold text-gray-400 uppercase">Gateway</p>
         <FieldRow label="Port">
           <input type="number" className={inputCls} value={config.gateway?.port || '8080'} onChange={e => updateField('gateway', 'port', e.target.value)} />
@@ -231,6 +268,10 @@ function StructuredConfig() {
         <button onClick={save} disabled={saving}
           className="flex items-center gap-2 text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-40 transition-colors">
           <Save size={14} /> {saving ? 'Saving\u2026' : 'Save'}
+        </button>
+        <button onClick={async () => { await save(); try { await fetch('/api/service/restart', { method: 'POST' }) } catch {} setMsg('Saved & restarting\u2026') }} disabled={saving}
+          className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-1.5 rounded-lg disabled:opacity-40 transition-colors">
+          <RefreshCw size={14} /> Save & Restart
         </button>
         {msg && <span className="text-xs text-gray-500 flex-1">{msg}</span>}
         <button onClick={() => setShowRaw(!showRaw)}
@@ -639,9 +680,15 @@ function CredentialsSection() {
 
 // ── Main Settings Page ──────────────────────────────────
 export default function Settings() {
+  const [version, setVersion] = useState('')
+  useEffect(() => { fetch('/api/status').then(r => r.json()).then(d => setVersion(d.version || '')).catch(() => {}) }, [])
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        {version && <span className="text-sm text-gray-400 font-mono">v{version}</span>}
+      </div>
 
       <Section title="Updates">
         <UpdateChecker />
