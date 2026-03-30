@@ -84,7 +84,7 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO is different —
 | **Telegram** | python-telegram-bot |
 | **Local LLM** | Ollama, LM Studio, or any OpenAI-compatible endpoint (optional) |
 | **Dashboard** | React, Vite, Tailwind CSS, Lucide Icons |
-| **Database** | SQLite (sessions, audit logs, memory) |
+| **Database** | SQLite (reminders, heartbeat log) |
 | **Voice** | py-tgcalls + FFmpeg for Telegram calls |
 
 ### Smart Model Router
@@ -250,7 +250,7 @@ KOVO includes built-in security features:
 │   ├── skills/              # Skill definitions (SKILL.md per skill)
 │   ├── SOUL.md.template     # Agent personality (template)
 │   ├── USER.md.template     # Owner profile (template)
-│   ├── IDENTITY.md.template # Agent identity card (template)
+│   ├── IDENTITY.md          # Deprecated — identity now in SOUL.md
 │   └── MEMORY.md.template   # Long-term learnings (template)
 ├── bootstrap.sh     # One-line installer
 ├── requirements.txt # Python dependencies

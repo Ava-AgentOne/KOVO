@@ -28,6 +28,7 @@ playwright                       # after install run: playwright install chromiu
 # Google Workspace
 google-api-python-client
 google-auth-oauthlib
+google-auth-httplib2
 
 # GitHub
 PyGithub
@@ -37,7 +38,8 @@ APScheduler>=3.10.0
 psutil>=5.9.0
 
 # Utilities
-ddgs                # web image search (src/tools/image.py)
+ddgs                             # DuckDuckGo search (src/tools/web_search.py)
+beautifulsoup4                   # HTML parsing (src/tools/link_reader.py)
 Pillow                           # image processing (src/tools/vision.py)
 
 # ML (CPU only)
