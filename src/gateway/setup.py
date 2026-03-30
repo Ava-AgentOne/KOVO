@@ -12,10 +12,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from src.utils.platform import kovo_dir, service_restart_cmd
 
 router = APIRouter(prefix="/api/setup")
 
-_BASE = Path(__file__).resolve().parents[2]  # /opt/kovo
+_BASE = kovo_dir()
 _ENV_FILE = _BASE / "config" / ".env"
 _GOOGLE_CREDS_FILE = _BASE / "config" / "google-credentials.json"
 
@@ -122,16 +123,13 @@ async def setup_save(body: SaveRequest):
     _ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
     _ENV_FILE.write_text("\n".join(lines) + "\n")
 
-    # Restart service
+    # Restart service (cross-platform)
     restarted = False
     if body.restart:
         try:
-            result = subprocess.run(
-                ["systemctl", "restart", "kovo"],
-                capture_output=True,
-                timeout=10,
-            )
-            restarted = result.returncode == 0
+            cmd = service_restart_cmd()
+            subprocess.Popen(cmd, start_new_session=True)
+            restarted = True
         except Exception:
             restarted = False
 

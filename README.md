@@ -4,7 +4,7 @@
 
 # <span style="color:#378ADD">KOVO</span>
 
-**Your Self-Hosted AI Agent for Linux**
+**Your Self-Hosted AI Agent for Linux & macOS**
 
 [![GitHub release](https://img.shields.io/github/v/release/Ava-AgentOne/kovo?color=378ADD&label=Release)](https://github.com/Ava-AgentOne/kovo/releases)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
@@ -20,7 +20,7 @@
 
 ## 📖 What Is KOVO?
 
-**KOVO** is a self-hosted AI agent powered by **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** that runs on a Linux VM and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, and learn new skills — all while keeping your data private on your own hardware.
+**KOVO** is a self-hosted AI agent powered by **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** that runs on a Linux VM or macOS machine and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, and learn new skills — all while keeping your data private on your own hardware.
 
 Inspired by **[OpenClaw](https://github.com/openclaw)**, KOVO takes a different approach to the AI backbone — it uses **Claude Code CLI as a subprocess** (`claude -p`), powered by your Claude Max subscription. This gives it access to Claude Sonnet and Opus for real multi-step reasoning, not pay-per-token API calls. It optionally uses a **local LLM** (like [Ollama](https://ollama.com)) for cheap tasks like heartbeats and quick classification.
 
@@ -118,11 +118,12 @@ The built-in web dashboard gives you full visibility into KOVO's state:
 
 ### Prerequisites
 
-- **Linux VM** — Ubuntu 24.04+, Debian 12+, or similar (tested on Unraid)
-- **4GB+ RAM**, **40GB+ disk**
+- **Linux** — Ubuntu 24.04+, Debian 12+, or similar (tested on Unraid)
+- **macOS** — macOS 13 Ventura or newer
+- **4GB+ RAM**, **30GB+ disk**
 - **Claude Max** or **Team** subscription — [sign up](https://claude.ai)
 
-> The installer handles everything else — Claude Code CLI, Node.js, Python, and all dependencies. The **Setup Wizard** guides you through creating your Telegram bot, connecting Google Workspace, and setting up voice calls.
+> The installer handles everything else — Claude Code CLI, Node.js, Python, Homebrew (macOS), and all dependencies.
 
 ### One-Line Install
 
@@ -136,22 +137,28 @@ This will:
 3. Create a Python virtual environment with all packages
 4. Build the dashboard frontend
 5. Set up Claude Code permissions
-6. Set up the systemd service
-7. Launch the **Setup Wizard** for easy configuration
+6. Set up the service (systemd on Linux, launchd on macOS)
+7. Launch the **Dashboard** for easy configuration
 
 ### Configure & Start
 
+**Linux:**
 ```bash
 sudo systemctl enable --now kovo
 ```
 
-Open the **Setup Wizard** in your browser:
+**macOS:**
+```bash
+launchctl load ~/Library/LaunchAgents/com.kovo.agent.plist
+```
+
+Open the **Dashboard** in your browser:
 
 ```
-http://<YOUR-VM-IP>:8080/dashboard/setup
+http://<YOUR-IP>:8080/dashboard
 ```
 
-The wizard walks you through everything with step-by-step guides:
+On first run (or when `.env` is unconfigured), the dashboard automatically redirects to the **Setup Wizard** at `/dashboard/setup`. The wizard walks you through:
 - **Telegram** — bot token + your user ID (with links to @BotFather and @userinfobot)
 - **Google Workspace** — which APIs to enable, with direct links to each one
 - **Voice Calls** — clear 3-account explanation (your main account, the bot, the caller)
@@ -167,10 +174,12 @@ KOVO has a built-in update mechanism. From the dashboard (Settings → Updates),
 
 ```bash
 # Check if an update is available
-bash /opt/kovo/scripts/update.sh --check
+bash <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
+├── config/scripts/update.sh --check
 
 # Apply the update (auto-backup, pull, rebuild, restart)
-bash /opt/kovo/scripts/update.sh --apply
+bash <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
+├── config/scripts/update.sh --apply
 ```
 
 Updates only trigger on version bumps, not every commit. Your personal data (workspace files, settings, `.env`, database) is never overwritten.
@@ -202,7 +211,7 @@ KOVO ships with built-in skills and supports custom ones:
 | 📞 **phone-call** | Real Telegram voice calls + TTS voice messages |
 | 📊 **report-builder** | Generate HTML reports with charts |
 | 🛡️ **security-audit** | Deep security scan — ports, users, malware |
-| 🖥️ **server-health** | Linux server and Unraid health metrics |
+| 🖥️ **server-health** | System health metrics |
 | ⚙️ **shell** | Execute commands, manage files, install packages |
 
 ## 🛡️ Security
@@ -221,7 +230,8 @@ KOVO includes built-in security features:
 ## 📁 Project Structure
 
 ```
-/opt/kovo/
+<KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
+├── config/
 ├── config/          # .env, settings.yaml, credentials
 ├── data/            # SQLite DB, security audit data, temp files
 ├── scripts/         # Helper scripts
@@ -235,7 +245,8 @@ KOVO includes built-in security features:
 │   ├── router/      # Smart model router (local LLM / Claude)
 │   ├── skills/      # Skill registry + loader
 │   ├── telegram/    # Bot, commands, formatting
-│   └── tools/       # Tool registry (Claude CLI, shell, browser, etc.)
+│   ├── tools/       # Tool registry (Claude CLI, shell, browser, etc.)
+│   └── utils/       # Cross-platform helpers (platform.py, tz.py)
 ├── workspace/
 │   ├── memory/              # Daily log files (YYYY-MM-DD.md)
 │   ├── skills/              # Skill definitions (SKILL.md per skill)
@@ -259,7 +270,7 @@ KOVO is inspired by [OpenClaw](https://github.com/openclaw) and uses a compatibl
 | **Models** | Claude Sonnet & Opus via Claude Code | Any provider (OpenAI, Anthropic, Groq, local) |
 | **Local LLM** | Optional — for heartbeats & cheap tasks | Core — primary model for many setups |
 | **Workspace format** | SOUL.md, MEMORY.md, SKILL.md — compatible | ✅ Same format |
-| **Platform** | Linux VM (self-hosted) | Linux VM (self-hosted) |
+| **Platform** | Linux + macOS (self-hosted) | Linux VM (self-hosted) |
 
 KOVO's approach means predictable monthly costs and access to Claude's full reasoning capabilities through Claude Code, while OpenClaw offers more flexibility in model choice and provider.
 
@@ -276,7 +287,8 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 
 - Check your `TELEGRAM_BOT_TOKEN` is correct in `.env`
 - Verify `OWNER_TELEGRAM_ID` matches your Telegram user ID
-- Check logs: `tail -f /opt/kovo/logs/gateway.log` or `journalctl -u kovo -f`
+- Check logs: `tail -f <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
+├── config/logs/gateway.log` or `journalctl -u kovo -f`
 </details>
 
 <details>
@@ -285,7 +297,8 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 - Verify Claude Code is installed: `claude --version`
 - Check authentication: `claude auth status`
 - Ensure you have an active Claude Max or Pro subscription
-- Check the sandbox permissions: `cat /opt/kovo/.claude/settings.local.json`
+- Check the sandbox permissions: `cat <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
+├── config/.claude/settings.local.json`
 </details>
 
 <details>
@@ -302,6 +315,14 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 - Install ClamAV: `sudo apt install clamav`
 - Install chkrootkit: `sudo apt install chkrootkit`
 - The audit still runs without these — it just reports "not_installed"
+</details>
+
+<details>
+<summary><strong>macOS: Gateway crashes on startup</strong></summary>
+
+- Without Telegram tokens configured, the gateway starts in **dashboard-only mode** — this is normal
+- Configure `.env` via the Setup Wizard at `http://localhost:8080/dashboard/setup`
+- Once Telegram tokens are set, restart the service
 </details>
 
 ## 📜 License
