@@ -11,6 +11,7 @@
 [![Python](https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-Powered-DA7756?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support_KOVO-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/erumaithi)
 
 *A personal AI agent powered by Claude Code — chat via Telegram, monitor via dashboard, extend with skills.*
 
