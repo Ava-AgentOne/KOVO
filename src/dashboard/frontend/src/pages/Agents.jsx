@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Bot, X, Trash2, ChevronDown } from 'lucide-react'
+import { Plus, Bot, X, Trash2 } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 
 const AVAILABLE_TOOLS = ['shell', 'browser', 'google_api', 'telegram_call', 'tts', 'ollama', 'claude_cli', 'whisper', 'github']
