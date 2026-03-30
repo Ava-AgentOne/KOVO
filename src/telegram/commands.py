@@ -21,11 +21,10 @@ from src.telegram.formatting import (
     purge_inline,
 )
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
 
 
 def _tz_today():
-    return datetime.now(_DUBAI_TZ).date()
+    return datetime.now(_get_tz()).date()
 
 log = logging.getLogger(__name__)
 
@@ -551,14 +550,13 @@ async def cmd_storage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         def _build():
             from datetime import datetime, timezone, timedelta
-            _DUBAI_TZ = timezone(timedelta(hours=4))
             usage = storage.get_disk_usage()
             state = storage._load_state()
             last_purge = "never"
             if "last_auto_purge" in state:
                 try:
                     last_dt = datetime.fromisoformat(state["last_auto_purge"])
-                    delta   = datetime.now(tz=_DUBAI_TZ) - last_dt
+                    delta   = datetime.now(tz=_get_tz()) - last_dt
                     hours   = int(delta.total_seconds() / 3600)
                     last_purge = f"{hours}h ago" if hours else "just now"
                 except Exception:

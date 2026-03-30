@@ -1,3 +1,4 @@
+from src.utils.tz import get_tz as _get_tz
 """
 Session-aware daily log helper.
 A DailyLogSession accumulates entries during a conversation, then flushes to disk.
@@ -8,7 +9,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
 
 if TYPE_CHECKING:
     from src.memory.manager import MemoryManager
@@ -21,7 +21,7 @@ class DailyLogSession:
 
     def __init__(self, memory: "MemoryManager", label: str | None = None):
         self.memory = memory
-        self.label = label or datetime.now(_DUBAI_TZ).strftime("Session %H:%M")
+        self.label = label or datetime.now(_get_tz()).strftime("Session %H:%M")
         self._entries: list[str] = []
 
     def add(self, role: str, text: str, max_len: int = 300) -> None:

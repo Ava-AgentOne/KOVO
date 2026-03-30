@@ -15,12 +15,12 @@ import os
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from src.utils.tz import get_tz as _get_tz
 from src.utils.platform import data_path, kovo_dir, logs_path
 from typing import Optional
 
 log = logging.getLogger(__name__)
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
 _BASE = data_path()
 _SRC  = kovo_dir() / "src"
 _LOGS = logs_path()
@@ -133,7 +133,7 @@ class StorageManager:
 
         Returns: {deleted: int, freed_bytes: int, details: list[str]}
         """
-        now = datetime.now(tz=_DUBAI_TZ)
+        now = datetime.now(tz=_get_tz())
         deleted = 0
         freed_bytes = 0
         details: list[str] = []
@@ -165,7 +165,7 @@ class StorageManager:
         Returns:
           dict[dir_name, {files: list[str], count: int, total_size: int, total_mb: float}]
         """
-        now = datetime.now(tz=_DUBAI_TZ)
+        now = datetime.now(tz=_get_tz())
         result: dict[str, dict] = {}
 
         for name, (path, retention_days, tier) in _DIR_CONFIG.items():
@@ -179,7 +179,7 @@ class StorageManager:
                     if not f.is_file():
                         continue
                     try:
-                        mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=_DUBAI_TZ)
+                        mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=_get_tz())
                         if mtime < cutoff:
                             size = f.stat().st_size
                             files.append(str(f))
@@ -232,7 +232,7 @@ class StorageManager:
         if "last_auto_purge" in state:
             try:
                 last_dt = datetime.fromisoformat(state["last_auto_purge"])
-                delta   = datetime.now(tz=_DUBAI_TZ) - last_dt
+                delta   = datetime.now(tz=_get_tz()) - last_dt
                 hours   = int(delta.total_seconds() / 3600)
                 last_purge = f"{hours}h ago" if hours else "just now"
             except Exception:
@@ -300,7 +300,7 @@ class StorageManager:
                 if not f.is_file():
                     continue
                 try:
-                    mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=_DUBAI_TZ)
+                    mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=_get_tz())
                     if mtime < cutoff:
                         size = f.stat().st_size
                         f.unlink()

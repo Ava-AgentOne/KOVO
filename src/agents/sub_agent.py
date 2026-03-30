@@ -19,11 +19,10 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
 
 
 def _tz_today():
-    return datetime.now(_DUBAI_TZ).date()
+    return datetime.now(_get_tz()).date()
 
 import yaml
 
