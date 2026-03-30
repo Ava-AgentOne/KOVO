@@ -6,12 +6,13 @@ import logging
 import os
 import stat
 from pathlib import Path
+from src.utils.platform import kovo_dir
 import yaml
 from dotenv import load_dotenv
 
-_BASE = Path(__file__).resolve().parents[2]  # resolves to kovo_dir()
-_ENV_FILE = _BASE / "config" / ".env"
-_SETTINGS_FILE = _BASE / "config" / "settings.yaml"
+
+_ENV_FILE = kovo_dir() / "config" / ".env"
+_SETTINGS_FILE = kovo_dir() / "config" / "settings.yaml"
 
 load_dotenv(_ENV_FILE)
 
