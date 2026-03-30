@@ -981,7 +981,7 @@ EOF
     ok "6 skills"
 
     # ── TOOLS.md ─────────────────────────────────────────────────
-    cat > "$WORKSPACE/TOOLS.md" << 'EOF'
+    [[ ! -f "$WORKSPACE/TOOLS.md" ]] && cat > "$WORKSPACE/TOOLS.md" << 'EOF'
 ---
 tools:
 - { name: shell, status: configured, description: "Execute shell commands" }
