@@ -512,9 +512,21 @@ class UpdateEnvRequest(BaseModel):
     value: str
 
 
+# Keys that can be written via the dashboard — blocks LD_PRELOAD, PATH, etc.
+_ALLOWED_ENV_KEYS = {
+    "TELEGRAM_BOT_TOKEN", "OWNER_TELEGRAM_ID", "WEBHOOK_URL",
+    "TELEGRAM_API_ID", "TELEGRAM_API_HASH",
+    "GROQ_API_KEY", "GITHUB_TOKEN",
+    "CLAUDE_CODE_OAUTH_TOKEN", "GOOGLE_CREDENTIALS_PATH",
+}
+
+
 @router.post("/env/update")
 async def update_env(payload: UpdateEnvRequest):
     """Update a single .env key-value pair. Creates the key if it doesn't exist."""
+    key = payload.key.strip().upper()
+    if key not in _ALLOWED_ENV_KEYS:
+        raise HTTPException(403, f"Key not allowed: {key}. Only KOVO configuration keys can be set via the dashboard.")
     _env = kovo_dir() / "config" / ".env"
     if not _env.exists():
         _env.write_text(f"{payload.key}={payload.value}\n")

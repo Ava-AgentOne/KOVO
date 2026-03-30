@@ -50,7 +50,15 @@ class ReminderManager:
 
     def create(self, user_id: int, message: str, due_at: str,
                delivery: str = "message") -> int:
-        """Create a reminder. Returns the reminder ID."""
+        """Create a reminder. Returns the reminder ID. Raises ValueError for invalid dates."""
+        from datetime import datetime as _dt
+        # Validate ISO date format — reject garbage that would fire immediately
+        try:
+            parsed = _dt.fromisoformat(due_at)
+            # Normalize to consistent format
+            due_at = parsed.strftime("%Y-%m-%dT%H:%M")
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid reminder date: {due_at!r} — use ISO format like 2026-03-30T15:00")
         from src.utils.tz import now
         c = self._conn()
         cur = c.execute(

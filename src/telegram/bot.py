@@ -163,7 +163,11 @@ async def _handle_reminder_tags(update: Update, response_text: str, context) -> 
         if delivery not in ("message", "call", "both"):
             delivery = "message"
 
-        rid = reminders.create(user_id, msg_text, due_at, delivery)
+        try:
+            rid = reminders.create(user_id, msg_text, due_at, delivery)
+        except ValueError as e:
+            await update.message.reply_text(f"⚠️ Invalid reminder date: {due_at}\nUse format like: 2026-03-30T15:00")
+            continue
 
         try:
             from datetime import datetime as _dt
