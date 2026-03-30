@@ -181,7 +181,11 @@ export default function Agents() {
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Sub-Agents</h2>
           <span className="text-xs text-gray-400">({subAgentCount})</span>
           <span className="text-[10px] text-gray-300 dark:text-gray-600 ml-1">Advanced</span>
-          {showAdvanced ? <ChevronUp size={14} className="text-gray-400 ml-auto" /> : <ChevronDown size={14} className="text-gray-400 ml-auto" />}
+          <button onClick={(e) => { e.stopPropagation(); setShowAdvanced(true); setShowCreate(true) }}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-500 ml-auto mr-2 px-2 py-0.5 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            <Plus size={12} /> New
+          </button>
+          {showAdvanced ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
         </button>
 
         {showAdvanced && (
