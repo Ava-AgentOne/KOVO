@@ -16,7 +16,7 @@ KOVO_VERSION="0.9"
 
 set -euo pipefail
 
-INSTALLER_VERSION="5.2"
+INSTALLER_VERSION="5.3"
 
 # ─── Cross-platform detection ────────────────────────────────────
 OS_TYPE="$(uname -s)"
@@ -999,16 +999,8 @@ EOF
     ok "TOOLS.md (9 tools)"
 
     # ── Scripts ──────────────────────────────────────────────────
-    cat > "$KOVO_DIR/scripts/backup.sh" << BKEOF
-#!/bin/bash
-SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
-KOVO_DIR="\${KOVO_DIR:-\$(cd "\$SCRIPT_DIR/.." && pwd)}"
-D="\$KOVO_DIR/data/backups"; mkdir -p "\$D"
-tar czf "\$D/workspace_\$(date +%Y%m%d).tar.gz" -C "\$KOVO_DIR" workspace/
-find "\$D" -name "workspace_*.tar.gz" -mtime +30 -delete
-echo "✓ Backup: \$D/workspace_\$(date +%Y%m%d).tar.gz"
-BKEOF
-    chmod +x "$KOVO_DIR/scripts/backup.sh"
+    # backup.sh: already copied from repo in Phase 6 (scripts/backup.sh v2)
+    chmod +x "$KOVO_DIR/scripts/backup.sh" 2>/dev/null || true
 
     cat > "$KOVO_DIR/scripts/health-check.sh" << HCEOF
 #!/bin/bash
@@ -1032,9 +1024,18 @@ HCEOF
 
     # ── Logrotate + CLAUDE.md ────────────────────────────────────
     if [[ "$OS_TYPE" != "Darwin" ]]; then
-        [[ ! -f /etc/logrotate.d/kovo ]] && sudo tee /etc/logrotate.d/kovo > /dev/null << 'EOF'
-/opt/kovo/logs/gateway.log { daily rotate 7 compress missingok notifempty copytruncate }
-EOF
+        if [[ ! -f /etc/logrotate.d/kovo ]]; then
+            sudo tee /etc/logrotate.d/kovo > /dev/null << 'LREOF'
+/opt/kovo/logs/gateway.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
+LREOF
+        fi
     fi
     if [[ -f /tmp/CLAUDE.md ]]; then cp /tmp/CLAUDE.md "$KOVO_DIR/CLAUDE.md"; ok "CLAUDE.md"
     elif [[ -f "$KOVO_DIR/CLAUDE.md" ]]; then ok "CLAUDE.md exists"
