@@ -32,32 +32,32 @@ function StatusBadge({ status }) {
 const FIX_CONFIG = {
   'Executable files found in /tmp': {
     hint: 'Remove non-system executable files from /tmp and /dev/shm.',
-    preview_cmd: 'find /tmp /dev/shm -type f -executable -not -path "*/systemd*" 2>/dev/null',
-    fix_cmd: 'find /tmp /dev/shm -type f -executable -not -path "*/systemd*" -delete 2>/dev/null && echo "Cleaned executable files from /tmp and /dev/shm"',
+    preview_cmd: 'find /tmp /dev/shm -type f -executable -not -path "*/systemd*"',
+    fix_cmd: 'find /tmp /dev/shm -type f -executable -not -path "*/systemd*" -delete',
   },
   'failed login': {
     hint: 'High number of failed SSH logins. Consider installing fail2ban.',
-    preview_cmd: 'grep "Failed password" /var/log/auth.log 2>/dev/null | tail -5',
-    fix_cmd: 'which fail2ban-client >/dev/null 2>&1 && echo "fail2ban already installed" || (sudo apt-get install -y fail2ban 2>/dev/null && sudo systemctl enable fail2ban && sudo systemctl start fail2ban && echo "fail2ban installed and started")',
+    preview_cmd: 'grep "Failed password" /var/log/auth.log',
+    fix_cmd: 'sudo apt-get install -y fail2ban',
   },
   'security updates': {
     hint: 'Security updates are available. Apply them to stay patched.',
-    preview_cmd: 'apt list --upgradable 2>/dev/null | grep -i security | head -10',
-    fix_cmd: 'sudo apt-get update -qq && sudo apt-get upgrade -y --with-new-pkgs 2>/dev/null && echo "Updates applied"',
+    preview_cmd: 'apt list --upgradable',
+    fix_cmd: 'sudo apt-get upgrade -y --with-new-pkgs',
   },
   'Failed systemd': {
     hint: 'Some systemd services have failed.',
-    preview_cmd: 'systemctl --failed --no-legend 2>/dev/null',
-    fix_cmd: 'systemctl --failed --no-legend 2>/dev/null | awk "{print \\$1}" | xargs -r sudo systemctl restart 2>/dev/null && echo "Failed services restarted"',
+    preview_cmd: 'systemctl --failed --no-legend',
+    fix_cmd: null,  // Requires manual intervention — service names vary
   },
   'Malware detected': {
     hint: 'ClamAV detected malware. Review and quarantine.',
-    preview_cmd: 'clamscan -r /tmp /dev/shm --no-summary 2>/dev/null | grep FOUND',
-    fix_cmd: 'clamscan -r /tmp /dev/shm --remove 2>/dev/null && echo "Infected files removed"',
+    preview_cmd: 'clamscan -r /tmp /dev/shm --no-summary',
+    fix_cmd: 'clamscan -r /tmp /dev/shm --remove',
   },
   'Rootkit detected': {
     hint: 'chkrootkit found a potential rootkit. Investigate immediately.',
-    preview_cmd: 'sudo chkrootkit 2>/dev/null | grep INFECTED | head -10',
+    preview_cmd: 'sudo chkrootkit -q',
     fix_cmd: null,  // No auto-fix for rootkits — needs manual investigation
   },
 }
