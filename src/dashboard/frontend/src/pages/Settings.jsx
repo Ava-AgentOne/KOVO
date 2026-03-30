@@ -463,9 +463,38 @@ function ConfigTab() {
       <Section title="General">
         <FieldRow label="Timezone" hint="Logs, schedules, memory timestamps">
           <select className={selectCls} value={config.kovo?.timezone || 'Asia/Dubai'} onChange={e => updateField('kovo', 'timezone', e.target.value)}>
-            {['Asia/Dubai', 'Asia/Riyadh', 'Asia/Kuwait', 'Asia/Qatar', 'Asia/Muscat', 'Asia/Kolkata', 'Asia/Karachi', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Singapore',
-              'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Europe/Moscow', 'Europe/Istanbul',
-              'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Australia/Sydney', 'UTC'
+            {[
+              // Middle East
+              'Asia/Dubai', 'Asia/Riyadh', 'Asia/Kuwait', 'Asia/Qatar', 'Asia/Muscat', 'Asia/Bahrain',
+              // South Asia
+              'Asia/Kolkata', 'Asia/Karachi', 'Asia/Dhaka', 'Asia/Colombo',
+              // East Asia
+              'Asia/Tokyo', 'Asia/Seoul', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Taipei', 'Asia/Singapore',
+              // Southeast Asia
+              'Asia/Bangkok', 'Asia/Jakarta', 'Asia/Manila', 'Asia/Ho_Chi_Minh',
+              // Central/West Asia
+              'Asia/Tehran', 'Asia/Baghdad', 'Asia/Almaty',
+              // Europe - Western
+              'Europe/London', 'Europe/Dublin', 'Europe/Lisbon',
+              // Europe - Central
+              'Europe/Berlin', 'Europe/Paris', 'Europe/Madrid', 'Europe/Rome', 'Europe/Amsterdam',
+              'Europe/Zurich', 'Europe/Brussels', 'Europe/Vienna', 'Europe/Warsaw', 'Europe/Prague',
+              'Europe/Stockholm', 'Europe/Helsinki', 'Europe/Oslo', 'Europe/Copenhagen',
+              // Europe - Eastern
+              'Europe/Moscow', 'Europe/Istanbul', 'Europe/Athens', 'Europe/Bucharest', 'Europe/Kiev',
+              // Africa
+              'Africa/Cairo', 'Africa/Lagos', 'Africa/Johannesburg', 'Africa/Nairobi', 'Africa/Casablanca',
+              // Americas - North
+              'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+              'America/Toronto', 'America/Vancouver', 'America/Phoenix',
+              // Americas - Central & South
+              'America/Mexico_City', 'America/Bogota', 'America/Lima', 'America/Sao_Paulo',
+              'America/Buenos_Aires', 'America/Santiago',
+              // Pacific & Oceania
+              'Australia/Sydney', 'Australia/Melbourne', 'Australia/Perth',
+              'Pacific/Auckland', 'Pacific/Honolulu', 'Pacific/Fiji',
+              // UTC
+              'UTC',
             ].map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
         </FieldRow>
