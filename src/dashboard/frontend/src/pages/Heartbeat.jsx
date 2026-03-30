@@ -56,7 +56,7 @@ export default function Heartbeat() {
               <div key={job.id} className="flex justify-between items-center text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <span className="text-gray-600 dark:text-gray-400 font-mono">{job.id}</span>
                 <span className="text-gray-400 text-xs">
-                  next: {job.next_run ? new Date(job.next_run).toLocaleString('en-AE', { timeZone: 'Asia/Dubai' }) : '—'}
+                  next: {job.next_run ? new Date(job.next_run).toLocaleString() : '—'}
                 </span>
               </div>
             ))}
