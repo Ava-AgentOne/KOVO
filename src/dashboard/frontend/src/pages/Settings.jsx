@@ -4,9 +4,9 @@ import { Link } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import {
   Sun, Moon, RefreshCw, ChevronDown, ChevronUp, Save, Download, Upload,
-  Trash2, Archive, Loader2, AlertTriangle, CheckCircle, XCircle, ExternalLink,
-  MessageSquare, Phone, Cloud, Key, Github, Mic, Settings2, Database, Shield,
-  Server, Palette, HardDrive, Plug, ChevronRight, Eye, EyeOff,
+  Trash2, Archive, Loader2, ExternalLink,
+  MessageSquare, Phone, Cloud, Github, Mic, Settings2, Database,
+  Server, HardDrive, Plug, Eye, EyeOff,
 } from 'lucide-react'
 
 // ── Tab system ──────────────────────────────────────────────────
@@ -228,39 +228,18 @@ function ConnectionsTab() {
   }, [])
 
   const saveEnvKey = async (key, value) => {
-    // Read current .env, update the key, write back
-    const r = await fetch('/api/env')
-    const d = await r.json()
-    const currentEntries = d.entries || []
-
-    let found = false
-    const lines = currentEntries.map(e => {
-      if (e.type === 'var' && e.key === key) {
-        found = true
-        return `${key}=${value}`
-      }
-      if (e.type === 'comment') return e.raw
-      return `${e.key}=${e.value}`
-    })
-    if (!found) lines.push(`${key}=${value}`)
-
-    // We need a save .env endpoint — for now use workspace save
-    // Actually, let's just call the setup/save endpoint with just this field
-    // Simpler: write to .env via a small proxy
     const resp = await fetch('/api/env/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, value }),
     })
     if (!resp.ok) {
-      // Fallback: try the raw approach
       throw new Error('Save failed — edit config/.env manually and restart')
     }
-
     // Refresh entries
-    const r2 = await fetch('/api/env')
-    const d2 = await r2.json()
-    setEntries(d2.entries || [])
+    const r = await fetch('/api/env')
+    const d = await r.json()
+    setEntries(d.entries || [])
   }
 
   const hasKey = (key) => {
@@ -369,7 +348,7 @@ function ConnectionsTab() {
         testFn={async () => { const r = await fetch('/api/ollama/test', { method: 'POST' }); return r.json() }}
         testLabel="Test"
       >
-        <p className="text-xs text-gray-400">Ollama settings are managed in the <button onClick={() => document.querySelector('[data-tab="config"]')?.click()} className="text-brand-500 underline">Configuration</button> tab.</p>
+        <p className="text-xs text-gray-400">Ollama settings are managed in the <span className="text-brand-500">Configuration</span> tab.</p>
       </ConnectionCard>
 
       {/* Restart reminder */}
@@ -651,7 +630,7 @@ function BackupTab() {
     if (manifests[filename]) return
     try {
       const r = await fetch(`/api/backup/manifest/${filename}`)
-      setManifests(prev => ({ ...prev, [filename]: await r.json() }))
+      const d = await r.json(); setManifests(prev => ({ ...prev, [filename]: d }))
     } catch { setManifests(prev => ({ ...prev, [filename]: { error: 'Could not read manifest' } })) }
   }
 
@@ -747,7 +726,6 @@ function SystemTab() {
   const [info, setInfo] = useState(null)
   const [entries, setEntries] = useState([])
   const [revealed, setRevealed] = useState({})
-  const [showEnv, setShowEnv] = useState(false)
 
   useEffect(() => {
     fetch('/api/service/status').then(r => r.json()).then(setServiceStatus).catch(() => {})
