@@ -129,7 +129,7 @@ class StorageManager:
     def auto_purge(self) -> dict:
         """
         Tier 1: delete files past their retention without user approval.
-        Covers: tmp (1d), audio (7d), screenshots (7d), all __pycache__ in src/.
+        Covers: tmp (1d), audio (7d), screenshots (7d).
 
         Returns: {deleted: int, freed_bytes: int, details: list[str]}
         """
@@ -148,20 +148,6 @@ class StorageManager:
                 deleted += n
                 freed_bytes += freed
 
-        # Sweep __pycache__ directories from src/
-        pc_dirs = 0
-        pc_freed = 0
-        for pc in _SRC.rglob("__pycache__"):
-            if pc.is_dir():
-                size = _dir_size(pc)
-                try:
-                    shutil.rmtree(pc)
-                    pc_dirs += 1
-                    pc_freed += size
-                except Exception as e:
-                    log.warning("Could not remove %s: %s", pc, e)
-        if pc_dirs:
-            details.append(f"__pycache__: {pc_dirs} dirs freed {_fmt(pc_freed)}")
             freed_bytes += pc_freed
 
         state = self._load_state()
