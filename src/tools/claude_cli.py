@@ -7,7 +7,7 @@ import logging
 import re
 import signal
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 from src.utils.platform import kovo_dir, workspace_path
 from src.utils.tz import get_tz as _get_tz

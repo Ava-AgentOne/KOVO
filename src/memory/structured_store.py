@@ -8,14 +8,14 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 from src.utils.platform import kovo_dir
 from src.utils.tz import get_tz as _get_tz
 
 log = logging.getLogger(__name__)
 
-_DB_PATH = Path(str(kovo_dir()) + "/data/kovo.db")
+_DB_PATH = kovo_dir() / "data" / "kovo.db"
 
 _SCHEMA = """\
 PRAGMA journal_mode=WAL;

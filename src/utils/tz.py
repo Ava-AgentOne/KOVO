@@ -1,6 +1,5 @@
 """Shared timezone helper — reads from settings.yaml."""
 from datetime import date, datetime, timezone, timedelta
-import sys
 
 _tz_cache = None
 
