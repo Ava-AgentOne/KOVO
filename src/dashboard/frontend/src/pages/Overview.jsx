@@ -20,6 +20,12 @@ function SimpleMarkdown({ text }) {
     .replace(/\*\*`([^`]+)`\*\*/g, '<strong><code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">$1</code></strong>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-900 dark:text-white">$1</strong>')
     .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs text-brand-600 dark:text-yellow-300 font-mono">$1</code>')
+    // Session headers -> 12h format (must run BEFORE generic ## heading)
+    .replace(/^## Session (\d{2}):(\d{2})$/gm, (_, h, m) => {
+      const hr = parseInt(h); const ampm = hr >= 12 ? 'PM' : 'AM';
+      const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+      return '<p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-3 mb-1 uppercase tracking-wide">Session ' + h12 + ':' + m + ' ' + ampm + '</p>';
+    })
     .replace(/^## (.+)$/gm, '<p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-3 mb-1">$1</p>')
     .replace(/^# (.+)$/gm, '<p class="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1">$1</p>')
     // Log timestamps [HH:MM] → 12h format
@@ -33,12 +39,7 @@ function SimpleMarkdown({ text }) {
     // User: and Reply: labels
     .replace(/User:\s*/g, '<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">You: </span>')
     .replace(/Reply:\s*/g, '<br/><span class="text-xs font-semibold text-brand-500">Kovo: </span>')
-    // Session headers → 12h format
-    .replace(/^## Session (\d{2}):(\d{2})$/gm, (_, h, m) => {
-      const hr = parseInt(h); const ampm = hr >= 12 ? 'PM' : 'AM';
-      const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
-      return '<p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-3 mb-1 uppercase tracking-wide">Session ' + h12 + ':' + m + ' ' + ampm + '</p>';
-    })
+
     .replace(/\n/g, '<br/>')
   return <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
 }
