@@ -388,6 +388,7 @@ async def run_full_report(request: Request):
 
 @router.get("/logs")
 async def get_logs(lines: int = 200):
+    lines = min(max(lines, 1), 2000)  # cap to prevent OOM
     log_file = kovo_dir() / "logs" / "gateway.log"
     if not log_file.exists():
         return {"lines": []}
@@ -529,8 +530,8 @@ async def update_env(payload: UpdateEnvRequest):
         raise HTTPException(403, f"Key not allowed: {key}. Only KOVO configuration keys can be set via the dashboard.")
     _env = kovo_dir() / "config" / ".env"
     if not _env.exists():
-        _env.write_text(f"{payload.key}={payload.value}\n")
-        return {"updated": True, "key": payload.key}
+        _env.write_text(f"{key}={payload.value}\n")
+        return {"updated": True, "key": key}
 
     lines = _env.read_text().splitlines()
     found = False
@@ -540,24 +541,24 @@ async def update_env(payload: UpdateEnvRequest):
         if stripped.startswith("#"):
             # Check if it's a commented-out version of this key
             uncommented = stripped.lstrip("# ")
-            if "=" in uncommented and uncommented.split("=", 1)[0].strip() == payload.key:
+            if "=" in uncommented and uncommented.split("=", 1)[0].strip() == key:
                 # Replace commented-out line with the new value
-                new_lines.append(f"{payload.key}={payload.value}")
+                new_lines.append(f"{key}={payload.value}")
                 found = True
                 continue
         if "=" in stripped and not stripped.startswith("#"):
             k, _, _ = stripped.partition("=")
-            if k.strip() == payload.key:
-                new_lines.append(f"{payload.key}={payload.value}")
+            if k.strip() == key:
+                new_lines.append(f"{key}={payload.value}")
                 found = True
                 continue
         new_lines.append(line)
 
     if not found:
-        new_lines.append(f"{payload.key}={payload.value}")
+        new_lines.append(f"{key}={payload.value}")
 
     _env.write_text("\n".join(new_lines) + "\n")
-    return {"updated": True, "key": payload.key}
+    return {"updated": True, "key": key}
 
 
 @router.get("/env")
