@@ -1,9 +1,9 @@
-from src.utils.tz import get_tz as _get_tz
 """
 Session-aware daily log helper.
 A DailyLogSession accumulates entries during a conversation, then flushes to disk.
 """
 from __future__ import annotations
+from src.utils.tz import get_tz as _get_tz
 
 import logging
 from datetime import datetime, timedelta, timezone
