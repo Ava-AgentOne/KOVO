@@ -14,11 +14,24 @@ import ConfirmModal from '../components/ConfirmModal'
 function SimpleMarkdown({ text }) {
   if (!text) return null
   const html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/\*\*`([^`]+)`\*\*/g, '<strong><code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">$1</code></strong>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-900 dark:text-white">$1</strong>')
+    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs text-brand-600 dark:text-yellow-300 font-mono">$1</code>')
     .replace(/^## (.+)$/gm, '<p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-3 mb-1">$1</p>')
     .replace(/^# (.+)$/gm, '<p class="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1">$1</p>')
+    // Log timestamps [HH:MM]
+    .replace(/\[(\d{2}:\d{2})\]/g, '<span class="text-brand-500 font-mono text-xs font-medium">[$1]</span>')
+    // agent=kovo model=claude/sonnet metadata
+    .replace(/agent=(\w+)\s+model=([\w/]+)/g, '<span class="text-gray-400 text-xs">$2</span>')
+    // User: and Reply: labels
+    .replace(/User:\s*/g, '<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">You: </span>')
+    .replace(/Reply:\s*/g, '<br/><span class="text-xs font-semibold text-brand-500">Kovo: </span>')
+    // Session headers
+    .replace(/^(## Session \d{2}:\d{2})$/gm, '<p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-3 mb-1 uppercase tracking-wide">$1</p>')
+    .replace(/\n/g, '<br/>')
   return <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
 }
 
