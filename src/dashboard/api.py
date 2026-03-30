@@ -776,20 +776,118 @@ async def security_run():
 
     async def _run_audit():
         results = {}
+        findings = []
         timestamp = datetime.now().isoformat()
 
+        # ── System baseline checks ────────────────────────────────
+        # Package count
+        pkg_count = 0
+        try:
+            r = subprocess.run(["dpkg", "--get-selections"], capture_output=True, text=True, timeout=10)
+            pkg_count = len([l for l in r.stdout.splitlines() if "\tinstall" in l])
+            results["packages"] = {"status": "clean", "output": f"{pkg_count} packages installed"}
+        except Exception:
+            results["packages"] = {"status": "error", "output": "Could not count packages"}
+
+        # SUID binaries
+        suid_count = 0
+        try:
+            r = subprocess.run(
+                ["find", "/", "-perm", "-4000", "-type", "f"],
+                capture_output=True, text=True, timeout=30,
+            )
+            suid_files = [l for l in r.stdout.splitlines() if l.strip()]
+            suid_count = len(suid_files)
+            results["suid_binaries"] = {"status": "clean", "output": f"{suid_count} SUID binaries found"}
+        except Exception:
+            results["suid_binaries"] = {"status": "error", "output": "Could not scan SUID binaries"}
+
+        # Failed SSH logins (last 24h)
+        failed_logins = 0
+        try:
+            r = subprocess.run(
+                ["grep", "-c", "Failed password", "/var/log/auth.log"],
+                capture_output=True, text=True, timeout=10,
+            )
+            failed_logins = int(r.stdout.strip()) if r.returncode == 0 else 0
+            status = "warning" if failed_logins > 20 else "clean"
+            if failed_logins > 20:
+                findings.append(f"{failed_logins} failed login attempts detected")
+            results["failed_logins"] = {"status": status, "output": f"{failed_logins} failed login attempts"}
+        except Exception:
+            results["failed_logins"] = {"status": "clean", "output": "0 failed logins (no auth.log)"}
+
+        # Listening ports
+        try:
+            r = subprocess.run(
+                ["ss", "-tlnp"],
+                capture_output=True, text=True, timeout=10,
+            )
+            ports = [l for l in r.stdout.splitlines()[1:] if l.strip()]
+            results["listening_ports"] = {"status": "clean", "output": f"{len(ports)} listening ports"}
+        except Exception:
+            results["listening_ports"] = {"status": "error", "output": "Could not check ports"}
+
+        # .env permissions
+        env_path = kovo_dir() / "config" / ".env"
+        try:
+            import stat
+            if env_path.exists():
+                mode = env_path.stat().st_mode
+                is_loose = bool(mode & (stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH))
+                if is_loose:
+                    findings.append(f".env has loose permissions ({oct(mode & 0o777)})")
+                    results["env_permissions"] = {"status": "warning", "output": f"Permissions: {oct(mode & 0o777)} — should be 600"}
+                else:
+                    results["env_permissions"] = {"status": "clean", "output": f"Permissions: {oct(mode & 0o777)}"}
+        except Exception:
+            results["env_permissions"] = {"status": "error", "output": "Could not check .env"}
+
+        # Executable files in /tmp
+        try:
+            r = subprocess.run(
+                ["find", "/tmp", "/dev/shm", "-type", "f", "-executable", "-not", "-path", "*/systemd*"],
+                capture_output=True, text=True, timeout=10,
+            )
+            exec_files = [l for l in r.stdout.splitlines() if l.strip()]
+            if exec_files:
+                findings.append(f"Executable files found in /tmp ({len(exec_files)})")
+                results["tmp_executables"] = {"status": "warning", "output": f"{len(exec_files)} executable files in /tmp"}
+            else:
+                results["tmp_executables"] = {"status": "clean", "output": "No executable files in /tmp"}
+        except Exception:
+            results["tmp_executables"] = {"status": "clean", "output": "Check skipped"}
+
+        # Failed systemd services
+        try:
+            r = subprocess.run(
+                ["systemctl", "--failed", "--no-legend"],
+                capture_output=True, text=True, timeout=10,
+            )
+            failed = [l for l in r.stdout.splitlines() if l.strip()]
+            if failed:
+                findings.append(f"Failed systemd services: {len(failed)}")
+                results["systemd_failed"] = {"status": "warning", "output": "\n".join(failed[:5])}
+            else:
+                results["systemd_failed"] = {"status": "clean", "output": "All services running"}
+        except Exception:
+            results["systemd_failed"] = {"status": "clean", "output": "Check skipped"}
+
+        # ── Malware / rootkit scans ───────────────────────────────
         # ClamAV
         try:
             r = subprocess.run(
                 ["clamscan", "--infected", "--recursive", "--no-summary", str(kovo_dir())],
                 capture_output=True, text=True, timeout=120,
             )
+            if r.returncode != 0 and r.stdout.strip():
+                findings.append("Malware detected by ClamAV")
             results["clamav"] = {
                 "status": "clean" if r.returncode == 0 else "warning",
                 "output": r.stdout.strip()[-500:] if r.stdout else "(no output)",
             }
         except FileNotFoundError:
-            results["clamav"] = {"status": "not_installed", "output": "clamscan not found"}
+            results["clamav"] = {"status": "not_installed", "output": "clamscan not found — install with: sudo apt install clamav"}
         except subprocess.TimeoutExpired:
             results["clamav"] = {"status": "timeout", "output": "Scan timed out (120s)"}
         except Exception as e:
@@ -802,6 +900,8 @@ async def security_run():
                 capture_output=True, text=True, timeout=60,
             )
             infected = [l for l in r.stdout.splitlines() if "INFECTED" in l]
+            if infected:
+                findings.append("Rootkit detected by chkrootkit")
             results["chkrootkit"] = {
                 "status": "warning" if infected else "clean",
                 "output": "\n".join(infected) if infected else "No rootkits found",
@@ -818,6 +918,8 @@ async def security_run():
                 capture_output=True, text=True, timeout=120,
             )
             warnings = r.stdout.strip()
+            if warnings:
+                findings.append("rkhunter reported warnings")
             results["rkhunter"] = {
                 "status": "warning" if warnings else "clean",
                 "output": warnings[-500:] if warnings else "No warnings",
@@ -827,16 +929,27 @@ async def security_run():
         except Exception as e:
             results["rkhunter"] = {"status": "error", "output": str(e)}
 
-        # Overall status
+        # ── Overall status ────────────────────────────────────────
         statuses = [v["status"] for v in results.values()]
-        if "warning" in statuses:
+        if any(s == "warning" for s in statuses):
             overall = "warning"
         elif all(s in ("clean", "not_installed") for s in statuses):
             overall = "clean"
         else:
             overall = "error"
 
-        report = {"status": overall, "timestamp": timestamp, "checks": results}
+        # Build summary
+        summary = f"All clear — {pkg_count} packages, {suid_count} SUID binaries, {failed_logins} failed logins"
+        if findings:
+            summary = f"{len(findings)} issue(s) found"
+
+        report = {
+            "status": overall,
+            "timestamp": timestamp,
+            "checks": results,
+            "findings": findings,
+            "summary": summary,
+        }
 
         # Save to disk
         _SEC_DIR.mkdir(parents=True, exist_ok=True)
