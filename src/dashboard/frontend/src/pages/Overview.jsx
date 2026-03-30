@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Cpu, MemoryStick, HardDrive, Clock, MessageSquare,
+  Cpu, MemoryStick, HardDrive, Clock, Shield, MessageSquare,
   RefreshCw, Trash2, Save, RotateCcw, Settings as SettingsIcon,
   ScrollText,
 } from 'lucide-react'
@@ -90,10 +90,28 @@ export default function Overview() {
   const [actionFeedback, setActionFeedback] = useState('')
   const navigate = useNavigate()
 
+  const [auditResult, setAuditResult] = useState(null)
+
   const runAudit = async () => {
     setAuditRunning(true)
+    setAuditResult(null)
+    const before = secLatest?.timestamp || ''
     try { await fetch('/api/security/run', { method: 'POST' }) } catch {}
-    setAuditRunning(false)
+    let attempts = 0
+    const poll = setInterval(async () => {
+      attempts++
+      try {
+        const r = await fetch('/api/security/latest')
+        const d = await r.json()
+        if (d.timestamp && d.timestamp !== before) {
+          clearInterval(poll)
+          setAuditRunning(false)
+          setAuditResult(d.status === 'clean' ? 'clean' : d.status === 'warning' ? 'warning' : 'critical')
+          setTimeout(() => setAuditResult(null), 5000)
+        }
+      } catch {}
+      if (attempts > 30) { clearInterval(poll); setAuditRunning(false) }
+    }, 1000)
   }
   const doRestart = async () => {
     setConfirmRestart(false)
@@ -164,9 +182,23 @@ export default function Overview() {
               <p className="text-sm text-gray-400">No scans yet. Run your first audit below.</p>
             )}
             <button onClick={runAudit} disabled={auditRunning}
-              className="mt-3 flex items-center justify-center gap-2 w-full py-2 text-xs rounded-lg bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-50 transition-colors">
-              <RefreshCw size={12} className={auditRunning ? 'animate-spin' : ''} />
-              {auditRunning ? 'Running\u2026' : 'Run Audit'}
+              className={`mt-3 flex items-center justify-center gap-2 w-full py-2 text-xs rounded-lg transition-all duration-300 ${
+                auditResult === 'clean' ? 'bg-emerald-500 text-white' :
+                auditResult === 'warning' ? 'bg-amber-500 text-white' :
+                auditResult === 'critical' ? 'bg-red-500 text-white' :
+                'bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-50'
+              }`}>
+              {auditRunning ? (
+                <><RefreshCw size={12} className="animate-spin" /> Scanning\u2026</>
+              ) : auditResult === 'clean' ? (
+                <><Shield size={12} /> All Clear</>
+              ) : auditResult === 'warning' ? (
+                <><Shield size={12} /> Warnings Found</>
+              ) : auditResult === 'critical' ? (
+                <><Shield size={12} /> Issues Found</>
+              ) : (
+                <><RefreshCw size={12} /> Run Audit</>
+              )}
             </button>
           </div>
         </div>
