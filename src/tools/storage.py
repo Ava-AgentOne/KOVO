@@ -148,7 +148,6 @@ class StorageManager:
                 deleted += n
                 freed_bytes += freed
 
-            freed_bytes += pc_freed
 
         state = self._load_state()
         state["last_auto_purge"] = now.isoformat()
