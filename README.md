@@ -56,6 +56,9 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO is different —
 | 📊 **Health Monitoring** | CPU, RAM, disk, uptime — all visible from dashboard and Telegram |
 | 🔧 **Smart Model Router** | Local LLM for simple tasks, Claude for complex ones |
 | 📞 **Voice Calls** | Real Telegram voice calls for critical alerts |
+| 🔍 **Web Search** | Auto DuckDuckGo search for current-info questions |
+| 🔗 **Link Reader** | Auto-extracts page content from URLs in messages |
+| ⏰ **Smart Reminders** | SQLite-backed reminders with message, call, or both delivery |
 
 ## 🏗️ Architecture
 
@@ -84,7 +87,7 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO is different —
 | **Telegram** | python-telegram-bot |
 | **Local LLM** | Ollama, LM Studio, or any OpenAI-compatible endpoint (optional) |
 | **Dashboard** | React, Vite, Tailwind CSS, Lucide Icons |
-| **Database** | SQLite (reminders, heartbeat log) |
+| **Database** | SQLite (memories, reminders, heartbeat log, permissions, stats) |
 | **Voice** | py-tgcalls + FFmpeg for Telegram calls |
 
 ### Smart Model Router
@@ -93,9 +96,11 @@ KOVO intelligently routes messages to the right model:
 
 | Complexity | Routed To | Use Case |
 |------------|-----------|----------|
-| **Simple** | Local LLM | Heartbeats, quick Q&A, classification |
+| **Simple** | Claude Sonnet | Quick Q&A, greetings, status checks |
 | **Medium** | Claude Sonnet | Most tasks, code, analysis |
 | **Complex** | Claude Opus | Deep reasoning, architecture, planning |
+
+> Local LLM (Ollama) is used exclusively for heartbeat health summaries — never in the message routing path.
 
 ## 🖥️ Dashboard
 
@@ -197,7 +202,7 @@ KOVO uses a persistent reply keyboard with emoji buttons:
 | 📚 Skills | `/skills` | List all loaded skills |
 | 🔧 Tools | `/tools` | Tool registry with status |
 
-Plus: `/agents`, `/permissions`, `/purge`, `/audit`, and natural language for everything else.
+Plus: `/agents`, `/permissions`, `/purge`, `/reminders`, `/remind cancel <id>`, `/search`, `/call`, `/db`, and natural language for everything else.
 
 ## ⚡ Skills
 
@@ -206,13 +211,13 @@ KOVO ships with built-in skills and supports custom ones:
 | Skill | Description |
 |-------|-------------|
 | 🌐 **browser** | Navigate pages, take screenshots, fill forms |
-| 💬 **general** | Conversation, reasoning, planning |
-| 📂 **google** | Google Docs, Drive, Gmail, Spreadsheets |
+| 📂 **google-workspace** | Google Docs, Drive, Gmail, Calendar, Sheets |
 | 📞 **phone-call** | Real Telegram voice calls + TTS voice messages |
 | 📊 **report-builder** | Generate HTML reports with charts |
 | 🛡️ **security-audit** | Deep security scan — ports, users, malware |
 | 🖥️ **server-health** | System health metrics |
-| ⚙️ **shell** | Execute commands, manage files, install packages |
+| 🔍 **web-search** | Auto DuckDuckGo search for current-info questions |
+| ⏰ **reminders** | Smart reminders with message, call, or both delivery |
 
 ## 🛡️ Security
 
@@ -226,6 +231,10 @@ KOVO includes built-in security features:
 - **Pre-push git hook** — blocks personal data, `.env`, credentials, and database files from being committed
 - **Personal data isolation** — repo ships `.template` files only; live workspace files are gitignored
 - **Claude Code sandbox** — pre-approved command allowlist, runtime approval via Telegram
+- **Shell metachar blocking** — `;|&$\`><(){}!` blocked in all API command endpoints
+- **Env key whitelist** — dashboard can only write 9 approved KOVO configuration keys
+- **Backup validation** — tar archives checked for path traversal and source code injection before extraction
+- **Reminder date validation** — rejects invalid dates that would fire immediately
 
 ## 📁 Project Structure
 
@@ -251,7 +260,6 @@ KOVO includes built-in security features:
 │   ├── skills/              # Skill definitions (SKILL.md per skill)
 │   ├── SOUL.md.template     # Agent personality (template)
 │   ├── USER.md.template     # Owner profile (template)
-│   ├── IDENTITY.md          # Deprecated — identity now in SOUL.md
 │   └── MEMORY.md.template   # Long-term learnings (template)
 ├── bootstrap.sh     # One-line installer
 ├── requirements.txt # Python dependencies
