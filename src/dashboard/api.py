@@ -631,6 +631,13 @@ async def get_chat_history():
     return {"messages": _chat_history}
 
 
+@router.post("/chat/clear")
+async def clear_chat_history():
+    """Clear the in-memory dashboard chat history."""
+    _chat_history.clear()
+    return {"cleared": True}
+
+
 @router.websocket("/ws/chat")
 async def chat_websocket(websocket: WebSocket):
     """
