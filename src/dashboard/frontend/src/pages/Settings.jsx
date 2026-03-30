@@ -2,9 +2,44 @@ import { useState, useEffect, useRef } from 'react'
 import UpdateChecker from '../components/UpdateChecker'
 import { Link } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
-import { Sun, Moon, RefreshCw, ChevronDown, ChevronUp, Save, Download, Upload, Trash2, Archive, Loader2, AlertTriangle } from 'lucide-react'
+import {
+  Sun, Moon, RefreshCw, ChevronDown, ChevronUp, Save, Download, Upload,
+  Trash2, Archive, Loader2, AlertTriangle, CheckCircle, XCircle, ExternalLink,
+  MessageSquare, Phone, Cloud, Key, Github, Mic, Settings2, Database, Shield,
+  Server, Palette, HardDrive, Plug, ChevronRight, Eye, EyeOff,
+} from 'lucide-react'
 
-function Section({ title, children, defaultOpen = true }) {
+// ── Tab system ──────────────────────────────────────────────────
+const TABS = [
+  { id: 'connections', label: 'Connections', icon: Plug },
+  { id: 'config', label: 'Configuration', icon: Settings2 },
+  { id: 'backup', label: 'Backup', icon: HardDrive },
+  { id: 'system', label: 'System', icon: Server },
+]
+
+function TabBar({ active, onChange }) {
+  return (
+    <div className="flex border-b border-gray-200 dark:border-gray-800 mb-6 -mx-1">
+      {TABS.map(({ id, label, icon: Icon }) => (
+        <button
+          key={id}
+          onClick={() => onChange(id)}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors mx-1 ${
+            active === id
+              ? 'border-brand-500 text-brand-500'
+              : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+          }`}
+        >
+          <Icon size={15} />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── Shared UI ───────────────────────────────────────────────────
+function Section({ title, children, defaultOpen = true, actions }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
@@ -13,7 +48,10 @@ function Section({ title, children, defaultOpen = true }) {
         className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
       >
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{title}</h2>
-        {open ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+        <div className="flex items-center gap-2">
+          {actions}
+          {open ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+        </div>
       </button>
       {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
     </div>
@@ -35,23 +73,321 @@ function FieldRow({ label, hint, children }) {
 const inputCls = 'w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-gray-200 focus:outline-none focus:border-brand-500'
 const selectCls = 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-gray-200 focus:outline-none focus:border-brand-500'
 
-// ── Appearance ──────────────────────────────────────────
-function ThemeToggle() {
-  const { theme, toggle } = useTheme()
+function ExtLink({ href, children }) {
   return (
-    <div className="flex items-center gap-4">
-      <p className="text-sm text-gray-600 dark:text-gray-400">Current: <strong className="text-gray-900 dark:text-white capitalize">{theme}</strong></p>
-      <button onClick={toggle}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm transition-colors">
-        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-        Switch to {theme === 'dark' ? 'light' : 'dark'}
-      </button>
+    <a href={href} target="_blank" rel="noreferrer" className="text-brand-500 hover:text-brand-600 underline underline-offset-2 inline-flex items-center gap-1 text-xs">
+      {children} <ExternalLink size={10} />
+    </a>
+  )
+}
+
+function StatusDot({ ok, label }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${ok ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+      <span className={`text-xs ${ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>{label}</span>
     </div>
   )
 }
 
-// ── Structured Config ───────────────────────────────────
-function StructuredConfig() {
+// ═══════════════════════════════════════════════════════════════
+// TAB 1: CONNECTIONS
+// ═══════════════════════════════════════════════════════════════
+function ConnectionCard({ icon: Icon, iconColor, title, description, configured, children, testFn, testLabel }) {
+  const [expanded, setExpanded] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState(null)
+
+  const doTest = async () => {
+    if (!testFn) return
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const r = await testFn()
+      setTestResult(r)
+    } catch (e) { setTestResult({ ok: false, error: e.message }) }
+    setTesting(false)
+  }
+
+  return (
+    <div className={`bg-white dark:bg-gray-900 border rounded-xl overflow-hidden transition-colors ${
+      configured ? 'border-gray-200 dark:border-gray-800' : 'border-dashed border-gray-300 dark:border-gray-700'
+    }`}>
+      <div className="flex items-center gap-4 px-4 py-3.5">
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${iconColor}`}>
+          <Icon size={20} className="text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+            {configured ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700 font-medium">Connected</span>
+            ) : (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700 font-medium">Not set up</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {testFn && configured && (
+            <button onClick={doTest} disabled={testing}
+              className="text-xs text-gray-400 hover:text-brand-500 px-2 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
+              {testing ? 'Testing…' : (testLabel || 'Test')}
+            </button>
+          )}
+          {testResult && (
+            <span className={`text-xs ${testResult.ok ? 'text-emerald-500' : 'text-red-400'}`}>
+              {testResult.ok ? '✓' : testResult.error || '✗'}
+            </span>
+          )}
+          <button onClick={() => setExpanded(!expanded)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
+      </div>
+      {expanded && (
+        <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-3">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EnvField({ label, envKey, hint, entries, onSave, type = 'text' }) {
+  const current = entries.find(e => e.key === envKey)
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState('')
+  const [showValue, setShowValue] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const save = async () => {
+    setSaving(true)
+    setMsg('')
+    try {
+      await onSave(envKey, value)
+      setEditing(false)
+      setMsg('Saved — restart to apply')
+    } catch (e) { setMsg(e.message) }
+    setSaving(false)
+  }
+
+  const hasValue = current && current.value && !current.value.startsWith('#')
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+      <div className="sm:w-40 flex-shrink-0">
+        <p className="text-sm text-gray-700 dark:text-gray-300">{label}</p>
+        {hint && <p className="text-xs text-gray-400">{hint}</p>}
+      </div>
+      <div className="flex-1 flex items-center gap-2">
+        {editing ? (
+          <>
+            <input
+              type={showValue ? 'text' : 'password'}
+              className={inputCls + ' flex-1 font-mono text-xs'}
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              placeholder={`Enter ${label}…`}
+              autoFocus
+            />
+            <button onClick={() => setShowValue(!showValue)} className="text-gray-400 hover:text-gray-600 p-1">
+              {showValue ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+            <button onClick={save} disabled={saving} className="text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
+              {saving ? '…' : 'Save'}
+            </button>
+            <button onClick={() => setEditing(false)} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5">Cancel</button>
+          </>
+        ) : (
+          <>
+            <span className={`text-xs font-mono flex-1 ${hasValue ? 'text-gray-600 dark:text-gray-400' : 'text-gray-300 dark:text-gray-600 italic'}`}>
+              {hasValue ? current.masked : 'Not configured'}
+            </span>
+            <button onClick={() => { setEditing(true); setValue(hasValue ? current.value : '') }}
+              className="text-xs text-brand-500 hover:text-brand-600 px-2 py-1 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors">
+              {hasValue ? 'Change' : 'Set up'}
+            </button>
+          </>
+        )}
+        {msg && <span className="text-xs text-gray-400">{msg}</span>}
+      </div>
+    </div>
+  )
+}
+
+function ConnectionsTab() {
+  const [entries, setEntries] = useState([])
+  const [setupStatus, setSetupStatus] = useState(null)
+
+  useEffect(() => {
+    fetch('/api/env').then(r => r.json()).then(d => setEntries(d.entries || [])).catch(() => {})
+    fetch('/api/setup/status').then(r => r.json()).then(setSetupStatus).catch(() => {})
+  }, [])
+
+  const saveEnvKey = async (key, value) => {
+    // Read current .env, update the key, write back
+    const r = await fetch('/api/env')
+    const d = await r.json()
+    const currentEntries = d.entries || []
+
+    let found = false
+    const lines = currentEntries.map(e => {
+      if (e.type === 'var' && e.key === key) {
+        found = true
+        return `${key}=${value}`
+      }
+      if (e.type === 'comment') return e.raw
+      return `${e.key}=${e.value}`
+    })
+    if (!found) lines.push(`${key}=${value}`)
+
+    // We need a save .env endpoint — for now use workspace save
+    // Actually, let's just call the setup/save endpoint with just this field
+    // Simpler: write to .env via a small proxy
+    const resp = await fetch('/api/env/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value }),
+    })
+    if (!resp.ok) {
+      // Fallback: try the raw approach
+      throw new Error('Save failed — edit config/.env manually and restart')
+    }
+
+    // Refresh entries
+    const r2 = await fetch('/api/env')
+    const d2 = await r2.json()
+    setEntries(d2.entries || [])
+  }
+
+  const hasKey = (key) => {
+    const e = entries.find(x => x.key === key)
+    return e && e.value && !e.value.startsWith('#') && e.value.length > 3
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="text-sm text-gray-500">Manage your integrations and API keys. Changes require a service restart.</p>
+        </div>
+        <Link to="/setup" className="flex items-center gap-1.5 text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg transition-colors">
+          <Settings2 size={12} /> Setup Wizard
+        </Link>
+      </div>
+
+      {/* Telegram — Required */}
+      <ConnectionCard
+        icon={MessageSquare}
+        iconColor="bg-[#26A5E4]"
+        title="Telegram"
+        description="Bot token + owner ID — required for KOVO to work"
+        configured={hasKey('TELEGRAM_BOT_TOKEN')}
+      >
+        <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30 rounded-lg p-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+          <p><strong>Bot Token:</strong> Message <ExtLink href="https://t.me/BotFather">@BotFather</ExtLink> → <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">/newbot</code></p>
+          <p><strong>User ID:</strong> Message <ExtLink href="https://t.me/userinfobot">@userinfobot</ExtLink> to get your numeric ID</p>
+        </div>
+        <EnvField label="Bot Token" envKey="TELEGRAM_BOT_TOKEN" entries={entries} onSave={saveEnvKey} />
+        <EnvField label="Owner ID" envKey="OWNER_TELEGRAM_ID" entries={entries} onSave={saveEnvKey} />
+      </ConnectionCard>
+
+      {/* Voice Calls — Optional */}
+      <ConnectionCard
+        icon={Phone}
+        iconColor="bg-amber-500"
+        title="Voice Calls"
+        description="Real Telegram voice calls for urgent alerts — needs a second SIM"
+        configured={hasKey('TELEGRAM_API_ID') && hasKey('TELEGRAM_API_HASH')}
+      >
+        <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30 rounded-lg p-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+          <p>Requires a <strong>second phone number</strong> for the caller account.</p>
+          <p>Log in at <ExtLink href="https://my.telegram.org">my.telegram.org</ExtLink> with the second number → API development tools</p>
+          <p>After saving, use <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">/reauth_caller +PHONE</code> in Telegram to authenticate.</p>
+        </div>
+        <EnvField label="API ID" envKey="TELEGRAM_API_ID" entries={entries} onSave={saveEnvKey} />
+        <EnvField label="API Hash" envKey="TELEGRAM_API_HASH" entries={entries} onSave={saveEnvKey} />
+      </ConnectionCard>
+
+      {/* Google — Optional */}
+      <ConnectionCard
+        icon={Cloud}
+        iconColor="bg-blue-500"
+        title="Google Workspace"
+        description="Docs, Drive, Gmail, Calendar, Sheets"
+        configured={setupStatus?.services?.google_calendar}
+      >
+        <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30 rounded-lg p-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+          <p><strong>1.</strong> Go to <ExtLink href="https://console.cloud.google.com/">Google Cloud Console</ExtLink> → create/select a project</p>
+          <p><strong>2.</strong> Enable APIs: <ExtLink href="https://console.cloud.google.com/apis/library/drive.googleapis.com">Drive</ExtLink>, <ExtLink href="https://console.cloud.google.com/apis/library/docs.googleapis.com">Docs</ExtLink>, <ExtLink href="https://console.cloud.google.com/apis/library/gmail.googleapis.com">Gmail</ExtLink>, <ExtLink href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com">Calendar</ExtLink>, <ExtLink href="https://console.cloud.google.com/apis/library/sheets.googleapis.com">Sheets</ExtLink></p>
+          <p><strong>3.</strong> <ExtLink href="https://console.cloud.google.com/apis/credentials">Credentials</ExtLink> → Create OAuth 2.0 Client ID (Desktop app) → Download JSON</p>
+          <p><strong>4.</strong> Upload JSON via the <Link to="/setup" className="text-brand-500 underline">Setup Wizard</Link>, then run <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">/auth_google</code> in Telegram</p>
+        </div>
+        <StatusDot ok={setupStatus?.services?.google_calendar} label={setupStatus?.services?.google_calendar ? 'Credentials JSON uploaded' : 'Not configured — use Setup Wizard to upload JSON'} />
+      </ConnectionCard>
+
+      {/* Groq — Optional */}
+      <ConnectionCard
+        icon={Mic}
+        iconColor="bg-purple-500"
+        title="Groq Transcription"
+        description="Fast cloud voice-to-text — free tier (14,400 req/day)"
+        configured={hasKey('GROQ_API_KEY')}
+      >
+        <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30 rounded-lg p-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+          <p>Go to <ExtLink href="https://console.groq.com/keys">console.groq.com/keys</ExtLink> → sign up free → Create API Key</p>
+          <p>Uses <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">whisper-large-v3-turbo</code> model. Falls back to local Whisper if not set.</p>
+        </div>
+        <EnvField label="Groq API Key" envKey="GROQ_API_KEY" hint="Starts with gsk_" entries={entries} onSave={saveEnvKey} />
+      </ConnectionCard>
+
+      {/* GitHub — Optional */}
+      <ConnectionCard
+        icon={Github}
+        iconColor="bg-gray-800 dark:bg-gray-600"
+        title="GitHub"
+        description="Repo management, issues, PRs — used by update checker"
+        configured={hasKey('GITHUB_TOKEN')}
+      >
+        <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30 rounded-lg p-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+          <p>Go to <ExtLink href="https://github.com/settings/tokens?type=beta">GitHub Settings → Fine-grained tokens</ExtLink></p>
+          <p>Create a token with <strong>Contents</strong> (read) permission for your repos.</p>
+        </div>
+        <EnvField label="GitHub Token" envKey="GITHUB_TOKEN" hint="ghp_ or github_pat_" entries={entries} onSave={saveEnvKey} />
+      </ConnectionCard>
+
+      {/* Ollama — Optional */}
+      <ConnectionCard
+        icon={Database}
+        iconColor="bg-gray-500"
+        title="Ollama (Local LLM)"
+        description="Optional local LLM for heartbeats and cheap tasks"
+        configured={true}
+        testFn={async () => { const r = await fetch('/api/ollama/test', { method: 'POST' }); return r.json() }}
+        testLabel="Test"
+      >
+        <p className="text-xs text-gray-400">Ollama settings are managed in the <button onClick={() => document.querySelector('[data-tab="config"]')?.click()} className="text-brand-500 underline">Configuration</button> tab.</p>
+      </ConnectionCard>
+
+      {/* Restart reminder */}
+      <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl px-4 py-3">
+        <p className="text-xs text-amber-700 dark:text-amber-400">After changing credentials, restart the service to apply.</p>
+        <button onClick={async () => { try { await fetch('/api/service/restart', { method: 'POST' }) } catch {} }}
+          className="flex items-center gap-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg transition-colors">
+          <RefreshCw size={12} /> Restart
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 2: CONFIGURATION (from StructuredConfig)
+// ═══════════════════════════════════════════════════════════════
+function ConfigTab() {
   const [config, setConfig] = useState(null)
   const [raw, setRaw] = useState('')
   const [saving, setSaving] = useState(false)
@@ -104,7 +440,7 @@ function StructuredConfig() {
     setConfig(prev => ({ ...prev, [section]: { ...(prev?.[section] || {}), [key]: value } }))
   }
 
-  const save = async () => {
+  const save = async (andRestart = false) => {
     setSaving(true)
     setMsg('')
     try {
@@ -113,9 +449,17 @@ function StructuredConfig() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: raw }),
       })
-      const d = await r.json()
-      if (r.ok) setMsg('Saved \u2014 restart service to apply')
-      else setMsg(d.detail || 'Save failed')
+      if (r.ok) {
+        if (andRestart) {
+          try { await fetch('/api/service/restart', { method: 'POST' }) } catch {}
+          setMsg('Saved & restarting…')
+        } else {
+          setMsg('Saved — restart to apply')
+        }
+      } else {
+        const d = await r.json()
+        setMsg(d.detail || 'Save failed')
+      }
     } catch (e) { setMsg(e.message) }
     setSaving(false)
   }
@@ -125,53 +469,20 @@ function StructuredConfig() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">General</p>
-        <FieldRow label="Timezone" hint="Used for logs, schedules, and memory timestamps">
+      {/* General */}
+      <Section title="General">
+        <FieldRow label="Timezone" hint="Logs, schedules, memory timestamps">
           <select className={selectCls} value={config.kovo?.timezone || 'Asia/Dubai'} onChange={e => updateField('kovo', 'timezone', e.target.value)}>
-            <option value="Asia/Dubai">Asia/Dubai (UTC+4)</option>
-            <option value="Asia/Riyadh">Asia/Riyadh (UTC+3)</option>
-            <option value="Asia/Kuwait">Asia/Kuwait (UTC+3)</option>
-            <option value="Asia/Qatar">Asia/Qatar (UTC+3)</option>
-            <option value="Asia/Muscat">Asia/Muscat (UTC+4)</option>
-            <option value="Asia/Kolkata">Asia/Kolkata (UTC+5:30)</option>
-            <option value="Asia/Karachi">Asia/Karachi (UTC+5)</option>
-            <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
-            <option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</option>
-            <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
-            <option value="Europe/London">Europe/London (UTC+0)</option>
-            <option value="Europe/Berlin">Europe/Berlin (UTC+1)</option>
-            <option value="Europe/Paris">Europe/Paris (UTC+1)</option>
-            <option value="Europe/Moscow">Europe/Moscow (UTC+3)</option>
-            <option value="Europe/Istanbul">Europe/Istanbul (UTC+3)</option>
-            <option value="US/Eastern">US/Eastern (UTC-5)</option>
-            <option value="US/Central">US/Central (UTC-6)</option>
-            <option value="US/Mountain">US/Mountain (UTC-7)</option>
-            <option value="US/Pacific">US/Pacific (UTC-8)</option>
-            <option value="Australia/Sydney">Australia/Sydney (UTC+11)</option>
-            <option value="UTC">UTC</option>
+            {['Asia/Dubai', 'Asia/Riyadh', 'Asia/Kuwait', 'Asia/Qatar', 'Asia/Muscat', 'Asia/Kolkata', 'Asia/Karachi', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Singapore',
+              'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Europe/Moscow', 'Europe/Istanbul',
+              'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific', 'Australia/Sydney', 'UTC'
+            ].map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
         </FieldRow>
-      </div>
+      </Section>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Ollama (Local LLM)</p>
-        <FieldRow label="URL" hint="Ollama API endpoint">
-          <input className={inputCls} value={config.ollama?.url || ''} onChange={e => updateField('ollama', 'url', e.target.value)} />
-        </FieldRow>
-        <FieldRow label="Model" hint="Default model for cheap tasks">
-          <input className={inputCls} value={config.ollama?.default_model || ''} onChange={e => updateField('ollama', 'default_model', e.target.value)} />
-        </FieldRow>
-        <FieldRow label="Enabled">
-          <select className={selectCls} value={config.ollama?.enabled || 'false'} onChange={e => updateField('ollama', 'enabled', e.target.value)}>
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </FieldRow>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Claude</p>
+      {/* Claude */}
+      <Section title="Claude">
         <FieldRow label="Default model">
           <select className={selectCls} value={config.claude?.default_model || 'sonnet'} onChange={e => updateField('claude', 'default_model', e.target.value)}>
             <option value="sonnet">Sonnet (fast, balanced)</option>
@@ -179,13 +490,29 @@ function StructuredConfig() {
             <option value="haiku">Haiku (quick, cheap)</option>
           </select>
         </FieldRow>
-        <FieldRow label="Timeout" hint="Seconds before Claude CLI times out">
+        <FieldRow label="Timeout" hint="Seconds before CLI times out">
           <input type="number" className={inputCls} value={config.claude?.timeout || '300'} onChange={e => updateField('claude', 'timeout', e.target.value)} />
         </FieldRow>
-      </div>
+      </Section>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Heartbeat Schedules</p>
+      {/* Ollama */}
+      <Section title="Ollama (Local LLM)">
+        <FieldRow label="Enabled">
+          <select className={selectCls} value={config.ollama?.enabled || 'false'} onChange={e => updateField('ollama', 'enabled', e.target.value)}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </FieldRow>
+        <FieldRow label="URL" hint="Ollama API endpoint">
+          <input className={inputCls} value={config.ollama?.url || ''} onChange={e => updateField('ollama', 'url', e.target.value)} />
+        </FieldRow>
+        <FieldRow label="Model" hint="Default model for cheap tasks">
+          <input className={inputCls} value={config.ollama?.default_model || ''} onChange={e => updateField('ollama', 'default_model', e.target.value)} />
+        </FieldRow>
+      </Section>
+
+      {/* Heartbeat Schedules */}
+      <Section title="Heartbeat Schedules" defaultOpen={false}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {[
             { job: 'Archive logs', schedule: 'Daily 3:00 AM', desc: 'Archive daily logs older than 30 days' },
@@ -201,25 +528,12 @@ function StructuredConfig() {
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-400 italic">All schedules use the configured timezone. Manual triggers available on the Heartbeat page.</p>
-      </div>
+        <p className="text-xs text-gray-400 italic">All schedules use the configured timezone. Manual triggers on the Heartbeat page.</p>
+      </Section>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Security Audit</p>
-        <FieldRow label="Enabled">
-          <select className={selectCls} value={config.security_audit?.enabled || 'true'} onChange={e => updateField('security_audit', 'enabled', e.target.value)}>
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </FieldRow>
-        <FieldRow label="Schedule" hint="Day + time (e.g. sun 07:00)">
-          <input className={inputCls} value={config.security_audit?.schedule || 'sun 07:00'} onChange={e => updateField('security_audit', 'schedule', e.target.value)} placeholder="sun 07:00" />
-        </FieldRow>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Transcription</p>
-        <FieldRow label="Whisper model" hint="Local fallback model (base, small, medium, large)">
+      {/* Transcription */}
+      <Section title="Transcription" defaultOpen={false}>
+        <FieldRow label="Whisper model" hint="Local fallback model">
           <select className={selectCls} value={config.transcription?.whisper_model || 'base'} onChange={e => updateField('transcription', 'whisper_model', e.target.value)}>
             <option value="base">base (fast, ~150MB)</option>
             <option value="small">small (balanced, ~460MB)</option>
@@ -227,49 +541,50 @@ function StructuredConfig() {
             <option value="large">large (best, ~3GB)</option>
           </select>
         </FieldRow>
-        <p className="text-xs text-gray-400">Primary: Groq API (configured in .env). Fallback: local Whisper model above.</p>
-      </div>
+        <p className="text-xs text-gray-400">Primary: Groq API (set in Connections tab). Fallback: local Whisper.</p>
+      </Section>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Memory Auto-Extract</p>
-        <FieldRow label="Schedule" hint="When to run daily extraction (24h format)">
-          <input className={inputCls} value={config.memory?.auto_extract?.schedule || config.memory?.schedule || '23:00'} onChange={e => updateField('memory', 'schedule', e.target.value)} placeholder="23:00" />
-        </FieldRow>
-        <FieldRow label="Dedup threshold" hint="Similarity threshold to skip duplicate learnings (0.0-1.0)">
-          <input type="number" step="0.1" min="0" max="1" className={inputCls} value={config.memory?.auto_extract?.dedup_threshold || config.memory?.dedup_threshold || '0.8'} onChange={e => updateField('memory', 'dedup_threshold', e.target.value)} />
-        </FieldRow>
-        <FieldRow label="Budget (lines)" hint="Max learnings before archiving old entries">
-          <input type="number" className={inputCls} value={config.memory?.structured_store?.memory_budget_lines || config.memory?.memory_budget_lines || '500'} onChange={e => updateField('memory', 'memory_budget_lines', e.target.value)} />
-        </FieldRow>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Voice / TTS</p>
-        <FieldRow label="TTS backend" hint="Text-to-speech engine">
+      {/* Voice / TTS */}
+      <Section title="Voice / TTS" defaultOpen={false}>
+        <FieldRow label="TTS backend">
           <select className={selectCls} value={config.telegram_call?.tts?.backend || config.telegram_call?.backend || 'edge-tts'} onChange={e => updateField('telegram_call', 'backend', e.target.value)}>
             <option value="edge-tts">edge-tts (free, Microsoft Azure)</option>
             <option value="piper">piper (local, fast)</option>
             <option value="elevenlabs">ElevenLabs (premium)</option>
           </select>
         </FieldRow>
-        <FieldRow label="Voice" hint="Voice name for the selected backend">
+        <FieldRow label="Voice name">
           <input className={inputCls} value={config.telegram_call?.tts?.voice || config.telegram_call?.voice || 'en-US-AvaMultilingualNeural'} onChange={e => updateField('telegram_call', 'voice', e.target.value)} />
         </FieldRow>
-      </div>
+      </Section>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase">Gateway</p>
+      {/* Security Audit */}
+      <Section title="Security Audit" defaultOpen={false}>
+        <FieldRow label="Enabled">
+          <select className={selectCls} value={config.security_audit?.enabled || 'true'} onChange={e => updateField('security_audit', 'enabled', e.target.value)}>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </FieldRow>
+        <FieldRow label="Schedule" hint="Day + time (e.g. sun 07:00)">
+          <input className={inputCls} value={config.security_audit?.schedule || 'sun 07:00'} onChange={e => updateField('security_audit', 'schedule', e.target.value)} />
+        </FieldRow>
+      </Section>
+
+      {/* Gateway */}
+      <Section title="Gateway" defaultOpen={false}>
         <FieldRow label="Port">
           <input type="number" className={inputCls} value={config.gateway?.port || '8080'} onChange={e => updateField('gateway', 'port', e.target.value)} />
         </FieldRow>
-      </div>
+      </Section>
 
+      {/* Save buttons */}
       <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
-        <button onClick={save} disabled={saving}
+        <button onClick={() => save(false)} disabled={saving}
           className="flex items-center gap-2 text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-40 transition-colors">
-          <Save size={14} /> {saving ? 'Saving\u2026' : 'Save'}
+          <Save size={14} /> {saving ? 'Saving…' : 'Save'}
         </button>
-        <button onClick={async () => { await save(); try { await fetch('/api/service/restart', { method: 'POST' }) } catch {} setMsg('Saved & restarting\u2026') }} disabled={saving}
+        <button onClick={() => save(true)} disabled={saving}
           className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-1.5 rounded-lg disabled:opacity-40 transition-colors">
           <RefreshCw size={14} /> Save & Restart
         </button>
@@ -295,8 +610,10 @@ function StructuredConfig() {
   )
 }
 
-// ── Backup Management ───────────────────────────────────
-function BackupManager() {
+// ═══════════════════════════════════════════════════════════════
+// TAB 3: BACKUP (kept from BackupManager)
+// ═══════════════════════════════════════════════════════════════
+function BackupTab() {
   const [backups, setBackups] = useState(null)
   const [running, setRunning] = useState(false)
   const [runningTier, setRunningTier] = useState('')
@@ -308,34 +625,24 @@ function BackupManager() {
   const fileInputRef = useRef(null)
 
   const loadBackups = () =>
-    fetch('/api/backup/list')
-      .then(r => r.json())
-      .then(setBackups)
-      .catch(() => setBackups({ backups: [], total_size: '0B' }))
+    fetch('/api/backup/list').then(r => r.json()).then(setBackups).catch(() => setBackups({ backups: [], total_size: '0B' }))
 
   useEffect(() => { loadBackups() }, [])
 
   const runBackup = async (tier) => {
-    setRunning(true)
-    setRunningTier(tier)
-    setMsg('')
+    setRunning(true); setRunningTier(tier); setMsg('')
     try {
       const r = await fetch(`/api/backup?tier=${tier}`, { method: 'POST' })
       const d = await r.json()
-      if (d.ok) setMsg(`${tier === 'full' ? 'Full' : 'Core'} backup created (${d.size || '?'})`)
-      else setMsg(d.error || 'Backup failed')
+      setMsg(d.ok ? `${tier === 'full' ? 'Full' : 'Core'} backup created (${d.size || '?'})` : d.error || 'Failed')
       loadBackups()
-    } catch (e) { setMsg('Backup failed: ' + e.message) }
-    setRunning(false)
-    setRunningTier('')
+    } catch (e) { setMsg('Failed: ' + e.message) }
+    setRunning(false); setRunningTier('')
   }
 
   const deleteBackup = async (filename) => {
     if (!confirm(`Delete ${filename}?`)) return
-    try {
-      await fetch(`/api/backup/${filename}`, { method: 'DELETE' })
-      loadBackups()
-    } catch {}
+    try { await fetch(`/api/backup/${filename}`, { method: 'DELETE' }); loadBackups() } catch {}
   }
 
   const loadManifest = async (filename) => {
@@ -344,58 +651,30 @@ function BackupManager() {
     if (manifests[filename]) return
     try {
       const r = await fetch(`/api/backup/manifest/${filename}`)
-      const d = await r.json()
-      setManifests(prev => ({ ...prev, [filename]: d }))
-    } catch {
-      setManifests(prev => ({ ...prev, [filename]: { error: 'Could not read manifest' } }))
-    }
+      setManifests(prev => ({ ...prev, [filename]: await r.json() }))
+    } catch { setManifests(prev => ({ ...prev, [filename]: { error: 'Could not read manifest' } })) }
   }
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.name.endsWith('.tar.gz') && !file.name.endsWith('.tgz')) {
-      setRestoreResult({ ok: false, output: 'Only .tar.gz backup files are accepted.' })
-      return
+      setRestoreResult({ ok: false, output: 'Only .tar.gz files accepted.' }); return
     }
-    if (!confirm(`Restore from "${file.name}"? This will overlay workspace, config, and reinstall user packages.`)) {
-      fileInputRef.current.value = ''
-      return
-    }
-    setUploading(true)
-    setRestoreResult(null)
-    setMsg('')
+    if (!confirm(`Restore from "${file.name}"?`)) { fileInputRef.current.value = ''; return }
+    setUploading(true); setRestoreResult(null); setMsg('')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
+      const formData = new FormData(); formData.append('file', file)
       const r = await fetch('/api/backup/restore', { method: 'POST', body: formData })
-      const d = await r.json()
-      setRestoreResult(d)
-      if (d.ok) loadBackups()
-    } catch (e) {
-      setRestoreResult({ ok: false, output: `Upload failed: ${e.message}` })
-    }
-    setUploading(false)
-    fileInputRef.current.value = ''
+      const d = await r.json(); setRestoreResult(d); if (d.ok) loadBackups()
+    } catch (e) { setRestoreResult({ ok: false, output: `Upload failed: ${e.message}` }) }
+    setUploading(false); fileInputRef.current.value = ''
   }
 
-  const getTier = (name) => {
-    if (name.includes('-full_') || name.includes('-full.')) return 'full'
-    if (name.includes('-core_') || name.includes('-core.')) return 'core'
-    return 'legacy'
-  }
-
-  const tierBadge = (tier) => {
-    const cls = {
-      core: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700',
-      full: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700',
-      legacy: 'bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700',
-    }
-    return <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium uppercase ${cls[tier] || cls.legacy}`}>{tier}</span>
-  }
+  const getTier = (name) => name.includes('-full') ? 'full' : name.includes('-core') ? 'core' : 'legacy'
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => runBackup('core')} disabled={running}
           className="flex items-center gap-2 text-sm bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
@@ -412,318 +691,182 @@ function BackupManager() {
         </button>
         {msg && <span className="text-xs text-gray-500">{msg}</span>}
       </div>
-      <div className="flex gap-4 text-[11px] text-gray-400">
-        <span>Core = config + brain + packages (~1-5 MB)</span>
-        <span>Full = core + media files (~1-10 GB)</span>
-      </div>
+      <p className="text-[11px] text-gray-400">Core = config + brain + packages (~1-5 MB) · Full = core + media (~1-10 GB)</p>
 
       {restoreResult && (
         <div className={`rounded-lg p-3 text-sm ${restoreResult.ok ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40'}`}>
           <p className={`text-xs font-semibold mb-1 ${restoreResult.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
             {restoreResult.ok ? 'Restore Complete — service restarting...' : 'Restore Failed'}
           </p>
-          {restoreResult.manifest && (
-            <div className="flex gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
-              <span>{restoreResult.manifest.stats?.skills_count || 0} skills</span>
-              <span>{restoreResult.manifest.stats?.memory_days || 0} days memory</span>
-              <span>{restoreResult.manifest.stats?.pip_delta_count || 0} user packages</span>
-            </div>
-          )}
-          {restoreResult.output && (
-            <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed max-h-40 overflow-y-auto">{restoreResult.output}</pre>
-          )}
+          {restoreResult.output && <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">{restoreResult.output}</pre>}
         </div>
       )}
 
       {backups && (
         <div className="space-y-1.5">
-          <p className="text-xs text-gray-400">{backups.backups?.length || 0} backups &middot; {backups.total_size || '0B'} total</p>
+          <p className="text-xs text-gray-400">{backups.backups?.length || 0} backups · {backups.total_size || '0B'} total</p>
           {backups.backups?.length > 0 && (
             <div className="max-h-72 overflow-y-auto space-y-1">
-              {backups.backups.map(b => {
-                const tier = getTier(b.name)
-                const manifest = manifests[b.name]
-                const isExpanded = expandedManifest === b.name
-                return (
-                  <div key={b.name} className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <div className="flex items-center justify-between text-sm p-2.5">
-                      <button onClick={() => loadManifest(b.name)} className="flex items-center gap-2 min-w-0 text-left hover:opacity-70 transition-opacity">
-                        <Archive size={14} className="text-gray-400 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-gray-700 dark:text-gray-300 font-mono text-xs truncate">{b.name}</p>
-                            {tierBadge(tier)}
-                          </div>
-                          {b.date && <p className="text-[10px] text-gray-400">{new Date(b.date).toLocaleString()}</p>}
-                        </div>
-                      </button>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs text-gray-400">{b.size}</span>
-                        <a href={`/api/backup/download/${b.name}`} download className="flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 transition-colors px-2 py-1 rounded hover:bg-brand-50 dark:hover:bg-brand-900/20">
-                          <Download size={12} /> Download
-                        </a>
-                        <button onClick={() => deleteBackup(b.name)} className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete">
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+              {backups.backups.map(b => (
+                <div key={b.name} className="flex items-center justify-between text-sm p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Archive size={14} className="text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-700 dark:text-gray-300 font-mono truncate">{b.name}</p>
+                      {b.date && <p className="text-[10px] text-gray-400">{new Date(b.date).toLocaleString()}</p>}
                     </div>
-                    {isExpanded && manifest && !manifest.error && (
-                      <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-700">
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-2">
-                            <p className="text-gray-400 text-[10px]">Skills</p>
-                            <p className="text-gray-700 dark:text-gray-300 font-semibold">{manifest.stats?.skills_count || 0}</p>
-                          </div>
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-2">
-                            <p className="text-gray-400 text-[10px]">Memory days</p>
-                            <p className="text-gray-700 dark:text-gray-300 font-semibold">{manifest.stats?.memory_days || 0}</p>
-                          </div>
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-2">
-                            <p className="text-gray-400 text-[10px]">User packages</p>
-                            <p className="text-gray-700 dark:text-gray-300 font-semibold">{manifest.stats?.pip_delta_count || 0}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {Object.entries(manifest.auth_status || {}).map(([key, val]) => (
-                            <span key={key} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${val === true ? 'border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : val === 'requires_reauth' ? 'border-yellow-300 dark:border-yellow-700 text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' : 'border-gray-200 dark:border-gray-700 text-gray-400'}`}>{key.replace(/_/g, ' ')}</span>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-2">v{manifest.kovo_version} &middot; {manifest.hostname} &middot; {manifest.backup_date?.split('T')[0]}</p>
-                      </div>
-                    )}
-                    {isExpanded && manifest?.error && (
-                      <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-700">
-                        <p className="text-xs text-gray-400 italic">Legacy backup — no manifest data</p>
-                      </div>
-                    )}
                   </div>
-                )
-              })}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs text-gray-400">{b.size}</span>
+                    <a href={`/api/backup/download/${b.name}`} download className="text-xs text-brand-500 hover:text-brand-600 px-2 py-1 rounded hover:bg-brand-50 dark:hover:bg-brand-900/20">
+                      <Download size={12} />
+                    </a>
+                    <button onClick={() => deleteBackup(b.name)} className="text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-          {(!backups.backups || backups.backups.length === 0) && (
-            <p className="text-xs text-gray-400 italic">No backups yet. Click "Core Backup" to create one.</p>
-          )}
+          {(!backups.backups || backups.backups.length === 0) && <p className="text-xs text-gray-400 italic">No backups yet.</p>}
         </div>
       )}
     </div>
   )
 }
 
-// ── .env Viewer ─────────────────────────────────────────
-function EnvViewer() {
-  const [entries, setEntries] = useState([])
-  const [revealed, setRevealed] = useState({})
-  const [loadError, setLoadError] = useState(null)
-
-  useEffect(() => {
-    fetch('/api/env')
-      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-      .then(d => setEntries(d.entries || []))
-      .catch(e => setLoadError(e.message))
-  }, [])
-
-  if (loadError) return <p className="text-sm text-red-500">Failed to load: {loadError}</p>
-
-  const toggle = (key) => setRevealed(prev => ({ ...prev, [key]: !prev[key] }))
-
-  return (
-    <div className="space-y-1 font-mono text-sm">
-      {entries.length === 0 && <p className="text-gray-400 italic text-sm">No .env file found.</p>}
-      {entries.map((e, i) => {
-        if (e.type === 'comment') return <div key={i} className="text-gray-400 dark:text-gray-600">{e.raw || ''}</div>
-        return (
-          <div key={i} className="flex items-center gap-2">
-            <span className="text-blue-600 dark:text-blue-400 flex-shrink-0">{e.key}</span>
-            <span className="text-gray-400">=</span>
-            <span className="text-yellow-600 dark:text-yellow-300 flex-1">{revealed[e.key] ? e.value : e.masked}</span>
-            <button onClick={() => toggle(e.key)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-1">
-              {revealed[e.key] ? 'hide' : 'show'}
-            </button>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Service Controls ────────────────────────────────────
-function ServiceControls() {
-  const [status, setStatus] = useState(null)
+// ═══════════════════════════════════════════════════════════════
+// TAB 4: SYSTEM
+// ═══════════════════════════════════════════════════════════════
+function SystemTab() {
+  const { theme, toggle } = useTheme()
+  const [serviceStatus, setServiceStatus] = useState(null)
   const [restarting, setRestarting] = useState(false)
   const [restartMsg, setRestartMsg] = useState('')
+  const [info, setInfo] = useState(null)
+  const [entries, setEntries] = useState([])
+  const [revealed, setRevealed] = useState({})
+  const [showEnv, setShowEnv] = useState(false)
 
-  const fetchStatus = () => fetch('/api/service/status').then(r => r.json()).then(setStatus).catch(() => {})
-  useEffect(() => { fetchStatus(); const id = setInterval(fetchStatus, 10000); return () => clearInterval(id) }, [])
+  useEffect(() => {
+    fetch('/api/service/status').then(r => r.json()).then(setServiceStatus).catch(() => {})
+    fetch('/api/system/info').then(r => r.json()).then(setInfo).catch(() => {})
+    fetch('/api/env').then(r => r.json()).then(d => setEntries(d.entries || [])).catch(() => {})
+    const id = setInterval(() => fetch('/api/service/status').then(r => r.json()).then(setServiceStatus).catch(() => {}), 10000)
+    return () => clearInterval(id)
+  }, [])
 
   const restart = async () => {
-    setRestarting(true)
-    setRestartMsg('')
+    setRestarting(true); setRestartMsg('')
     try {
       const r = await fetch('/api/service/restart', { method: 'POST' })
       const d = await r.json()
-      setRestartMsg(d.restarted ? `Restarted ${d.service}` : d.error || 'Failed')
+      setRestartMsg(d.restarted ? 'Restarted' : d.error || 'Failed')
     } catch (e) { setRestartMsg(e.message) }
     setRestarting(false)
-    setTimeout(fetchStatus, 2000)
+    setTimeout(() => fetch('/api/service/status').then(r => r.json()).then(setServiceStatus).catch(() => {}), 2000)
   }
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${status?.active ? 'bg-green-500' : 'bg-red-500'}`} />
-      <span className="text-sm text-gray-700 dark:text-gray-300">
-        {status ? `${status.service} \u2014 ${status.state}` : 'Checking\u2026'}
-      </span>
-      <button onClick={restart} disabled={restarting}
-        className="flex items-center gap-2 text-sm bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 px-3 py-1 rounded-lg disabled:opacity-50 transition-colors ml-auto">
-        <RefreshCw size={14} className={restarting ? 'animate-spin' : ''} />
-        {restarting ? 'Restarting\u2026' : 'Restart'}
-      </button>
-      {restartMsg && <span className="text-xs text-gray-500">{restartMsg}</span>}
-    </div>
-  )
-}
-
-// ── System Info ─────────────────────────────────────────
-function SystemInfo() {
-  const [info, setInfo] = useState(null)
-  const [loadError, setLoadError] = useState(null)
-
-  useEffect(() => {
-    fetch('/api/system/info')
-      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-      .then(setInfo)
-      .catch(e => setLoadError(e.message))
-  }, [])
-
-  if (loadError) return <p className="text-sm text-red-500">Failed to load: {loadError}</p>
-  if (!info) return <div className="animate-pulse"><div className="grid grid-cols-3 gap-3">{[1,2,3].map(i => <div key={i} className="h-14 bg-gray-100 dark:bg-gray-800 rounded-lg" />)}</div></div>
-
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {[
-        { label: 'Python', value: info.python },
-        { label: 'Node', value: info.node },
-        { label: 'Disk', value: info.disk_used_gb != null ? `${info.disk_used_gb}/${info.disk_total_gb} GB (${info.disk_pct}%)` : '\u2014' },
-        { label: 'RAM', value: info.ram_used_gb != null ? `${info.ram_used_gb}/${info.ram_total_gb} GB (${info.ram_pct}%)` : '\u2014' },
-      ].map(({ label, value }) => (
-        <div key={label} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
-          <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-          <p className="text-sm text-gray-700 dark:text-gray-200 font-mono">{value ?? '\u2014'}</p>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Ollama Test ─────────────────────────────────────────
-function OllamaTest() {
-  const [result, setResult] = useState(null)
-  const [testing, setTesting] = useState(false)
-
-  const test = async () => {
-    setTesting(true)
-    setResult(null)
-    try {
-      const r = await fetch('/api/ollama/test', { method: 'POST' })
-      setResult(await r.json())
-    } catch (e) { setResult({ ok: false, error: e.message }) }
-    setTesting(false)
-  }
-
-  return (
-    <div className="flex items-center gap-3">
-      <button onClick={test} disabled={testing}
-        className="text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
-        {testing ? 'Testing\u2026' : 'Test Ollama'}
-      </button>
-      {result && (
-        <span className={`text-sm ${result.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-          {result.ok ? `Online (${result.url})` : result.error || 'Offline'}
-        </span>
-      )}
-    </div>
-  )
-}
-
-// ── Credentials ─────────────────────────────────────────
-function CredentialsSection() {
-  const [status, setStatus] = useState(null)
-  useEffect(() => { fetch('/api/setup/status').then(r => r.json()).then(setStatus).catch(() => {}) }, [])
-
-  return (
-    <div className="flex items-center gap-3 flex-wrap">
-      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${status === null ? 'bg-gray-400' : status.configured ? 'bg-green-500' : 'bg-yellow-500'}`} />
-      <span className="text-sm text-gray-700 dark:text-gray-300">
-        {status === null ? 'Checking\u2026' : status.configured ? 'Configured' : 'Not configured'}
-      </span>
-      {status?.services && (
-        <div className="flex gap-1.5">
-          {[
-            { key: 'telegram_calls', label: 'Calls' },
-            { key: 'google_calendar', label: 'Google' },
-            { key: 'groq', label: 'Groq' },
-          ].map(({ key, label }) => (
-            <span key={key} className={`text-xs px-1.5 py-0.5 rounded-full border ${
-              status.services[key] ? 'border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
-                : 'border-gray-200 dark:border-gray-700 text-gray-400'
-            }`}>{label} {status.services[key] ? '\u2713' : '\u2014'}</span>
-          ))}
-        </div>
-      )}
-      <Link to="/setup" className="text-sm bg-brand-500 hover:bg-brand-600 text-white px-3 py-1 rounded-lg transition-colors ml-auto">
-        {status?.configured ? 'Edit' : 'Configure'}
-      </Link>
-    </div>
-  )
-}
-
-// ── Main Settings Page ──────────────────────────────────
-export default function Settings() {
-  const [version, setVersion] = useState('')
-  useEffect(() => { fetch('/api/status').then(r => r.json()).then(d => setVersion(d.version || '')).catch(() => {}) }, [])
 
   return (
     <div className="space-y-4">
+      {/* Updates */}
+      <Section title="Updates">
+        <UpdateChecker />
+      </Section>
+
+      {/* Service */}
+      <Section title="Service">
+        <div className="flex items-center gap-3">
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${serviceStatus?.active ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            {serviceStatus ? `${serviceStatus.service} — ${serviceStatus.state}` : 'Checking…'}
+          </span>
+          <button onClick={restart} disabled={restarting}
+            className="flex items-center gap-2 text-sm bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 px-3 py-1 rounded-lg disabled:opacity-50 transition-colors ml-auto">
+            <RefreshCw size={14} className={restarting ? 'animate-spin' : ''} />
+            {restarting ? 'Restarting…' : 'Restart'}
+          </button>
+          {restartMsg && <span className="text-xs text-gray-500">{restartMsg}</span>}
+        </div>
+      </Section>
+
+      {/* System Info */}
+      <Section title="System Info" defaultOpen={false}>
+        {info ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Python', value: info.python },
+              { label: 'Node', value: info.node },
+              { label: 'Disk', value: info.disk_used_gb != null ? `${info.disk_used_gb}/${info.disk_total_gb} GB` : '—' },
+              { label: 'RAM', value: info.ram_used_gb != null ? `${info.ram_used_gb}/${info.ram_total_gb} GB` : '—' },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-200 font-mono">{value ?? '—'}</p>
+              </div>
+            ))}
+          </div>
+        ) : <div className="animate-pulse h-14 bg-gray-100 dark:bg-gray-800 rounded-lg" />}
+      </Section>
+
+      {/* Environment (.env) */}
+      <Section title="Environment (.env)" defaultOpen={false}>
+        <div className="space-y-1 font-mono text-sm">
+          {entries.length === 0 && <p className="text-gray-400 italic text-sm">No .env file found.</p>}
+          {entries.map((e, i) => {
+            if (e.type === 'comment') return <div key={i} className="text-gray-400 dark:text-gray-600">{e.raw || ''}</div>
+            return (
+              <div key={i} className="flex items-center gap-2">
+                <span className="text-blue-600 dark:text-blue-400 flex-shrink-0">{e.key}</span>
+                <span className="text-gray-400">=</span>
+                <span className="text-yellow-600 dark:text-yellow-300 flex-1">{revealed[e.key] ? e.value : e.masked}</span>
+                <button onClick={() => setRevealed(prev => ({ ...prev, [e.key]: !prev[e.key] }))} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-1">
+                  {revealed[e.key] ? 'hide' : 'show'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </Section>
+
+      {/* Appearance */}
+      <Section title="Appearance" defaultOpen={false}>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Theme: <strong className="text-gray-900 dark:text-white capitalize">{theme}</strong></p>
+          <button onClick={toggle}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm transition-colors">
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            Switch to {theme === 'dark' ? 'light' : 'dark'}
+          </button>
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN SETTINGS PAGE
+// ═══════════════════════════════════════════════════════════════
+export default function Settings() {
+  const [tab, setTab] = useState('connections')
+  const [version, setVersion] = useState('')
+
+  useEffect(() => { fetch('/api/status').then(r => r.json()).then(d => setVersion(d.version || '')).catch(() => {}) }, [])
+
+  return (
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
         {version && <span className="text-sm text-gray-400 font-mono">v{version}</span>}
       </div>
 
-      <Section title="Updates">
-        <UpdateChecker />
-      </Section>
+      <TabBar active={tab} onChange={setTab} />
 
-      <Section title="Service">
-        <ServiceControls />
-      </Section>
-
-      <Section title="Credentials">
-        <CredentialsSection />
-      </Section>
-
-      <Section title="Configuration">
-        <StructuredConfig />
-      </Section>
-
-      <Section title="Backup & Restore">
-        <BackupManager />
-      </Section>
-
-      <Section title="Environment (.env)" defaultOpen={false}>
-        <EnvViewer />
-      </Section>
-
-      <Section title="System" defaultOpen={false}>
-        <SystemInfo />
-        <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-          <OllamaTest />
-        </div>
-      </Section>
-
-      <Section title="Appearance" defaultOpen={false}>
-        <ThemeToggle />
-      </Section>
+      {tab === 'connections' && <ConnectionsTab />}
+      {tab === 'config' && <ConfigTab />}
+      {tab === 'backup' && <BackupTab />}
+      {tab === 'system' && <SystemTab />}
     </div>
   )
 }

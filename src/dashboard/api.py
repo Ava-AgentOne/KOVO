@@ -504,6 +504,47 @@ async def save_settings(payload: SaveSettingsRequest):
     return {"saved": True}
 
 
+class UpdateEnvRequest(BaseModel):
+    key: str
+    value: str
+
+
+@router.post("/env/update")
+async def update_env(payload: UpdateEnvRequest):
+    """Update a single .env key-value pair. Creates the key if it doesn't exist."""
+    _env = kovo_dir() / "config" / ".env"
+    if not _env.exists():
+        _env.write_text(f"{payload.key}={payload.value}\n")
+        return {"updated": True, "key": payload.key}
+
+    lines = _env.read_text().splitlines()
+    found = False
+    new_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            # Check if it's a commented-out version of this key
+            uncommented = stripped.lstrip("# ")
+            if "=" in uncommented and uncommented.split("=", 1)[0].strip() == payload.key:
+                # Replace commented-out line with the new value
+                new_lines.append(f"{payload.key}={payload.value}")
+                found = True
+                continue
+        if "=" in stripped and not stripped.startswith("#"):
+            k, _, _ = stripped.partition("=")
+            if k.strip() == payload.key:
+                new_lines.append(f"{payload.key}={payload.value}")
+                found = True
+                continue
+        new_lines.append(line)
+
+    if not found:
+        new_lines.append(f"{payload.key}={payload.value}")
+
+    _env.write_text("\n".join(new_lines) + "\n")
+    return {"updated": True, "key": payload.key}
+
+
 @router.get("/env")
 async def get_env():
     """Return .env entries with values masked. Clients can request reveal per key."""
