@@ -498,6 +498,12 @@ async def save_settings(payload: SaveSettingsRequest):
     except Exception as e:
         raise HTTPException(400, f"Invalid YAML: {e}")
     _SETTINGS_PATH.write_text(payload.content, encoding="utf-8")
+    # Invalidate cached config so get() re-reads from disk
+    try:
+        from src.gateway.config import reload as _reload_config
+        _reload_config()
+    except Exception:
+        pass
     return {"saved": True}
 
 

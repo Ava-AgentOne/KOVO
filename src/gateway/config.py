@@ -125,6 +125,17 @@ def _load() -> dict:
 _cfg: dict | None = None
 
 
+def reload() -> None:
+    """Invalidate the cached config — next get() will re-read settings.yaml."""
+    global _cfg
+    _cfg = None
+    try:
+        from src.utils.tz import reset_cache
+        reset_cache()
+    except Exception:
+        pass
+
+
 def get() -> dict:
     global _cfg
     if _cfg is None:
