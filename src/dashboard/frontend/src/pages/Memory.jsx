@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Pencil, FileText, BookOpen, Brain, Loader2 } from 'lucide-react'
 
-const WORKSPACE_FILES = ['MEMORY.md', 'SOUL.md', 'USER.md', 'IDENTITY.md', 'AGENTS.md', 'TOOLS.md', 'HEARTBEAT.md']
+const WORKSPACE_FILES = ['MEMORY.md', 'SOUL.md', 'USER.md']
 
 function renderMarkdown(text) {
   if (!text) return ''
