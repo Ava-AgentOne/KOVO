@@ -777,7 +777,7 @@ async def security_run():
     async def _run_audit():
         results = {}
         findings = []
-        timestamp = datetime.now().isoformat()
+        timestamp = _tz_now().isoformat()
 
         # ── System baseline checks ────────────────────────────────
         # Package count
