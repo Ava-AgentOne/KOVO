@@ -14,6 +14,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
+from src.utils.platform import data_path
 from src.utils.tz import get_tz as _get_configured_tz, today as _tz_today
 
 
@@ -359,7 +360,7 @@ class KovoAgent:
             prefix = "Urgent message from Kovo: " if urgent else ""
             mp3_path = await self.tts.speak(
                 prefix + message,
-                output_path="/opt/kovo/data/audio/call_audio.mp3",
+                output_path=str(data_path() / "audio" / "call_audio.mp3"),
             )
         except Exception as e:
             log.error("TTS failed: %s", e)

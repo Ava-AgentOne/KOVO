@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from src.utils.platform import config_path
 
 log = logging.getLogger(__name__)
 
@@ -17,8 +18,8 @@ _SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
-_CREDS_FILE = Path("/opt/kovo/config/google-credentials.json")
-_TOKEN_FILE = Path("/opt/kovo/config/google-token.json")
+_CREDS_FILE = config_path() / "google-credentials.json"
+_TOKEN_FILE = config_path() / "google-token.json"
 
 
 class GoogleAPIError(Exception):

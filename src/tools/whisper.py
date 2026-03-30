@@ -12,10 +12,11 @@ import logging
 import subprocess
 from functools import partial
 from pathlib import Path
+from src.utils.platform import data_path
 
 log = logging.getLogger(__name__)
 
-_AUDIO_DIR = Path("/opt/kovo/data/audio")
+_AUDIO_DIR = data_path() / "audio"
 _AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 

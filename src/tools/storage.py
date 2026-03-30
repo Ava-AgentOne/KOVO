@@ -15,14 +15,15 @@ import os
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from src.utils.platform import data_path, kovo_dir, logs_path
 from typing import Optional
 
 log = logging.getLogger(__name__)
 
 _DUBAI_TZ = timezone(timedelta(hours=4))
-_BASE = Path("/opt/kovo/data")
-_SRC  = Path("/opt/kovo/src")
-_LOGS = Path("/opt/kovo/logs")
+_BASE = data_path()
+_SRC  = kovo_dir() / "src"
+_LOGS = logs_path()
 
 # name → (path, retention_days, tier)  tier=None means "keep, no auto-purge"
 _DIR_CONFIG: dict[str, tuple[Path, int, Optional[int]]] = {

@@ -13,10 +13,11 @@ import asyncio
 import logging
 import os
 from pathlib import Path
+from src.utils.platform import data_path
 
 log = logging.getLogger(__name__)
 
-_SESSION_DIR = Path("/opt/kovo/data")
+_SESSION_DIR = data_path()
 _SESSION_DIR.mkdir(parents=True, exist_ok=True)
 
 

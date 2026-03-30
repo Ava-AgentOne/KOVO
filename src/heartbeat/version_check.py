@@ -6,11 +6,12 @@ import json
 import logging
 import subprocess
 from pathlib import Path
+from src.utils.platform import scripts_path, data_path
 
 log = logging.getLogger(__name__)
 
-_UPDATE_SCRIPT = Path("/opt/kovo/scripts/update.sh")
-_NOTIFIED_FILE = Path("/opt/kovo/data/.update_notified")
+_UPDATE_SCRIPT = scripts_path() / "update.sh"
+_NOTIFIED_FILE = data_path() / ".update_notified"
 
 
 async def check_and_notify(tg_bot, owner_user_id: int) -> dict | None:
@@ -60,7 +61,7 @@ async def check_and_notify(tg_bot, owner_user_id: int) -> dict | None:
             message += f"\n📅 {commit_date}"
         message += (
             f"\n\nUpdate from the dashboard (Settings → Updates) "
-            f"or run:\n`bash /opt/kovo/scripts/update.sh --apply`"
+            f"or run:\n`bash {scripts_path()}/update.sh --apply`"
         )
 
         try:

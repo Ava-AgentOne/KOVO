@@ -7,10 +7,11 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
+from src.utils.platform import data_path
 
 log = logging.getLogger(__name__)
 
-_SCREENSHOT_DIR = Path("/opt/kovo/data/screenshots")
+_SCREENSHOT_DIR = data_path() / "screenshots"
 _SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 

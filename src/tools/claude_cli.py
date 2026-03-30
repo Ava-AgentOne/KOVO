@@ -9,6 +9,7 @@ import signal
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from src.utils.platform import kovo_dir, workspace_path
 
 # Set when our own process receives SIGTERM — used to skip the 143 retry
 # so a shutdown isn't delayed by a second full claude invocation.
@@ -27,8 +28,8 @@ signal.signal(signal.SIGTERM, _on_sigterm)
 
 log = logging.getLogger(__name__)
 
-_SETTINGS_FILE = Path("/opt/kovo/.claude/settings.local.json")
-_MEMORY_DIR = Path("/opt/kovo/workspace/memory")
+_SETTINGS_FILE = kovo_dir() / ".claude" / "settings.local.json"
+_MEMORY_DIR = workspace_path() / "memory"
 _DUBAI_TZ = timezone(timedelta(hours=4))
 
 # Optional StructuredStore reference — set by gateway after init

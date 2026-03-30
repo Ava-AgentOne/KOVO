@@ -12,6 +12,7 @@ import re
 from pathlib import Path
 
 import httpx
+from src.utils.platform import data_path
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ _HEADERS = {
         "Chrome/124.0 Safari/537.36"
     )
 }
-_SAVE_DIR = Path("/opt/kovo/data/images")
+_SAVE_DIR = data_path() / "images"
 _TIMEOUT = 15
 
 

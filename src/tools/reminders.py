@@ -9,6 +9,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from src.utils.platform import data_path
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class ReminderManager:
     """Manages reminders in SQLite. Thread-safe via per-call connections."""
 
     def __init__(self, db_path: Path | str | None = None):
-        self.db_path = str(db_path or "/opt/kovo/data/kovo.db")
+        self.db_path = str(db_path or (data_path() / "kovo.db"))
         self._init_table()
 
     def _conn(self) -> sqlite3.Connection:

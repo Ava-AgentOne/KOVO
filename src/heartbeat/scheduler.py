@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from src.utils.platform import data_path
 from src.utils.tz import today as _tz_today
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -214,7 +215,7 @@ class HeartbeatScheduler:
                     if agent and getattr(agent, "caller", None) and getattr(agent, "tts", None):
                         from pathlib import Path
                         import asyncio
-                        audio_dir = Path("/opt/kovo/data/audio")
+                        audio_dir = data_path() / "audio"
                         audio_dir.mkdir(parents=True, exist_ok=True)
                         mp3 = str(audio_dir / f"reminder_{rid}.mp3")
                         await agent.tts.speak(msg[:500], mp3)
