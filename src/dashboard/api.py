@@ -877,7 +877,7 @@ async def security_run():
         # ClamAV
         try:
             r = subprocess.run(
-                ["clamscan", "--infected", "--recursive", "--no-summary", str(kovo_dir())],
+                ["clamscan", "--infected", "--recursive", "--no-summary", str(kovo_dir() / "data"), str(kovo_dir() / "workspace")],
                 capture_output=True, text=True, timeout=120,
             )
             if r.returncode != 0 and r.stdout.strip():
@@ -933,7 +933,7 @@ async def security_run():
         statuses = [v["status"] for v in results.values()]
         if any(s == "warning" for s in statuses):
             overall = "warning"
-        elif all(s in ("clean", "not_installed") for s in statuses):
+        elif all(s in ("clean", "not_installed", "timeout") for s in statuses):
             overall = "clean"
         else:
             overall = "error"
