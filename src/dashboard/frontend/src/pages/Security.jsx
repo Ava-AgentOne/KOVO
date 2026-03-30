@@ -245,10 +245,10 @@ export default function Security() {
     setTimeout(() => setAuditRunning(false), 3000)
   }
 
-  const resetBaseline = async () => {
-    try { await fetch('/api/security/baseline', { method: 'POST' }) } catch {}
+  const clearHistory = async () => {
+    try { await fetch('/api/security/history', { method: 'DELETE' }) } catch {}
     setResetOpen(false)
-    latest.reload()
+    history.reload()
   }
 
   const handleFixComplete = () => {
@@ -268,7 +268,7 @@ export default function Security() {
             onClick={() => setResetOpen(true)}
             className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            <RotateCcw size={14} /> Reset Baseline
+            <RotateCcw size={14} /> Clear History
           </button>
           <button
             onClick={runAudit}
@@ -348,11 +348,11 @@ export default function Security() {
 
       <ConfirmModal
         open={resetOpen}
-        title="Reset Security Baseline?"
-        message="This will recapture the current system state as the new baseline. Any existing deviations will be forgiven."
-        confirmLabel="Reset Baseline"
-        confirmColor="brand"
-        onConfirm={resetBaseline}
+        title="Clear Audit History?"
+        message="This will remove all past audit entries. The latest scan result will be kept."
+        confirmLabel="Clear History"
+        confirmColor="red"
+        onConfirm={clearHistory}
         onCancel={() => setResetOpen(false)}
       />
     </div>

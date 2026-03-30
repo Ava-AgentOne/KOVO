@@ -967,9 +967,17 @@ async def security_run():
 async def security_reset_baseline():
     """Reset the security baseline to the current system state."""
     _SEC_DIR.mkdir(parents=True, exist_ok=True)
-    entry = {"reset_at": datetime.now().isoformat(), "note": "Baseline reset via dashboard"}
+    entry = {"reset_at": _tz_now().isoformat(), "note": "Baseline reset via dashboard"}
     _SEC_BASELINE.write_text(json.dumps(entry, indent=2))
     return {"reset": True}
+
+
+@router.delete("/security/history")
+async def clear_security_history():
+    """Clear all security audit history."""
+    if _SEC_HISTORY.exists():
+        _SEC_HISTORY.write_text(json.dumps({"history": []}, indent=2))
+    return {"cleared": True}
 
 
 # ── Metrics ───────────────────────────────────────────────────────────────────
