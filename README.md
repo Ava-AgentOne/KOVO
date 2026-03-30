@@ -167,7 +167,7 @@ On first run (or when `.env` is unconfigured), the dashboard automatically redir
 
 Credentials are saved to `config/.env` on your machine — never transmitted.
 
-> **Prefer manual setup?** Copy `config/.env.template` to `config/.env` and fill in your tokens, then restart: `sudo systemctl restart kovo`
+> **Prefer manual setup?** Copy `config/.env.template` to `config/.env` and fill in your tokens, then restart the service.
 
 ### Upgrade
 
@@ -175,12 +175,10 @@ KOVO has a built-in update mechanism. From the dashboard (Settings → Updates),
 
 ```bash
 # Check if an update is available
-bash <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
-├── config/scripts/update.sh --check
+bash scripts/update.sh --check
 
 # Apply the update (auto-backup, pull, rebuild, restart)
-bash <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
-├── config/scripts/update.sh --apply
+bash scripts/update.sh --apply
 ```
 
 Updates only trigger on version bumps, not every commit. Your personal data (workspace files, settings, `.env`, database) is never overwritten.
@@ -220,7 +218,7 @@ KOVO ships with built-in skills and supports custom ones:
 KOVO includes built-in security features:
 
 - **Token masking** — all API keys masked in log output
-- **`.env` validation** — fails fast if required vars are missing or placeholder
+- **`.env` validation** — warns if required vars are missing; starts in dashboard-only mode
 - **File permissions** — `.env`, credentials, and DB set to `chmod 600`
 - **Shell blocklist** — dangerous commands blocked or require confirmation
 - **Security audits** — automated port scan, user check, ClamAV, chkrootkit
@@ -232,7 +230,6 @@ KOVO includes built-in security features:
 
 ```
 <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
-├── config/
 ├── config/          # .env, settings.yaml, credentials
 ├── data/            # SQLite DB, security audit data, temp files
 ├── scripts/         # Helper scripts
@@ -288,8 +285,7 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 
 - Check your `TELEGRAM_BOT_TOKEN` is correct in `.env`
 - Verify `OWNER_TELEGRAM_ID` matches your Telegram user ID
-- Check logs: `tail -f <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
-├── config/logs/gateway.log` or `journalctl -u kovo -f`
+- Check logs: `tail -f logs/gateway.log` or `journalctl -u kovo -f` (Linux)
 </details>
 
 <details>
@@ -298,8 +294,7 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 - Verify Claude Code is installed: `claude --version`
 - Check authentication: `claude auth status`
 - Ensure you have an active Claude Max or Pro subscription
-- Check the sandbox permissions: `cat <KOVO_DIR>/              # /opt/kovo (Linux) or ~/.kovo (macOS)
-├── config/.claude/settings.local.json`
+- Check the sandbox permissions: `cat .claude/settings.local.json`
 </details>
 
 <details>
@@ -337,5 +332,7 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 **Built for home labs** · Powered by [Claude Code](https://docs.anthropic.com/en/docs/claude-code) + [FastAPI](https://fastapi.tiangolo.com/) · Chat via [Telegram](https://telegram.org)
 
 Made with 💙 by [Ava-AgentOne](https://github.com/Ava-AgentOne)
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/erumaithi)
 
 </div>
