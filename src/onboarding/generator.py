@@ -71,7 +71,7 @@ async def generate_all(state: dict, workspace_dir: Path, ollama_url: str) -> Non
 
     # Remaining files are pure Python writes — run in executor to stay non-blocking
     await loop.run_in_executor(
-        None, _write_identity, workspace_dir, agent_name, personality, today
+        None, _append_identity_to_soul, workspace_dir, agent_name, personality, today
     )
     await loop.run_in_executor(None, _write_user, workspace_dir, user_profile)
     await loop.run_in_executor(
@@ -188,13 +188,13 @@ def _fallback_soul(
     )
 
 
-def _write_identity(
+def _append_identity_to_soul(
     workspace_dir: Path,
     agent_name: str,
     personality: dict,
     today: str,
 ) -> None:
-    """Write IDENTITY.md — agent name, style, and creation metadata."""
+    """Append agent identity section to SOUL.md."""
     style = personality.get("style", "friendly")
     emoji = _STYLE_EMOJI.get(style, "🤖")
     custom_desc = personality.get("custom_description") or ""
