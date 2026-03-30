@@ -130,7 +130,7 @@ async def _generate_soul(
         f"## Boundaries\n"
         f"- Never share {user_name}'s personal information\n"
         f"- Never make financial transactions without explicit approval\n"
-        f"- Never modify SOUL.md or IDENTITY.md without {user_name}'s permission\n"
+        f"- Never modify SOUL.md without {user_name}'s permission\n"
         f"- Always log actions to daily memory\n\n"
         f"Output ONLY the markdown. No explanation, no code fences."
     )
@@ -183,7 +183,7 @@ def _fallback_soul(
         f"## Boundaries\n"
         f"- Never share {user_name}'s personal information\n"
         f"- Never make financial transactions without explicit approval\n"
-        f"- Never modify SOUL.md or IDENTITY.md without {user_name}'s permission\n"
+        f"- Never modify SOUL.md without {user_name}'s permission\n"
         f"- Always log actions to daily memory"
     )
 
@@ -223,8 +223,19 @@ def _write_identity(
         f"{voice}\n"
     )
 
-    (workspace_dir / "IDENTITY.md").write_text(content)
-    log.info("IDENTITY.md written")
+    # Append identity to SOUL.md instead of writing separate file
+    soul_path = workspace_dir / "SOUL.md"
+    if soul_path.exists():
+        existing = soul_path.read_text()
+        if "## Agent Identity" not in existing:
+            soul_path.write_text(existing.rstrip() + "\n\n---\n\n" + content)
+            log.info("Identity section appended to SOUL.md")
+        else:
+            log.info("SOUL.md already has identity section — skipped")
+    else:
+        # No SOUL.md yet (shouldn't happen, but be safe)
+        (workspace_dir / "IDENTITY.md").write_text(content)
+        log.info("IDENTITY.md written (SOUL.md not found)")
 
 
 def _write_user(workspace_dir: Path, profile: dict) -> None:
