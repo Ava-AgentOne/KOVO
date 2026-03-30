@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Optional
 _DUBAI_TZ = timezone(timedelta(hours=4))
 
 
-def _dubai_today():
+def _tz_today():
     return datetime.now(_DUBAI_TZ).date()
 
 import yaml
@@ -139,7 +139,7 @@ class SubAgentRunner:
             f"- **SOUL**: workspace/agents/{agent.name}/SOUL.md\n"
             f"- **Tools**: {agent.tools}\n"
             f"- **Memory**: workspace/agents/{agent.name}/memory/\n"
-            f"- **Created**: {_dubai_today().isoformat()}\n"
+            f"- **Created**: {_tz_today().isoformat()}\n"
             f"- **Purpose**: {agent.purpose}\n"
         )
 

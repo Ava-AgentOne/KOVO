@@ -24,7 +24,7 @@ from src.telegram.formatting import (
 _DUBAI_TZ = timezone(timedelta(hours=4))
 
 
-def _dubai_today():
+def _tz_today():
     return datetime.now(_DUBAI_TZ).date()
 
 log = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ async def cmd_memory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     from src.telegram.formatting import format_memory_log
     today_log = memory.daily_log()
     if today_log:
-        text = format_memory_log(today_log, _dubai_today())
+        text = format_memory_log(today_log, _tz_today())
     else:
         text = "🧠 No entries in today's log yet."
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=MAIN_KEYBOARD)

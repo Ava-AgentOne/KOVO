@@ -13,8 +13,6 @@ from pathlib import Path
 from src.utils.tz import get_tz, today as _tz_today
 
 
-def _dubai_today() -> date:
-    return _tz_today()
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +42,7 @@ class MemoryManager:
         return self._read(self.workspace / "MEMORY.md")
 
     def daily_log(self, for_date: date | None = None) -> str:
-        d = for_date or _dubai_today()
+        d = for_date or _tz_today()
         path = self.workspace / "memory" / f"{d.isoformat()}.md"
         return self._read(path)
 
@@ -185,7 +183,7 @@ class MemoryManager:
             today_log = self.daily_log()
             if today_log:
                 parts.append("---\n## Today's Activity\n" + today_log)
-            yesterday_log = self.daily_log(_dubai_today() - timedelta(days=1))
+            yesterday_log = self.daily_log(_tz_today() - timedelta(days=1))
             if yesterday_log:
                 parts.append("---\n## Yesterday's Activity\n" + yesterday_log)
             pinned = self.pinned_memory()
@@ -201,7 +199,7 @@ class MemoryManager:
     def flush_to_memory(self, learnings: str) -> None:
         """Append a learning entry to the ## Learnings section of MEMORY.md."""
         mem_path = self.workspace / "MEMORY.md"
-        today = _dubai_today().isoformat()
+        today = _tz_today().isoformat()
         entry = f"- {today}: {learnings.strip()}"
 
         if not mem_path.exists():
@@ -222,7 +220,7 @@ class MemoryManager:
 
     def append_daily_log(self, entry: str, session_label: str | None = None) -> None:
         """Append an entry to today's daily log."""
-        today = _dubai_today()
+        today = _tz_today()
         log_dir = self.workspace / "memory"
         log_dir.mkdir(parents=True, exist_ok=True)
         log_path = log_dir / f"{today.isoformat()}.md"
@@ -242,7 +240,7 @@ class MemoryManager:
         log_dir = self.workspace / "memory"
         archive_dir = log_dir / "archive"
         archive_dir.mkdir(parents=True, exist_ok=True)
-        cutoff = _dubai_today() - timedelta(days=days)
+        cutoff = _tz_today() - timedelta(days=days)
         archived = 0
         for log_file in log_dir.glob("????-??-??.md"):
             try:

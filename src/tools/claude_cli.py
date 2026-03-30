@@ -10,6 +10,7 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from src.utils.platform import kovo_dir, workspace_path
+from src.utils.tz import get_tz as _get_tz
 
 # Set when our own process receives SIGTERM — used to skip the 143 retry
 # so a shutdown isn't delayed by a second full claude invocation.
@@ -30,7 +31,6 @@ log = logging.getLogger(__name__)
 
 _SETTINGS_FILE = kovo_dir() / ".claude" / "settings.local.json"
 _MEMORY_DIR = workspace_path() / "memory"
-_DUBAI_TZ = timezone(timedelta(hours=4))
 
 # Optional StructuredStore reference — set by gateway after init
 _structured_store = None
@@ -73,8 +73,8 @@ def _detect_permission_error(text: str) -> str | None:
 def _log_permission_grant(pattern: str) -> None:
     """Append a permission-grant event to today's daily log."""
     try:
-        today = datetime.now(_DUBAI_TZ).strftime("%Y-%m-%d")
-        timestamp = datetime.now(_DUBAI_TZ).strftime("%H:%M")
+        today = datetime.now(_get_tz()).strftime("%Y-%m-%d")
+        timestamp = datetime.now(_get_tz()).strftime("%H:%M")
         log_file = _MEMORY_DIR / f"{today}.md"
         entry = f"\n- [{timestamp}] 🔑 Permission granted by the owner: `{pattern}`\n"
         with open(log_file, "a") as f:

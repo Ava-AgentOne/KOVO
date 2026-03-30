@@ -16,8 +16,6 @@ from pathlib import Path
 from src.utils.tz import today as _tz_today, now as _tz_now
 
 
-def _dubai_today() -> date:
-    return _tz_today()
 from typing import List
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
@@ -33,7 +31,6 @@ router = APIRouter(prefix="/api")
 def _read_version() -> str:
     try:
         bs = (kovo_dir() / "bootstrap.sh").read_text()
-        import re
         m = re.search(r'KOVO_VERSION="([^"]+)"', bs)
         return m.group(1) if m else "0.0.0"
     except Exception:
@@ -277,8 +274,8 @@ async def list_memory_files(request: Request):
 async def get_today_log(request: Request):
     memory = _get_memory(request)
     if not memory:
-        return {"date": str(_dubai_today()), "content": ""}
-    return {"date": str(_dubai_today()), "content": memory.daily_log()}
+        return {"date": str(_tz_today()), "content": ""}
+    return {"date": str(_tz_today()), "content": memory.daily_log()}
 
 
 @router.get("/memory/{filename}")
@@ -288,7 +285,7 @@ async def get_memory_file(request: Request, filename: str):
         raise HTTPException(503, "Memory not available")
     # Allow workspace root files too
     safe_names = {
-        "MEMORY.md", "SOUL.md", "USER.md", "IDENTITY.md",
+        "MEMORY.md", "SOUL.md", "USER.md",
         "AGENTS.md", "TOOLS.md", "HEARTBEAT.md",
     }
     if filename in safe_names:
@@ -428,7 +425,7 @@ async def update_tool(request: Request, name: str, payload: UpdateToolRequest):
 
 _WORKSPACE_ROOT = kovo_dir() / "workspace"
 _WORKSPACE_WRITEABLE = {
-    "MEMORY.md", "SOUL.md", "USER.md", "IDENTITY.md",
+    "MEMORY.md", "SOUL.md", "USER.md",
     "AGENTS.md", "TOOLS.md", "HEARTBEAT.md",
 }
 

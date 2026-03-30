@@ -17,9 +17,7 @@ log = logging.getLogger(__name__)
 
 
 class MessageClassifier:
-    def __init__(self, claude_client=None, model: str = "claude-sonnet-4-6"):
-        # Parameters kept for API compatibility — classification is keyword-only.
-        pass
+    pass  # No state needed — classification is pure keyword matching
 
     async def classify(self, message: str) -> dict:
         """

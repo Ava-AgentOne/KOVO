@@ -29,8 +29,6 @@ logging.getLogger("apscheduler").setLevel(logging.WARNING)
 # Timezone from settings.yaml
 
 
-def _dubai_today() -> date:
-    return _tz_today()
 
 
 class HeartbeatScheduler:

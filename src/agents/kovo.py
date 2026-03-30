@@ -18,8 +18,6 @@ from src.utils.platform import data_path
 from src.utils.tz import get_tz as _get_configured_tz, today as _tz_today
 
 
-def _dubai_today():
-    return _tz_today()
 
 
 if TYPE_CHECKING:
@@ -162,7 +160,7 @@ class KovoAgent:
             if today_log:
                 parts.append(f"## Today's Activity\n{today_log[-3000:]}")
                 conditional_loaded += 1
-            yesterday_log = self.memory.daily_log(_dubai_today() - timedelta(days=1))
+            yesterday_log = self.memory.daily_log(_tz_today() - timedelta(days=1))
             if yesterday_log and ("yesterday" in msg or "last week" in msg):
                 parts.append(f"## Yesterday's Activity\n{yesterday_log[-1500:]}")
 

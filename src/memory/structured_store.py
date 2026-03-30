@@ -11,10 +11,10 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from src.utils.platform import kovo_dir
+from src.utils.tz import get_tz as _get_tz
 
 log = logging.getLogger(__name__)
 
-_DUBAI_TZ = timezone(timedelta(hours=4))
 _DB_PATH = Path(str(kovo_dir()) + "/data/kovo.db")
 
 _SCHEMA = """\
@@ -201,7 +201,7 @@ class StructuredStore:
             "check_type": check_type,
             "status": status,
             "alerts": json.dumps(alerts) if alerts else None,
-            "recorded_at": datetime.now(_DUBAI_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+            "recorded_at": datetime.now(_get_tz()).strftime("%Y-%m-%d %H:%M:%S"),
         })
 
     def log_permission(self, action: str, pattern: str, command: str | None = None) -> None:
@@ -210,7 +210,7 @@ class StructuredStore:
             "action": action,
             "pattern": pattern,
             "command": command,
-            "recorded_at": datetime.now(_DUBAI_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+            "recorded_at": datetime.now(_get_tz()).strftime("%Y-%m-%d %H:%M:%S"),
         })
 
     def increment_conversation_stats(
