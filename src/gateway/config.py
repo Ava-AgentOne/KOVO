@@ -9,7 +9,7 @@ from pathlib import Path
 import yaml
 from dotenv import load_dotenv
 
-_BASE = Path(__file__).resolve().parents[2]  # /opt/kovo
+_BASE = Path(__file__).resolve().parents[2]  # resolves to kovo_dir()
 _ENV_FILE = _BASE / "config" / ".env"
 _SETTINGS_FILE = _BASE / "config" / "settings.yaml"
 
