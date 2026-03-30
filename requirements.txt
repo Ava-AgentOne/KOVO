@@ -16,7 +16,7 @@ py-tgcalls
 # claude-code is installed via npm, not pip
 
 # Voice — Speech-to-Text
-faster-whisper                   # preferred STT backend
+# faster-whisper                   # preferred STT backend
 openai-whisper                   # fallback STT backend; install with: pip install openai-whisper --no-deps
 
 # Voice — Text-to-Speech

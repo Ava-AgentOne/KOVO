@@ -129,7 +129,8 @@ The built-in web dashboard gives you full visibility into KOVO's state:
 ### One-Line Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Ava-AgentOne/kovo/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Ava-AgentOne/kovo/main/bootstrap.sh -o /tmp/kovo-install.sh
+bash /tmp/kovo-install.sh
 ```
 
 This will:

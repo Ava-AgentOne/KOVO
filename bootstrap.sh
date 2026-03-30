@@ -50,6 +50,14 @@ for arg in "$@"; do
     esac
 done
 
+# ─── Piped-input detection ────────────────────────────────────────
+# When run as `curl ... | bash`, stdin is the script — not the terminal.
+# Detect this and switch to --yes mode so prompts dont silently auto-accept.
+if [[ ! -t 0 ]]; then
+    AUTO_YES=true
+    exec 0</dev/tty 2>/dev/null || true
+fi
+
 # ─── Terminal Colors ──────────────────────────────────────────────
 if [[ -t 1 ]]; then
     BOLD='\033[1m' DIM='\033[2m'
@@ -403,7 +411,7 @@ screen_network() {
     echo -e "    The main API server. Handles Telegram webhooks,"
     echo -e "    the chat WebSocket, and serves the production"
     echo -e "    dashboard. This is the port you'll access KOVO on."
-    echo -e "    Example: ${CYAN}http://$({ hostname -I 2>/dev/null || ipconfig getifaddr en0 2>/dev/null; } | awk '{print $1}' || echo 'your-ip'):8080${NC}"
+    echo -e "    Example: ${CYAN}http://$({ hostname -I 2>/dev/null || ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "localhost"; } | awk '{print $1}' || echo 'your-ip'):8080${NC}"
     echo ""
     echo -e "  ${WHITE}Dashboard dev server${NC} ${DIM}(default: 3000)${NC}"
     echo -e "    Only used during development. The gateway serves"
@@ -631,6 +639,10 @@ install_node_and_structure() {
             [ -f "$KOVO_DIR/repo-tmp/README.md" ] && cp "$KOVO_DIR/repo-tmp/README.md" "$KOVO_DIR/README.md"
             [ -d "$KOVO_DIR/repo-tmp/workspace" ] && cp -r "$KOVO_DIR/repo-tmp/workspace/"* "$KOVO_DIR/workspace/" 2>/dev/null || true
             [ -d "$KOVO_DIR/repo-tmp/assets" ] && cp -r "$KOVO_DIR/repo-tmp/assets/"* "$KOVO_DIR/assets/" 2>/dev/null
+            # Initialize git in KOVO_DIR for update.sh
+            cd "$KOVO_DIR"
+            git init -q
+            git remote add origin "$KOVO_REPO" 2>/dev/null || git remote set-url origin "$KOVO_REPO"
             rm -rf "$KOVO_DIR/repo-tmp"
             ok "Source cloned (src/, scripts/, requirements.txt, docs)"
         else warn "Git clone failed — will be built by Claude Code later"; fi
@@ -1029,7 +1041,7 @@ HCEOF
     if [[ "$OS_TYPE" != "Darwin" ]]; then
         if [[ ! -f /etc/logrotate.d/kovo ]]; then
             sudo tee /etc/logrotate.d/kovo > /dev/null << 'LREOF'
-/opt/kovo/logs/gateway.log {
+$KOVO_DIR/logs/gateway.log {
     daily
     rotate 7
     compress
