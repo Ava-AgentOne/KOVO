@@ -547,7 +547,7 @@ async def update_env(payload: UpdateEnvRequest):
 
 @router.get("/env")
 async def get_env():
-    """Return .env entries with values masked. Clients can request reveal per key."""
+    """Return .env entries with values masked. Use POST /api/env/reveal to get actual values."""
     if not _ENV_PATH.exists():
         return {"entries": []}
     entries = []
@@ -558,10 +558,31 @@ async def get_env():
             continue
         if "=" in line:
             key, _, val = line.partition("=")
-            entries.append({"type": "var", "key": key.strip(), "masked": "•" * min(len(val), 12), "value": val.strip()})
+            val = val.strip()
+            has_value = bool(val) and not val.startswith("#")
+            entries.append({"type": "var", "key": key.strip(), "masked": "•" * min(len(val), 12), "has_value": has_value})
         else:
             entries.append({"type": "comment", "raw": line})
     return {"entries": entries}
+
+
+class RevealEnvRequest(BaseModel):
+    key: str
+
+
+@router.post("/env/reveal")
+async def reveal_env(payload: RevealEnvRequest):
+    """Return the actual value of a single .env key. Separated from GET to avoid bulk exposure."""
+    if not _ENV_PATH.exists():
+        raise HTTPException(404, ".env not found")
+    for line in _ENV_PATH.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#") or "=" not in stripped:
+            continue
+        k, _, v = stripped.partition("=")
+        if k.strip() == payload.key:
+            return {"key": payload.key, "value": v.strip()}
+    raise HTTPException(404, f"Key not found: {payload.key}")
 
 
 # ── Service controls ──────────────────────────────────────────────────────────
@@ -1264,25 +1285,40 @@ class SecurityFixRequest(BaseModel):
 
 @router.post("/security/fix")
 async def security_fix(payload: SecurityFixRequest):
-    """Run a security fix command directly. Fast and deterministic."""
+    """Run a security fix command. Shell metacharacters are blocked."""
+    import shlex
+
+    # Block shell metacharacters — prevents injection via ;, &&, |, $(), etc.
+    SHELL_METACHARS = set(';|&$`><(){}!')
+    cmd = payload.command.strip()
+
+    if any(ch in cmd for ch in SHELL_METACHARS):
+        return {"ok": False, "output": "Command contains shell metacharacters — blocked for security"}
+
     ALLOWED_PREFIXES = [
         "find /tmp", "find /dev/shm",
         "grep ", "apt list", "apt-get",
         "systemctl", "clamscan", "sudo chkrootkit",
-        "sudo apt", "which ", "echo ",
+        "sudo apt-get", "which ", "echo ",
     ]
-    cmd = payload.command.strip()
-    if not any(cmd.startswith(p) for p in ALLOWED_PREFIXES):
+    if not any(cmd.startswith(pfx) for pfx in ALLOWED_PREFIXES):
         return {"ok": False, "output": f"Command not allowed: {cmd[:50]}"}
 
     try:
+        args = shlex.split(cmd)
+    except ValueError as e:
+        return {"ok": False, "output": f"Invalid command syntax: {e}"}
+
+    try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=30,
+            args, capture_output=True, text=True, timeout=30,
         )
         output = (result.stdout.strip() + "\n" + result.stderr.strip()).strip()
         return {"ok": True, "output": output or "(no output)"}
     except subprocess.TimeoutExpired:
         return {"ok": False, "output": "Command timed out (30s)"}
+    except FileNotFoundError:
+        return {"ok": False, "output": f"Command not found: {args[0]}"}
     except Exception as e:
         return {"ok": False, "output": f"Error: {e}"}
 

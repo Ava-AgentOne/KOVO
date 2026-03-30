@@ -174,7 +174,7 @@ function EnvField({ label, envKey, hint, entries, onSave, type = 'text' }) {
     setSaving(false)
   }
 
-  const hasValue = current && current.value && !current.value.startsWith('#')
+  const hasValue = current && current.has_value
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
@@ -206,7 +206,16 @@ function EnvField({ label, envKey, hint, entries, onSave, type = 'text' }) {
             <span className={`text-xs font-mono flex-1 ${hasValue ? 'text-gray-600 dark:text-gray-400' : 'text-gray-300 dark:text-gray-600 italic'}`}>
               {hasValue ? current.masked : 'Not configured'}
             </span>
-            <button onClick={() => { setEditing(true); setValue(hasValue ? current.value : '') }}
+            <button onClick={async () => {
+              setEditing(true)
+              if (hasValue) {
+                try {
+                  const r = await fetch('/api/env/reveal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: envKey }) })
+                  const d = await r.json()
+                  setValue(d.value || '')
+                } catch { setValue('') }
+              } else { setValue('') }
+            }}
               className="text-xs text-brand-500 hover:text-brand-600 px-2 py-1 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors">
               {hasValue ? 'Change' : 'Set up'}
             </button>
@@ -788,8 +797,18 @@ function SystemTab() {
               <div key={i} className="flex items-center gap-2">
                 <span className="text-blue-600 dark:text-blue-400 flex-shrink-0">{e.key}</span>
                 <span className="text-gray-400">=</span>
-                <span className="text-yellow-600 dark:text-yellow-300 flex-1">{revealed[e.key] ? e.value : e.masked}</span>
-                <button onClick={() => setRevealed(prev => ({ ...prev, [e.key]: !prev[e.key] }))} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-1">
+                <span className="text-yellow-600 dark:text-yellow-300 flex-1">{revealed[e.key] || e.masked}</span>
+                <button onClick={async () => {
+                  if (revealed[e.key]) {
+                    setRevealed(prev => ({ ...prev, [e.key]: null }))
+                  } else {
+                    try {
+                      const r = await fetch('/api/env/reveal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: e.key }) })
+                      const d = await r.json()
+                      setRevealed(prev => ({ ...prev, [e.key]: d.value || '(empty)' }))
+                    } catch { setRevealed(prev => ({ ...prev, [e.key]: '(error)' })) }
+                  }
+                }} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-1">
                   {revealed[e.key] ? 'hide' : 'show'}
                 </button>
               </div>
