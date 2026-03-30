@@ -481,7 +481,7 @@ function ConfigTab() {
               'Europe/Zurich', 'Europe/Brussels', 'Europe/Vienna', 'Europe/Warsaw', 'Europe/Prague',
               'Europe/Stockholm', 'Europe/Helsinki', 'Europe/Oslo', 'Europe/Copenhagen',
               // Europe - Eastern
-              'Europe/Moscow', 'Europe/Istanbul', 'Europe/Athens', 'Europe/Bucharest', 'Europe/Kiev',
+              'Europe/Moscow', 'Europe/Istanbul', 'Europe/Athens', 'Europe/Bucharest', 'Europe/Kyiv',
               // Africa
               'Africa/Cairo', 'Africa/Lagos', 'Africa/Johannesburg', 'Africa/Nairobi', 'Africa/Casablanca',
               // Americas - North
@@ -489,7 +489,7 @@ function ConfigTab() {
               'America/Toronto', 'America/Vancouver', 'America/Phoenix',
               // Americas - Central & South
               'America/Mexico_City', 'America/Bogota', 'America/Lima', 'America/Sao_Paulo',
-              'America/Buenos_Aires', 'America/Santiago',
+              'America/Argentina/Buenos_Aires', 'America/Santiago',
               // Pacific & Oceania
               'Australia/Sydney', 'Australia/Melbourne', 'Australia/Perth',
               'Pacific/Auckland', 'Pacific/Honolulu', 'Pacific/Fiji',
