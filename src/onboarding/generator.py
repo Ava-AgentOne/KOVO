@@ -33,11 +33,11 @@ _CITY_TZ = {
     "hong kong": "Asia/Hong_Kong", "singapore": "Asia/Singapore",
     "sydney": "Australia/Sydney", "melbourne": "Australia/Sydney",
     "auckland": "Pacific/Auckland",
-    "new york": "US/Eastern", "boston": "US/Eastern", "miami": "US/Eastern",
-    "chicago": "US/Central", "houston": "US/Central", "dallas": "US/Central",
-    "denver": "US/Mountain", "phoenix": "US/Mountain",
-    "los angeles": "US/Pacific", "san francisco": "US/Pacific", "seattle": "US/Pacific",
-    "toronto": "US/Eastern", "vancouver": "US/Pacific",
+    "new york": "America/New_York", "boston": "America/New_York", "miami": "America/New_York",
+    "chicago": "America/Chicago", "houston": "America/Chicago", "dallas": "America/Chicago",
+    "denver": "America/Denver", "phoenix": "America/Phoenix",
+    "los angeles": "America/Los_Angeles", "san francisco": "America/Los_Angeles", "seattle": "America/Los_Angeles",
+    "toronto": "America/Toronto", "vancouver": "America/Vancouver",
 }
 
 

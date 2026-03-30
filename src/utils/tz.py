@@ -23,10 +23,22 @@ def get_tz():
     return _tz_cache
 
 
+# Legacy aliases → IANA names (zoneinfo doesn't recognize US/* on most systems)
+_ALIASES = {
+    "US/Eastern": "America/New_York",
+    "US/Central": "America/Chicago",
+    "US/Mountain": "America/Denver",
+    "US/Pacific": "America/Los_Angeles",
+}
+
+
 def _parse_tz(name: str):
     """Parse a timezone name into a timezone object.
     Tries zoneinfo first (DST-aware), falls back to fixed offset.
     """
+    # Resolve legacy aliases
+    name = _ALIASES.get(name, name)
+
     # Try zoneinfo (Python 3.9+) — handles DST correctly
     try:
         from zoneinfo import ZoneInfo
