@@ -601,8 +601,6 @@ function BackupTab() {
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState('')
   const [restoreResult, setRestoreResult] = useState(null)
-  const [expandedManifest, setExpandedManifest] = useState(null)
-  const [manifests, setManifests] = useState({})
   const fileInputRef = useRef(null)
 
   const loadBackups = () =>
@@ -626,16 +624,6 @@ function BackupTab() {
     try { await fetch(`/api/backup/${filename}`, { method: 'DELETE' }); loadBackups() } catch {}
   }
 
-  const loadManifest = async (filename) => {
-    if (expandedManifest === filename) { setExpandedManifest(null); return }
-    setExpandedManifest(filename)
-    if (manifests[filename]) return
-    try {
-      const r = await fetch(`/api/backup/manifest/${filename}`)
-      const d = await r.json(); setManifests(prev => ({ ...prev, [filename]: d }))
-    } catch { setManifests(prev => ({ ...prev, [filename]: { error: 'Could not read manifest' } })) }
-  }
-
   const handleUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -652,7 +640,7 @@ function BackupTab() {
     setUploading(false); fileInputRef.current.value = ''
   }
 
-  const getTier = (name) => name.includes('-full') ? 'full' : name.includes('-core') ? 'core' : 'legacy'
+
 
   return (
     <div className="space-y-4">

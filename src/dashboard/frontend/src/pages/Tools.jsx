@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   CheckCircle, XCircle, AlertTriangle,
   Terminal, Globe, Volume2, Database, Brain, Mic,
-  Phone, Cloud, Github, Search, Link2, Bell,
+  Phone, Cloud, Github,
 } from 'lucide-react'
 
 // ── Tool metadata — icons, categories, better descriptions ──────
