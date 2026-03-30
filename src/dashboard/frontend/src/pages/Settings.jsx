@@ -465,7 +465,7 @@ function ConfigTab() {
           <select className={selectCls} value={config.kovo?.timezone || 'Asia/Dubai'} onChange={e => updateField('kovo', 'timezone', e.target.value)}>
             {['Asia/Dubai', 'Asia/Riyadh', 'Asia/Kuwait', 'Asia/Qatar', 'Asia/Muscat', 'Asia/Kolkata', 'Asia/Karachi', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Singapore',
               'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Europe/Moscow', 'Europe/Istanbul',
-              'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific', 'Australia/Sydney', 'UTC'
+              'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Australia/Sydney', 'UTC'
             ].map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
         </FieldRow>
