@@ -1,23 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle, Info, Wrench, Loader2, Play } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
+import useApi from '../hooks/useApi'
 
-function useApi(url, interval = 0) {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const load = () =>
-    fetch(url)
-      .then(r => r.json())
-      .then(d => { setData(d); setLoading(false) })
-      .catch(() => setLoading(false))
-  useEffect(() => {
-    load()
-    if (!interval) return
-    const id = setInterval(load, interval)
-    return () => clearInterval(id)
-  }, [url])
-  return { data, loading, reload: load }
-}
+
 
 function StatusBadge({ status }) {
   if (status === 'clean') return (
@@ -241,6 +227,7 @@ export default function Security() {
   const history = useApi('/api/security/history')
   const [auditRunning, setAuditRunning] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
+  const [showAllHistory, setShowAllHistory] = useState(false)
 
   const runAudit = async () => {
     setAuditRunning(true)
@@ -334,8 +321,9 @@ export default function Security() {
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Audit History</h2>
         {history.data?.history?.length > 0 ? (
+          <>
           <div className="space-y-2">
-            {history.data.history.map((entry, i) => (
+            {(showAllHistory ? history.data.history : history.data.history.slice(0, 10)).map((entry, i) => (
               <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
                   <StatusBadge status={entry.status} />
@@ -347,6 +335,12 @@ export default function Security() {
               </div>
             ))}
           </div>
+          {!showAllHistory && history.data.history.length > 10 && (
+            <button onClick={() => setShowAllHistory(true)} className="w-full text-center text-xs text-brand-500 hover:text-brand-600 py-2 mt-2 border-t border-gray-100 dark:border-gray-800">
+              Show all {history.data.history.length} entries
+            </button>
+          )}
+          </>
         ) : (
           <p className="text-sm text-gray-400 italic">No audit history yet.</p>
         )}

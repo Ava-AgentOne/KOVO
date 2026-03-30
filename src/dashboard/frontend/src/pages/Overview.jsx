@@ -1,29 +1,15 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Cpu, MemoryStick, HardDrive, Clock, Shield, MessageSquare,
+  Cpu, MemoryStick, HardDrive, Clock, MessageSquare,
   RefreshCw, Trash2, Save, RotateCcw, Settings as SettingsIcon,
   ScrollText,
 } from 'lucide-react'
 import StatusCard from '../components/StatusCard'
+import useApi from '../hooks/useApi'
 import ConfirmModal from '../components/ConfirmModal'
 
-function useApi(url, interval = 10000) {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  useEffect(() => {
-    const fetch_ = () =>
-      fetch(url)
-        .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
-        .then(d => { setData(d); setLoading(false); setError(null) })
-        .catch(e => { setLoading(false); setError(e.message) })
-    fetch_()
-    const id = setInterval(fetch_, interval)
-    return () => clearInterval(id)
-  }, [url, interval])
-  return { data, loading, error }
-}
+
 
 function SimpleMarkdown({ text }) {
   if (!text) return null

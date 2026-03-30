@@ -221,10 +221,12 @@ function EnvField({ label, envKey, hint, entries, onSave, type = 'text' }) {
 function ConnectionsTab() {
   const [entries, setEntries] = useState([])
   const [setupStatus, setSetupStatus] = useState(null)
+  const [ollamaOk, setOllamaOk] = useState(false)
 
   useEffect(() => {
     fetch('/api/env').then(r => r.json()).then(d => setEntries(d.entries || [])).catch(() => {})
     fetch('/api/setup/status').then(r => r.json()).then(setSetupStatus).catch(() => {})
+    fetch('/api/status').then(r => r.json()).then(d => setOllamaOk(d.ollama === true)).catch(() => {})
   }, [])
 
   const saveEnvKey = async (key, value) => {
@@ -344,7 +346,7 @@ function ConnectionsTab() {
         iconColor="bg-gray-500"
         title="Ollama (Local LLM)"
         description="Optional local LLM for heartbeats and cheap tasks"
-        configured={true}
+        configured={ollamaOk}
         testFn={async () => { const r = await fetch('/api/ollama/test', { method: 'POST' }); return r.json() }}
         testLabel="Test"
       >
