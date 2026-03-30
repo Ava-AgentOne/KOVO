@@ -1100,6 +1100,12 @@ LREOF
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>KOVO_DIR</key>
+        <string>$KOVO_DIR</string>
+$(printf "%b" "$env_args")
+    </dict>
     <key>StandardOutPath</key>
     <string>$KOVO_DIR/logs/gateway.log</string>
     <key>StandardErrorPath</key>
