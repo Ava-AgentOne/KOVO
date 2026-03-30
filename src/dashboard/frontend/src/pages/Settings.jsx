@@ -255,7 +255,7 @@ function ConnectionsTab() {
 
   const hasKey = (key) => {
     const e = entries.find(x => x.key === key)
-    return e && e.value && !e.value.startsWith('#') && e.value.length > 3
+    return e && e.has_value
   }
 
   return (
