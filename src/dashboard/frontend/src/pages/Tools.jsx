@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  CheckCircle, XCircle, AlertTriangle, Pencil,
+  CheckCircle, XCircle, AlertTriangle,
   Terminal, Globe, Volume2, Database, Brain, Mic,
   Phone, Cloud, Github, Search, Link2, Bell,
 } from 'lucide-react'
@@ -74,61 +74,10 @@ function ToolCard({ tool }) {
   )
 }
 
-function RawEditor({ onClose }) {
-  const [content, setContent] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState('')
-
-  useEffect(() => {
-    fetch('/api/workspace/TOOLS.md')
-      .then(r => r.json())
-      .then(d => setContent(d.content || ''))
-      .catch(() => setContent('Error loading file.'))
-  }, [])
-
-  const save = async () => {
-    setSaving(true)
-    setMsg('')
-    try {
-      const r = await fetch('/api/workspace/TOOLS.md', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      })
-      if (r.ok) setMsg('Saved')
-      else { const err = await r.json().catch(() => ({})); setMsg(err.detail || 'Save failed') }
-    } catch (e) { setMsg(e.message) }
-    setSaving(false)
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl w-full max-w-3xl flex flex-col" style={{ height: '80vh' }}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Edit TOOLS.md</h3>
-          <div className="flex items-center gap-3">
-            {msg && <span className="text-xs text-gray-500">{msg}</span>}
-            <button onClick={save} disabled={saving} className="text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1 rounded-lg disabled:opacity-50 transition-colors">
-              {saving ? 'Saving\u2026' : 'Save'}
-            </button>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none">&times;</button>
-          </div>
-        </div>
-        <textarea
-          className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 font-mono leading-relaxed resize-none focus:outline-none rounded-b-xl"
-          value={content}
-          onChange={e => setContent(e.target.value)}
-          spellCheck={false}
-        />
-      </div>
-    </div>
-  )
-}
-
 export default function Tools() {
   const [tools, setTools] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showRaw, setShowRaw] = useState(false)
+  
 
   const fetchTools = () => {
     fetch('/api/tools')
@@ -163,12 +112,7 @@ export default function Tools() {
             </p>
           )}
         </div>
-        <button
-          onClick={() => setShowRaw(true)}
-          className="flex items-center gap-1.5 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          <Pencil size={12} /> Edit TOOLS.md
-        </button>
+
       </div>
 
       {loading && (
@@ -196,7 +140,7 @@ export default function Tools() {
         </div>
       )}
 
-      {showRaw && <RawEditor onClose={() => { setShowRaw(false); fetchTools() }} />}
+      
     </div>
   )
 }
