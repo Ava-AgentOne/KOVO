@@ -180,8 +180,8 @@ export default function Tools() {
       {grouped.map(cat => (
         <div key={cat.id}>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{cat.label}</h2>
-            <span className="text-[10px] text-gray-300 dark:text-gray-600">{cat.desc}</span>
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">{cat.label}</h2>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{cat.desc}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {cat.tools.map(tool => <ToolCard key={tool.name} tool={tool} />)}
