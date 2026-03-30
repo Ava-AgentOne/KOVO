@@ -821,7 +821,7 @@ async def security_run():
         suid_count = 0
         try:
             r = subprocess.run(
-                ["find", "/", "-perm", "-4000", "-type", "f"],
+                ["find", "/usr", "/bin", "/sbin", "/lib", "-perm", "-4000", "-type", "f"],
                 capture_output=True, text=True, timeout=30,
             )
             suid_files = [l for l in r.stdout.splitlines() if l.strip()]
@@ -1232,6 +1232,19 @@ async def restore_backup(file: UploadFile = File(...)):
                 capture_output=True, text=True, timeout=300,
             )
         else:
+            # Validate archive contents — reject files outside kovo_dir
+            import tarfile as _tf_check
+            try:
+                with _tf_check.open(tmp_path, "r:gz") as check_tar:
+                    for member in check_tar.getmembers():
+                        # Block absolute paths and path traversal
+                        if member.name.startswith("/") or ".." in member.name:
+                            return {"ok": False, "output": f"Rejected: archive contains unsafe path '{member.name}'"}
+                        # Block files that could backdoor the system
+                        if member.name.endswith((".py") ) and member.name.startswith("src/"):
+                            return {"ok": False, "output": f"Rejected: archive contains source code '{member.name}' — use git pull for code updates"}
+            except Exception as e:
+                return {"ok": False, "output": f"Invalid archive: {e}"}
             result = subprocess.run(
                 ["tar", "xzf", tmp_path, "-C", str(kovo_dir()), "--overwrite"],
                 capture_output=True, text=True, timeout=60,

@@ -1,8 +1,8 @@
 kovo:
   timezone: UTC
-  workspace: /opt/kovo/workspace
-  data_dir: /opt/kovo/data
-  log_dir: /opt/kovo/logs
+  workspace: ${KOVO_DIR}/workspace
+  data_dir: ${KOVO_DIR}/data
+  log_dir: ${KOVO_DIR}/logs
 telegram:
   token: ${TELEGRAM_BOT_TOKEN}
   allowed_users:
@@ -25,7 +25,7 @@ telegram_call:
     backend: edge-tts
     voice: en-US-AvaMultilingualNeural
 google:
-  credentials_file: /opt/kovo/config/google-credentials.json
+  credentials_file: ${KOVO_DIR}/config/google-credentials.json
   scopes:
     - https://www.googleapis.com/auth/drive
     - https://www.googleapis.com/auth/documents
@@ -65,7 +65,7 @@ memory:
     archive_after_days: 90
     model: sonnet
   structured_store:
-    db_path: /opt/kovo/data/kovo.db
+    db_path: ${KOVO_DIR}/data/kovo.db
     max_db_size_mb: 100
     custom_table_prefix: "user_"
     schema_in_prompt: "on_demand"

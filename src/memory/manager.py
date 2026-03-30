@@ -37,9 +37,6 @@ class MemoryManager:
     def user_profile(self) -> str:
         return self._read(self.workspace / "USER.md")
 
-    def identity(self) -> str:
-        return self._read(self.workspace / "IDENTITY.md")
-
     def heartbeat(self) -> str:
         return self._read(self.workspace / "HEARTBEAT.md")
 
