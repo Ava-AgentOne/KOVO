@@ -34,6 +34,18 @@ function SimpleMarkdown({ text }) {
       const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
       return '<span class="text-brand-500 font-mono text-xs font-medium">' + h12 + ':' + m + ' ' + ampm + '</span>';
     })
+    // Parenthetical times (HH:MM) in summaries -> 12h
+    .replace(/\((\d{2}):(\d{2})\)/g, (_, h, m) => {
+      const hr = parseInt(h); const ampm = hr >= 12 ? 'PM' : 'AM';
+      const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+      return '(' + h12 + ':' + m + ' ' + ampm + ')';
+    })
+    // Bare HH:MM times not in brackets (e.g. session summaries)
+    .replace(/(\d{2}):(\d{2})(?= and| -|\)| —)/g, (_, h, m) => {
+      const hr = parseInt(h); const ampm = hr >= 12 ? 'PM' : 'AM';
+      const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+      return h12 + ':' + m + ' ' + ampm;
+    })
     // agent=kovo model=claude/sonnet metadata
     .replace(/agent=(\w+)\s+model=([\w/]+)/g, '<span class="text-gray-400 text-xs">$2</span>')
     // User: and Reply: labels
