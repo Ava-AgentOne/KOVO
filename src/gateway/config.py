@@ -52,6 +52,7 @@ class TokenMaskFilter(logging.Filter):
 
 _REQUIRED_VARS = ["TELEGRAM_BOT_TOKEN", "OWNER_TELEGRAM_ID"]
 
+_RECOMMENDED_VARS = []
 
 class EnvValidationError(Exception):
     pass
