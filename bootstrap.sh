@@ -545,11 +545,15 @@ install_system_packages() {
 
         info "Installing security audit tools..."
         run_with_spin "apt: security tools..." \
-            sudo apt install -y -qq clamav clamav-daemon chkrootkit rkhunter || true
-        sudo systemctl stop clamav-freshclam 2>/dev/null || true
-        sudo freshclam 2>/dev/null || warn "ClamAV definitions update failed"
-        sudo systemctl start clamav-freshclam 2>/dev/null || true
-        ok "Security: ClamAV, chkrootkit, rkhunter"
+            sudo apt install -y -qq clamav chkrootkit rkhunter || true
+        # Update ClamAV definitions in background (can take 5-10 min on first run)
+        if command -v freshclam &>/dev/null; then
+            sudo systemctl stop clamav-freshclam 2>/dev/null || true
+            sudo freshclam --quiet &>/dev/null &
+            ok "Security: ClamAV, chkrootkit, rkhunter (virus DB updating in background)"
+        else
+            ok "Security: chkrootkit, rkhunter (ClamAV not available)"
+        fi
     fi
 
     save_state 5
