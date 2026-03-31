@@ -3,6 +3,90 @@ import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle, Info
 import ConfirmModal from '../components/ConfirmModal'
 import useApi from '../hooks/useApi'
 
+function InstallToolsCard() {
+  const [toolStatus, setToolStatus] = useState(null)
+  const [installing, setInstalling] = useState(false)
+  const [log, setLog] = useState('')
+
+  const checkStatus = async () => {
+    try {
+      const r = await fetch('/api/security/tools-status')
+      const d = await r.json()
+      setToolStatus(d)
+      setInstalling(d.installing)
+      if (d.installing) setLog(d.log)
+    } catch {}
+  }
+
+  useEffect(() => {
+    checkStatus()
+    const id = setInterval(checkStatus, 3000)
+    return () => clearInterval(id)
+  }, [])
+
+  const startInstall = async () => {
+    setInstalling(true)
+    try {
+      await fetch('/api/security/install-tools', { method: 'POST' })
+    } catch {}
+  }
+
+  if (!toolStatus) return null
+
+  const allInstalled = toolStatus.clamav && toolStatus.chkrootkit && toolStatus.rkhunter
+  if (allInstalled && !installing) return null
+
+  const tools = [
+    { name: 'ClamAV', key: 'clamav', desc: 'Antivirus scanner' },
+    { name: 'chkrootkit', key: 'chkrootkit', desc: 'Rootkit detection' },
+    { name: 'rkhunter', key: 'rkhunter', desc: 'Rootkit hunter' },
+  ]
+
+  return (
+    <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Shield size={18} className="text-amber-500" />
+        <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+          Security Tools
+        </h2>
+      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        Install optional security scanning tools for full audit capabilities. This runs in the background and may take a few minutes.
+      </p>
+      <div className="flex flex-wrap gap-3 mb-4">
+        {tools.map(t => (
+          <div key={t.key} className="flex items-center gap-2 text-sm">
+            <span className={`w-2 h-2 rounded-full ${toolStatus[t.key] ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+            <span className={toolStatus[t.key] ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}>
+              {t.name}
+            </span>
+            <span className="text-xs text-gray-400">— {t.desc}</span>
+          </div>
+        ))}
+      </div>
+      {installing ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+            <Loader2 size={14} className="animate-spin" /> Installing...
+          </div>
+          {log && (
+            <pre className="text-xs text-gray-600 dark:text-gray-400 bg-gray-900 dark:bg-black rounded-lg p-3 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
+              {log}
+            </pre>
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={startInstall}
+          className="flex items-center gap-2 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          <Shield size={14} /> Install Security Tools
+        </button>
+      )}
+    </div>
+  )
+}
+
 
 
 function StatusBadge({ status }) {
@@ -280,6 +364,8 @@ export default function Security() {
           </button>
         </div>
       </div>
+
+      <InstallToolsCard />
 
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">

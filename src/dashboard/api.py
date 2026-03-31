@@ -1304,6 +1304,92 @@ async def restore_backup(file: UploadFile = File(...)):
                 pass
 
 
+# ── Security Tools Install ─────────────────────────────────────────
+
+_INSTALL_LOG = kovo_dir() / "logs" / "security-install.log"
+_INSTALL_LOCK = kovo_dir() / "logs" / ".security-install-running"
+
+
+@router.get("/security/tools-status")
+async def security_tools_status():
+    """Check which security tools are installed."""
+    import shutil
+    installing = _INSTALL_LOCK.exists()
+    log_content = ""
+    if _INSTALL_LOG.exists():
+        try:
+            log_content = _INSTALL_LOG.read_text(encoding="utf-8", errors="ignore")[-2000:]
+        except Exception:
+            pass
+    return {
+        "clamav": bool(shutil.which("clamscan")),
+        "chkrootkit": bool(shutil.which("chkrootkit")),
+        "rkhunter": bool(shutil.which("rkhunter")),
+        "installing": installing,
+        "log": log_content if installing else "",
+    }
+
+
+@router.post("/security/install-tools")
+async def security_install_tools():
+    """Install ClamAV, chkrootkit, and rkhunter in the background."""
+    import asyncio
+
+    if _INSTALL_LOCK.exists():
+        return {"ok": False, "error": "Installation already in progress"}
+
+    async def _install():
+        _INSTALL_LOCK.touch()
+        _INSTALL_LOG.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            # Install each tool separately so one failure doesn't block others
+            tools = [
+                ("chkrootkit", ["sudo", "DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y", "-qq", "--no-install-recommends", "chkrootkit"]),
+                ("rkhunter", ["sudo", "DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y", "-qq", "--no-install-recommends", "rkhunter"]),
+                ("clamav", ["sudo", "DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y", "-qq", "--no-install-recommends", "clamav"]),
+            ]
+            with open(_INSTALL_LOG, "w") as lf:
+                for name, cmd in tools:
+                    lf.write(f"Installing {name}...\n")
+                    lf.flush()
+                    try:
+                        env = dict(__import__("os").environ, DEBIAN_FRONTEND="noninteractive")
+                        result = subprocess.run(
+                            cmd, capture_output=True, text=True, timeout=300, env=env,
+                        )
+                        if result.returncode == 0:
+                            lf.write(f"  ✓ {name} installed\n")
+                        else:
+                            lf.write(f"  ✗ {name} failed: {result.stderr[:200]}\n")
+                    except subprocess.TimeoutExpired:
+                        lf.write(f"  ✗ {name} timed out (5min)\n")
+                    except Exception as e:
+                        lf.write(f"  ✗ {name} error: {e}\n")
+                    lf.flush()
+
+                # Stop freshclam service if it auto-started
+                subprocess.run(
+                    ["sudo", "systemctl", "stop", "clamav-freshclam"],
+                    capture_output=True, timeout=10,
+                )
+                subprocess.run(
+                    ["sudo", "systemctl", "disable", "clamav-freshclam"],
+                    capture_output=True, timeout=10,
+                )
+
+                # Update virus DB in background
+                subprocess.Popen(
+                    ["sudo", "freshclam", "--quiet"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                )
+                lf.write("\nDone. Virus definitions updating in background.\n")
+        finally:
+            _INSTALL_LOCK.unlink(missing_ok=True)
+
+    asyncio.create_task(_install())
+    return {"ok": True, "message": "Installation started in background"}
+
+
 # ── Security Fix (direct commands) ────────────────────────────────────────────
 
 class SecurityFixRequest(BaseModel):
