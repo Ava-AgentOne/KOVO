@@ -23,7 +23,6 @@ _SENSITIVE_VARS = [
     "TELEGRAM_BOT_TOKEN",
     "GROQ_API_KEY",
     "GITHUB_TOKEN",
-    "CLAUDE_CODE_OAUTH_TOKEN",
     "TELEGRAM_API_HASH",
 ]
 
@@ -52,7 +51,6 @@ class TokenMaskFilter(logging.Filter):
 # ── Startup environment validation ────────────────────────────────────────────
 
 _REQUIRED_VARS = ["TELEGRAM_BOT_TOKEN", "OWNER_TELEGRAM_ID"]
-_RECOMMENDED_VARS = ["CLAUDE_CODE_OAUTH_TOKEN"]
 
 
 class EnvValidationError(Exception):
