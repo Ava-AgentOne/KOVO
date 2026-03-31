@@ -1,0 +1,68 @@
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
+dist/
+.env
+*.session
+data/audio/
+data/photos/
+data/screenshots/
+data/images/
+*.mp3
+*.wav
+*.ogg
+*.raw
+venv/
+logs/
+*.log
+.DS_Store
+
+# Secrets & config (never commit)
+config/.env
+config/settings.yaml
+config/.env.template
+config/google-credentials.json
+config/google-token.json
+.claude/settings.local.json
+
+# Database
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# Temp data
+data/tmp/
+data/documents/
+data/.sim_reminder_sent
+data/.storage_state.json
+
+# Runtime security audit data
+data/security/
+
+# Backup archives
+data/backups/
+
+# ─── Personal workspace data (NEVER commit) ──────────────────
+# These files accumulate personal information at runtime.
+# The repo ships .template versions; bootstrap copies them on install.
+workspace/USER.md
+workspace/MEMORY.md
+workspace/SOUL.md
+workspace/IDENTITY.md
+workspace/HEARTBEAT.md
+workspace/AGENTS.md
+workspace/TOOLS.md
+
+# Memory archives (contain personal conversation history)
+workspace/memory/
+
+# Runtime state files
+data/*.json
+
+# Dev scratch files (may contain credentials)
+scripts/experiments/
+
+# Update tracking
+data/.update_notified
+CLAUDE.md

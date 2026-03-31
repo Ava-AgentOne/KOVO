@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900 font-sans transition-colors duration-200;
+}
+
+.dark body {
+  @apply bg-gray-950 text-gray-100;
+}
+
+/* Smooth theme transitions */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { @apply bg-gray-100; }
+::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded; }
+.dark ::-webkit-scrollbar-track { @apply bg-gray-900; }
+.dark ::-webkit-scrollbar-thumb { @apply bg-gray-700 rounded; }
+
+/* ── Kovo Logo Animations ─────────────────────────────────────── */
+
+/* Gentle breathing pulse */
+@keyframes breathe {
+  0%, 100% { transform: scale(1.0); }
+  50%      { transform: scale(1.09); }
+}
+
+.kovo-logo {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* Antenna glow pulse */
+@keyframes antennaGlow {
+  0%, 85%, 100% { opacity: 1; }
+  90%           { opacity: 0.2; }
+  92%           { opacity: 1; }
+  94%           { opacity: 0.2; }
+}
+
+.kovo-antenna-glow {
+  animation: antennaGlow 3.5s ease-in-out infinite;
+}
+
+/* Pupil drift — slow look left, pause, center, right, pause, center */
+@keyframes pupilDrift {
+  0%, 100% { transform: translateX(0); }
+  15%      { transform: translateX(-3px); }
+  30%      { transform: translateX(-3px); }
+  45%      { transform: translateX(0); }
+  60%      { transform: translateX(3px); }
+  75%      { transform: translateX(3px); }
+  90%      { transform: translateX(0); }
+}
+
+.kovo-pupil {
+  animation: pupilDrift 6s ease-in-out infinite;
+}
+
+/* Eye blink — squish the whole eye flat vertically */
+@keyframes eyeBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.05); }
+  97%           { transform: scaleY(0.05); }
+}
+
+.kovo-eye {
+  animation: eyeBlink 4s ease-in-out infinite;
+}
+
+/* Thin line that appears during blink */
+@keyframes blinkLine {
+  0%, 92%, 100% { opacity: 0; }
+  95%           { opacity: 1; }
+  97%           { opacity: 1; }
+}
+
+.kovo-blink-line {
+  animation: blinkLine 4s ease-in-out infinite;
+}
+
+
+/* Shooting star streak */
+@keyframes shootingStar {
+  0%   { transform: rotate(var(--angle)) translateX(0); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: rotate(var(--angle)) translateX(-300px); opacity: 0; }
+}
+
+.kovo-shooting-star {
+  position: absolute;
+  width: 80px;
+  height: var(--size, 1.5px);
+  background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.1), transparent);
+  border-radius: 50px;
+  animation: shootingStar var(--duration, 0.8s) linear forwards;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .kovo-logo { animation: none; }
+  .kovo-antenna-glow { animation: none; }
+  .kovo-pupil { animation: none; }
+  .kovo-eye { animation: none; }
+  .kovo-blink-line { animation: none; }
+  .kovo-shooting-star { animation: none; }
+}
+
+/* ── Setup Wizard Animations ──────────────────────────────────── */
+
+/* Floating particles */
+@keyframes particleFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; }
+  25%      { transform: translate(10px, -20px) scale(1.2); opacity: 0.4; }
+  50%      { transform: translate(-5px, -35px) scale(0.8); opacity: 0.15; }
+  75%      { transform: translate(15px, -15px) scale(1.1); opacity: 0.35; }
+}
+
+.kovo-particle {
+  position: absolute;
+  background: #378ADD;
+  border-radius: 50%;
+  animation: particleFloat 8s ease-in-out infinite;
+}
+
+/* Splash entrance — mascot bounces in */
+@keyframes splashEntrance {
+  0%   { opacity: 0; transform: scale(0.3) translateY(40px); }
+  40%  { opacity: 1; transform: scale(1.06) translateY(-4px); }
+  60%  { transform: scale(0.97) translateY(1px); }
+  80%  { transform: scale(1.02) translateY(-1px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+.kovo-splash-entrance {
+  animation: splashEntrance 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+/* Fade up — staggerable */
+@keyframes fadeUp {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.kovo-fade-up {
+  animation: fadeUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Step enter — subtle slide in */
+@keyframes stepEnter {
+  0%   { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.kovo-step-enter {
+  animation: stepEnter 0.35s ease-out forwards;
+}
+
+/* Egg wobble before cracking */
+
+/* Left shell falls away */
+
+/* Right shell falls away */
+
+/* Crack lines appear */
+
+/* Mascot bounce after hatching */

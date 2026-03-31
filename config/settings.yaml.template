@@ -1,0 +1,71 @@
+kovo:
+  timezone: UTC
+  workspace: ${KOVO_DIR}/workspace
+  data_dir: ${KOVO_DIR}/data
+  log_dir: ${KOVO_DIR}/logs
+telegram:
+  token: ${TELEGRAM_BOT_TOKEN}
+  allowed_users:
+    - ${OWNER_TELEGRAM_ID}
+ollama:
+  url: http://<OLLAMA-HOST>:11434
+  default_model: llama3.1:8b
+  enabled: false
+claude:
+  default_model: sonnet
+  memory_flush_model: sonnet
+  timeout: 300
+telegram_call:
+  api_id: ${TELEGRAM_API_ID}
+  api_hash: ${TELEGRAM_API_HASH}
+  session_name: kovo_caller
+  owner_user_id: ${OWNER_TELEGRAM_ID}
+  call_timeout: 30
+  tts:
+    backend: edge-tts
+    voice: en-US-AvaMultilingualNeural
+google:
+  credentials_file: ${KOVO_DIR}/config/google-credentials.json
+  scopes:
+    - https://www.googleapis.com/auth/drive
+    - https://www.googleapis.com/auth/documents
+    - https://www.googleapis.com/auth/gmail.modify
+    - https://www.googleapis.com/auth/calendar
+    - https://www.googleapis.com/auth/spreadsheets
+heartbeat:
+  enabled: false
+  quick_interval: 30
+  full_interval: 6
+  morning_time: "08:00"
+  use_ollama: false
+security_audit:
+  enabled: true
+  schedule: "sun 07:00"   # weekly security scan
+  tools:
+    - clamav
+    - chkrootkit
+    - rkhunter
+transcription:
+  groq_api_key: ${GROQ_API_KEY}
+  whisper_model: base
+dashboard:
+  port: 3000
+  host: 0.0.0.0
+gateway:
+  port: 8080
+  host: 0.0.0.0
+memory:
+  auto_extract:
+    enabled: true
+    confidence_threshold: 0.7
+    max_memories_per_extraction: 20
+    extraction_input_token_cap: 4000
+    consolidation_schedule: "sunday_3am"
+    budget_max_lines: 500
+    archive_after_days: 90
+    model: sonnet
+  structured_store:
+    db_path: ${KOVO_DIR}/data/kovo.db
+    max_db_size_mb: 100
+    custom_table_prefix: "user_"
+    schema_in_prompt: "on_demand"
