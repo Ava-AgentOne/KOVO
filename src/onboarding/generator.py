@@ -298,7 +298,7 @@ def _write_memory(
     content = (
         f"# MEMORY.md\n\n"
         f"## Pinned\n"
-        f"- preferred_language: {profile.get('languages', 'English').split(',')[0].strip()}\n"
+        f"- preferred_language: {(profile.get('languages') or 'English').split(',')[0].strip()}\n"
         f"- timezone: {tz}\n"
         f"- city: {location}\n"
         f"- occupation: {profile.get('occupation', 'Not specified')}\n"
