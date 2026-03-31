@@ -469,6 +469,28 @@ function ServicesPage({ services, onToggle }) {
 
 // ── CORE CREDENTIALS ─────────────────────────────────────────────
 function CorePage({ form, set }) {
+  const [verifying, setVerifying] = useState(false)
+  const [tokenStatus, setTokenStatus] = useState(null)  // null | 'valid' | 'invalid'
+  const [botUsername, setBotUsername] = useState('')
+
+  const verifyToken = async () => {
+    setVerifying(true)
+    setTokenStatus(null)
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${form.telegram_bot_token}/getMe`)
+      const d = await r.json()
+      if (d.ok && d.result?.username) {
+        setTokenStatus('valid')
+        setBotUsername(d.result.username)
+      } else {
+        setTokenStatus('invalid')
+      }
+    } catch {
+      setTokenStatus('invalid')
+    }
+    setVerifying(false)
+  }
+
   return (
     <div className="space-y-5">
       <div className="kovo-fade-up">
@@ -482,8 +504,30 @@ function CorePage({ form, set }) {
         <p><strong>Step 3:</strong> To find your User ID, message <ExtLink href="https://t.me/userinfobot">@userinfobot</ExtLink> on Telegram — it replies with your numeric ID.</p>
       </HelpBox>
 
-      <Field label="Telegram Bot Token" name="telegram_bot_token" value={form.telegram_bot_token} onChange={set} placeholder="1234567890:AABBCCDDeeffgghh..." />
-      <Field label="Your Telegram User ID" name="owner_telegram_id" value={form.owner_telegram_id} onChange={set} placeholder="123456789" />
+      <Field label="Telegram Bot Token" name="telegram_bot_token" value={form.telegram_bot_token} onChange={(n, v) => { set(n, v); setTokenStatus(null) }} placeholder="1234567890:AABBCCDDeeffgghh..." />
+      {form.telegram_bot_token && (
+        <div className="flex items-center gap-2 -mt-1">
+          {tokenStatus === null && (
+            <button type="button" onClick={verifyToken} disabled={verifying}
+              className="text-xs bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-700 px-3 py-1 rounded-lg hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors disabled:opacity-50">
+              {verifying ? 'Checking...' : 'Verify Token'}
+            </button>
+          )}
+          {tokenStatus === 'valid' && (
+            <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              Valid — @{botUsername}
+            </span>
+          )}
+          {tokenStatus === 'invalid' && (
+            <span className="flex items-center gap-1.5 text-xs text-red-500 font-medium">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              Invalid token — check and try again
+            </span>
+          )}
+        </div>
+      )}
+      <Field label="Your Telegram User ID" name="owner_telegram_id" value={form.owner_telegram_id} onChange={set} placeholder="123456789" hint={form.owner_telegram_id && !/^\d{5,15}$/.test(form.owner_telegram_id) ? '⚠ User ID should be a number (5-15 digits)' : ''} />
       <Field label="Webhook URL" name="webhook_url" value={form.webhook_url} onChange={set} placeholder="https://your-domain.com (optional)" hint="Leave empty for polling mode — recommended for home labs" />
 
       <div className="border-t border-gray-100 dark:border-gray-800 pt-5 mt-5 kovo-fade-up">
