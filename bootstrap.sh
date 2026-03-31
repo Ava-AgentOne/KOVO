@@ -521,39 +521,42 @@ install_system_packages() {
         ok "Security: ClamAV (chkrootkit/rkhunter skipped on macOS)"
     else
         # ── Linux: apt ───────────────────────────────────────────
+        # CRITICAL: noninteractive prevents ALL dpkg post-install prompts
+        # Without this, packages like needrestart, postfix, rkhunter hang
+        # waiting for user input when stdin is redirected by run_with_spin
+        export DEBIAN_FRONTEND=noninteractive
+
         info "Updating package lists..."
-        sudo apt update -y -qq 2>&1 | tail -1
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update -y -qq 2>&1 | tail -1
         ok "Package lists updated"
 
         info "Upgrading system packages..."
-        sudo apt upgrade -y -qq 2>&1 | tail -1
+        # --force-confdef/confold: auto-accept config file changes (needrestart, etc.)
+        sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq \
+            -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" 2>&1 | tail -1
         ok "System upgraded"
 
         info "Installing core dependencies..."
         run_with_spin "apt: core packages..." \
-            sudo apt install -y -qq \
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
             python3 python3-venv python3-pip \
             git curl wget jq build-essential sqlite3 ffmpeg \
             htop tmux ca-certificates gnupg || true
         ok "Core packages installed"
 
         info "Installing Redis..."
-        sudo apt install -y -qq redis-tools redis-server 2>&1 | tail -1
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq redis-tools redis-server 2>&1 | tail -1
         sudo systemctl enable --now redis-server 2>/dev/null || true
         if redis-cli ping 2>/dev/null | grep -q PONG; then ok "Redis: running (PONG)"
         else warn "Redis: installed but not responding"; fi
 
-        info "Installing security audit tools..."
-        run_with_spin "apt: security tools..." \
-            sudo apt install -y -qq clamav chkrootkit rkhunter || true
-        # Update ClamAV definitions in background (can take 5-10 min on first run)
-        if command -v freshclam &>/dev/null; then
-            sudo systemctl stop clamav-freshclam 2>/dev/null || true
-            sudo freshclam --quiet &>/dev/null &
-            ok "Security: ClamAV, chkrootkit, rkhunter (virus DB updating in background)"
-        else
-            ok "Security: chkrootkit, rkhunter (ClamAV not available)"
-        fi
+        # Security tools (ClamAV, chkrootkit, rkhunter) are NOT installed here.
+        # Why: clamav depends on clamav-freshclam (300MB virus DB download during
+        # dpkg post-install), rkhunter pulls in ruby + postfix + 30 packages and
+        # runs --propupd (full filesystem scan). Both cause 30-60 min hangs.
+        # Install them AFTER setup via: sudo apt install clamav chkrootkit rkhunter
+        # The dashboard Security page handles "not_installed" gracefully.
+        ok "Security tools: install after setup (sudo apt install clamav chkrootkit rkhunter)"
     fi
 
     save_state 5
