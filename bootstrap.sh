@@ -650,10 +650,16 @@ install_node_and_structure() {
             [ -f "$KOVO_DIR/repo-tmp/README.md" ] && cp "$KOVO_DIR/repo-tmp/README.md" "$KOVO_DIR/README.md"
             [ -d "$KOVO_DIR/repo-tmp/workspace" ] && cp -r "$KOVO_DIR/repo-tmp/workspace/"* "$KOVO_DIR/workspace/" 2>/dev/null || true
             [ -d "$KOVO_DIR/repo-tmp/assets" ] && cp -r "$KOVO_DIR/repo-tmp/assets/"* "$KOVO_DIR/assets/" 2>/dev/null
-            # Initialize git in KOVO_DIR for update.sh
+            # Copy full git history from clone (enables update.sh and version detection)
+            cp -r "$KOVO_DIR/repo-tmp/.git" "$KOVO_DIR/.git"
+            # Copy root-level files that aren't in src/ or scripts/
+            for f in bootstrap.sh .gitignore LICENSE kovo-logo.svg; do
+                [ -e "$KOVO_DIR/repo-tmp/$f" ] && cp -r "$KOVO_DIR/repo-tmp/$f" "$KOVO_DIR/$f"
+            done
+            [ -d "$KOVO_DIR/repo-tmp/.github" ] && cp -r "$KOVO_DIR/repo-tmp/.github" "$KOVO_DIR/.github"
+            [ -d "$KOVO_DIR/repo-tmp/tests" ] && cp -r "$KOVO_DIR/repo-tmp/tests" "$KOVO_DIR/tests"
             cd "$KOVO_DIR"
-            git init -q
-            git remote add origin "$KOVO_REPO" 2>/dev/null || git remote set-url origin "$KOVO_REPO"
+            git checkout main 2>/dev/null || git checkout -b main origin/main 2>/dev/null || true
             rm -rf "$KOVO_DIR/repo-tmp"
             ok "Source cloned (src/, scripts/, requirements.txt, docs)"
         else warn "Git clone failed — will be built by Claude Code later"; fi
