@@ -465,12 +465,9 @@ screen_overview() {
     echo -e "  ${BLUE}│${NC} ${PINK}phone-call${NC}         ${BLUE}│${NC} Voice call procedures         ${BLUE}│${NC}"
     echo -e "  ${BLUE}└────────────────────┴──────────────────────────────┘${NC}"
     echo ""
-    echo -e "  ${WHITE}Security${NC} ${DIM}(always included)${NC}"
-    echo -e "  ${BLUE}┌────────────────────┬──────────────────────────────┐${NC}"
-    echo -e "  ${BLUE}│${NC} ${GREEN}ClamAV${NC}             ${BLUE}│${NC} Antivirus scanner            ${BLUE}│${NC}"
-    echo -e "  ${BLUE}│${NC} ${GREEN}chkrootkit${NC}         ${BLUE}│${NC} Rootkit detection            ${BLUE}│${NC}"
-    echo -e "  ${BLUE}│${NC} ${GREEN}rkhunter${NC}           ${BLUE}│${NC} Rootkit hunter               ${BLUE}│${NC}"
-    echo -e "  ${BLUE}└────────────────────┴──────────────────────────────┘${NC}"
+    echo -e "  ${WHITE}Security${NC} ${DIM}(install after setup for full scanning)${NC}"
+    echo -e "  ${DIM}  ClamAV, chkrootkit, rkhunter — optional, installed post-setup${NC}"
+    echo -e "  ${DIM}  Dashboard Security page provides install instructions${NC}"
     echo ""
     echo -e "  ${WHITE}Packages:${NC} ${DIM}Python 3.13 venv, FastAPI, PyTorch CPU,${NC}"
     echo -e "  ${DIM}Playwright, Node.js 22, Redis, ffmpeg, SQLite3${NC}"
@@ -581,7 +578,7 @@ install_node_and_structure() {
                 brew install node@22 2>&1 | tail -3
             else
                 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - 2>&1 | tail -3
-                sudo apt install -y -qq nodejs 2>&1 | tail -1
+                sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs 2>&1 | tail -1
             fi
             ok "Node.js: $(node --version)"
         fi
@@ -591,7 +588,7 @@ install_node_and_structure() {
             brew install node@22 2>&1 | tail -3
         else
             curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - 2>&1 | tail -3
-            sudo apt install -y -qq nodejs 2>&1 | tail -1
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs 2>&1 | tail -1
         fi
         ok "Node.js: $(node --version)"
     fi
@@ -758,7 +755,7 @@ install_python_env() {
     run_with_spin "pip: Playwright..." pip install -q playwright
     run_with_spin "Downloading Chromium..." "$VENV/bin/playwright" install chromium
     if [[ "$OS_TYPE" != "Darwin" ]]; then
-        "$VENV/bin/playwright" install-deps chromium 2>&1 | tail -2
+        sudo DEBIAN_FRONTEND=noninteractive "$VENV/bin/playwright" install-deps chromium 2>&1 | tail -2
     fi
     ok "Playwright + Chromium"
 
@@ -1047,7 +1044,7 @@ HCEOF
     # ── Logrotate + CLAUDE.md ────────────────────────────────────
     if [[ "$OS_TYPE" != "Darwin" ]]; then
         if [[ ! -f /etc/logrotate.d/kovo ]]; then
-            sudo tee /etc/logrotate.d/kovo > /dev/null << 'LREOF'
+            sudo tee /etc/logrotate.d/kovo > /dev/null << LREOF
 $KOVO_DIR/logs/gateway.log {
     daily
     rotate 7
@@ -1121,8 +1118,7 @@ $(printf "%b" "$env_args")
 </plist>
 PLISTEOF
         cp "$KOVO_DIR/launchd/com.kovo.agent.plist" ~/Library/LaunchAgents/com.kovo.agent.plist
-        launchctl load ~/Library/LaunchAgents/com.kovo.agent.plist 2>/dev/null || true
-        ok "com.kovo.agent.plist (loaded + started)"
+        ok "com.kovo.agent.plist"
     else
         info "Systemd service..."
         cat > "$KOVO_DIR/systemd/kovo.service" << SVCEOF
@@ -1146,8 +1142,7 @@ WantedBy=multi-user.target
 SVCEOF
         sudo cp "$KOVO_DIR/systemd/kovo.service" /etc/systemd/system/kovo.service
         sudo systemctl daemon-reload
-        sudo systemctl enable --now kovo
-        ok "kovo.service (enabled + started)"
+        ok "kovo.service"
     fi
 
     # ── Verification ─────────────────────────────────────────────
@@ -1213,6 +1208,17 @@ SVCEOF
         cd "$KOVO_DIR"
     else warn "Dashboard frontend not found — will be built by Claude Code"; fi
 
+    # ── Start the service (AFTER dashboard is built) ────────
+    info "Starting KOVO service..."
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        launchctl load ~/Library/LaunchAgents/com.kovo.agent.plist 2>/dev/null || true
+        ok "Service started (launchd)"
+    else
+        sudo systemctl enable --now kovo
+        ok "Service started (systemd)"
+    fi
+    sleep 2  # give uvicorn time to bind the port
+
     clear_state
     save_state 8
 
@@ -1234,7 +1240,7 @@ SVCEOF
     echo -e "     ${DIM}• Telegram bot token + user ID${NC}"
     echo -e "     ${DIM}• Owner name + LLM preferences${NC}"
     echo -e "     ${DIM}• Optional: Groq, GitHub, Google${NC}"
-    echo -e "     ${DIM}• Build + start the service${NC}"
+    echo -e "     ${DIM}• Review and go!${NC}"
     echo ""
     echo -e "  ${WHITE}Quick commands:${NC}"
     echo -e "  ${DIM}$KOVO_DIR/scripts/health-check.sh${NC}  ${GRAY}status${NC}"
