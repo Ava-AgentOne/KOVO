@@ -1121,7 +1121,8 @@ $(printf "%b" "$env_args")
 </plist>
 PLISTEOF
         cp "$KOVO_DIR/launchd/com.kovo.agent.plist" ~/Library/LaunchAgents/com.kovo.agent.plist
-        ok "com.kovo.agent.plist"
+        launchctl load ~/Library/LaunchAgents/com.kovo.agent.plist 2>/dev/null || true
+        ok "com.kovo.agent.plist (loaded + started)"
     else
         info "Systemd service..."
         cat > "$KOVO_DIR/systemd/kovo.service" << SVCEOF
@@ -1145,7 +1146,8 @@ WantedBy=multi-user.target
 SVCEOF
         sudo cp "$KOVO_DIR/systemd/kovo.service" /etc/systemd/system/kovo.service
         sudo systemctl daemon-reload
-        ok "kovo.service"
+        sudo systemctl enable --now kovo
+        ok "kovo.service (enabled + started)"
     fi
 
     # ── Verification ─────────────────────────────────────────────
