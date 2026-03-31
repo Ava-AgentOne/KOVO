@@ -608,6 +608,13 @@ install_node_and_structure() {
         else fail "Claude Code CLI installation failed"; exit 1; fi
     fi
 
+    # Ensure claude is accessible system-wide (systemd doesn't see ~/.local/bin)
+    if command -v claude &>/dev/null && [[ ! -f /usr/local/bin/claude ]]; then
+        local claude_path="$(command -v claude)"
+        sudo ln -sf "$claude_path" /usr/local/bin/claude
+        ok "Claude CLI symlinked to /usr/local/bin (for systemd)"
+    fi
+
     info "Creating directory tree..."
     if [[ "$OS_TYPE" == "Darwin" ]]; then
         mkdir -p "$KOVO_DIR"
