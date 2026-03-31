@@ -93,12 +93,16 @@ class OnboardingFlow:
 
         phase = self._state.get("phase", "welcome")
         handler = {
-            "welcome":      self._phase_welcome,
-            "naming":       self._phase_naming,
-            "user_profile": self._phase_user_profile,
-            "personality":  self._phase_personality,
-            "confirm":      self._phase_confirm,
-            "generate":     self._phase_generate,
+            "welcome":        self._phase_welcome,
+            "naming":         self._phase_naming,
+            "ask_user_name":  self._phase_ask_user_name,
+            "ask_city":       self._phase_ask_city,
+            "ask_languages":  self._phase_ask_languages,
+            "ask_occupation": self._phase_ask_occupation,
+            "ask_email":      self._phase_ask_email,
+            "personality":    self._phase_personality,
+            "confirm":        self._phase_confirm,
+            "generate":       self._phase_generate,
         }.get(phase)
 
         if handler:
@@ -183,46 +187,63 @@ class OnboardingFlow:
 
     async def _phase_naming(self, message: str, send_fn: SendFn) -> None:
         agent_name = _extract_name(message) or "Assistant"
-        self._set_state({**self._state, "phase": "user_profile", "agent_name": agent_name})
+        self._set_state({**self._state, "phase": "ask_user_name", "agent_name": agent_name})
         await send_fn(
             f"*{agent_name}* — I like it! ✨\n\n"
-            f"Now let me get to know you. Answer these quick questions "
-            f"(all at once or one by one):\n\n"
-            f"1️⃣ What's your name?\n"
-            f"2️⃣ What city do you live in?\n"
-            f"3️⃣ What languages do you speak?\n"
-            f"4️⃣ What do you do? (job, hobby, or just \"student\")\n"
-            f"5️⃣ Email address? (for Google integration — say \"skip\" to skip)"
+            f"Now let me get to know you.\n\n"
+            f"1️⃣ What's your name?"
         )
 
-    async def _phase_user_profile(self, message: str, send_fn: SendFn) -> None:
-        profile = await self._extract_user_profile(message)
-
-        # Re-prompt if critical fields are missing
-        if not profile.get("name"):
-            await send_fn(
-                "I didn't quite catch your name. Could you tell me at least:\n\n"
-                "• Your name\n\n"
-                "(Everything else is optional)"
-            )
+    async def _phase_ask_user_name(self, message: str, send_fn: SendFn) -> None:
+        name = message.strip()
+        if not name or len(name) > 60:
+            await send_fn("Could you tell me your name?")
             return
+        # Capitalize first letter of each word
+        name = " ".join(w.capitalize() for w in name.split()[:3])
+        profile = self._state.get("user_profile") or {}
+        profile["name"] = name
+        self._set_state({**self._state, "phase": "ask_city", "user_profile": profile})
+        await send_fn(f"Nice to meet you, *{name}*!\n\n2️⃣ What city do you live in?")
 
+    async def _phase_ask_city(self, message: str, send_fn: SendFn) -> None:
+        city = message.strip()
+        if city.lower() in ("skip", "/skip", "none", "n/a"):
+            city = None
+        profile = self._state.get("user_profile") or {}
+        profile["city"] = city
+        self._set_state({**self._state, "phase": "ask_languages", "user_profile": profile})
+        await send_fn("3️⃣ What languages do you speak?")
+
+    async def _phase_ask_languages(self, message: str, send_fn: SendFn) -> None:
+        langs = message.strip()
+        if langs.lower() in ("skip", "/skip", "none", "n/a"):
+            langs = "English"
+        profile = self._state.get("user_profile") or {}
+        profile["languages"] = langs
+        self._set_state({**self._state, "phase": "ask_occupation", "user_profile": profile})
+        await send_fn("4️⃣ What do you do? (job, hobby, or just \"student\")")
+
+    async def _phase_ask_occupation(self, message: str, send_fn: SendFn) -> None:
+        occ = message.strip()
+        if occ.lower() in ("skip", "/skip", "none", "n/a"):
+            occ = None
+        profile = self._state.get("user_profile") or {}
+        profile["occupation"] = occ
+        self._set_state({**self._state, "phase": "ask_email", "user_profile": profile})
+        await send_fn("5️⃣ Email address? (for Google integration — say \"skip\" to skip)")
+
+    async def _phase_ask_email(self, message: str, send_fn: SendFn) -> None:
+        email = message.strip()
+        if email.lower() in ("skip", "/skip", "none", "n/a", "no"):
+            email = None
+        profile = self._state.get("user_profile") or {}
+        profile["email"] = email
         self._set_state({**self._state, "phase": "personality", "user_profile": profile})
 
         name = profile.get("name", "—")
-        city = profile.get("city", "—")
-        langs = profile.get("languages", "—")
-        occ = profile.get("occupation", "—")
-        email = profile.get("email") or "skipped"
-
         await send_fn(
-            f"Nice to meet you, *{name}*! Here's what I've got:\n\n"
-            f"👤 {name}\n"
-            f"📍 {city}\n"
-            f"🗣️ {langs}\n"
-            f"💼 {occ}\n"
-            f"📧 {email}\n\n"
-            f"Now the fun part — how should I talk to you?\n\n"
+            f"Got it, *{name}*! Now the fun part — how should I talk to you?\n\n"
             f"🎯 *Professional* — Clean, concise, no fluff\n"
             f"😄 *Friendly* — Casual, warm, like texting a smart friend\n"
             f"😏 *Sarcastic* — Gets things done but with humor\n"
@@ -247,12 +268,67 @@ class OnboardingFlow:
         }
         if any(w in msg_lower for w in confirm_words):
             await self._phase_generate("", send_fn)
-        else:
-            # User wants to change something
-            updates = await self._extract_correction(message)
-            if updates:
-                self._set_state({**self._state, **updates})
+            return
+
+        # Try direct field detection first (faster, no Claude call)
+        updated = self._try_direct_correction(message)
+        if updated:
+            self._set_state({**self._state, **updated})
             await self._send_confirmation(send_fn)
+            return
+
+        # Fall back to Claude extraction for complex corrections
+        updates = await self._extract_correction(message)
+        if updates:
+            self._set_state({**self._state, **updates})
+        await self._send_confirmation(send_fn)
+
+    def _try_direct_correction(self, message: str) -> dict | None:
+        """Try to detect simple field corrections without calling Claude."""
+        msg = message.strip()
+        msg_lower = msg.lower()
+        profile = dict(self._state.get("user_profile") or {})
+        changed = False
+
+        # Email detection
+        email_match = re.search(r'[\w.+-]+@[\w-]+\.[\w.]+', msg)
+        if email_match:
+            profile["email"] = email_match.group()
+            changed = True
+
+        # "my email is X" / "email: X" / "change email to X"
+        for pattern in [r'email\s*(?:is|:|-|to)\s*(.+)', r'mail\s*(?:is|:|-|to)\s*(.+)']:
+            m = re.search(pattern, msg_lower)
+            if m:
+                val = m.group(1).strip()
+                email_in_val = re.search(r'[\w.+-]+@[\w-]+\.[\w.]+', val)
+                if email_in_val:
+                    profile["email"] = email_in_val.group()
+                    changed = True
+
+        # "my name is X" / "name: X" / "call me X"
+        for pattern in [r'(?:my\s+)?name\s*(?:is|:|-|to)\s*(.+)', r'call\s+me\s+(.+)']:
+            m = re.search(pattern, msg_lower)
+            if m:
+                profile["name"] = m.group(1).strip().title()
+                changed = True
+
+        # "city is X" / "I live in X" / "location: X"
+        for pattern in [r'(?:city|location|live\s+in)\s*(?:is|:|-|to)?\s*(.+)']:
+            m = re.search(pattern, msg_lower)
+            if m:
+                profile["city"] = m.group(1).strip().title()
+                changed = True
+
+        # "agent name" / "change name to X" (for the agent)
+        for pattern in [r'(?:agent|bot)\s+name\s*(?:is|:|-|to)\s*(.+)']:
+            m = re.search(pattern, msg_lower)
+            if m:
+                return {"agent_name": m.group(1).strip().title()}
+
+        if changed:
+            return {"user_profile": profile}
+        return None
 
     async def _phase_generate(self, message: str, send_fn: SendFn) -> None:
         # Update state to "generate" while keeping all collected data
