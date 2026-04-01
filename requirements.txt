@@ -8,9 +8,10 @@ PyYAML>=6.0
 
 # Telegram
 python-telegram-bot[webhooks]>=21.0
-pyrogram
+pyrogram==2.0.106
 tgcrypto
-py-tgcalls
+py-tgcalls==2.2.11
+ntgcalls==2.1.0
 
 # AI / Claude
 # claude-code is installed via npm, not pip
