@@ -390,8 +390,8 @@ class KovoAgent:
         agent_used = result.get("agent", self.name)
         entry = (
             f"- [{timestamp}] agent={agent_used} model={model_used}\n"
-            f"  User: {message[:120]}\n"
-            f"  Reply: {result.get('text', '')[:200]}"
+            f"  User: {message[:300]}\n"
+            f"  Reply: {result.get('text', '')[:500]}"
         )
         self.memory.append_daily_log(entry, session_label=f"Session {timestamp}")
 
