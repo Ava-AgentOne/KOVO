@@ -737,6 +737,30 @@ install_python_env() {
         warn "py-tgcalls failed to build (voice calls disabled — other features unaffected)"
     fi
 
+    # Patch py-tgcalls: GroupcallForbidden import incompatible with current Pyrogram
+    if "$VENV/bin/python" -c "import pytgcalls" 2>/dev/null; then
+        "$VENV/bin/python" << 'GCPATCH'
+import glob
+for f in glob.glob("venv/**/pytgcalls/mtproto/*.py", recursive=True):
+    with open(f) as fh:
+        c = fh.read()
+    changed = False
+    for old_imp, cls in [
+        ("pyrogram.errors import GroupcallForbidden", "GroupcallForbidden"),
+        ("hydrogram.errors.exceptions import GroupcallForbidden", "GroupcallForbidden"),
+        ("telethon.errors import GroupcallForbiddenError", "GroupcallForbiddenError"),
+    ]:
+        bare = "from " + old_imp
+        wrapped = "try:\n    from " + old_imp
+        if bare in c and wrapped not in c:
+            c = c.replace(bare, "try:\n    from " + old_imp + "\nexcept ImportError:\n    " + cls + " = Exception")
+            changed = True
+    if changed:
+        with open(f, "w") as fh:
+            fh.write(c)
+GCPATCH
+        ok "py-tgcalls GroupcallForbidden patch applied"
+
     # ── Group 5: PyTorch (optional on macOS) ──────────────────
     progress_bar 5 7
     info "Installing PyTorch..."
