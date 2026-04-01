@@ -331,11 +331,16 @@ def _extract_text(msg) -> str:
 
 
 async def _reply_with_retry(msg, text: str, retries: int = 3, reply_markup=None) -> None:
-    """Send reply_text with retry on transient network errors."""
+    """Send reply_text with Markdown formatting (code blocks, bold, etc.).
+    Falls back to plain text if Markdown parsing fails."""
     import asyncio
-    from telegram.error import NetworkError, TimedOut
+    from telegram.error import NetworkError, TimedOut, BadRequest
     for attempt in range(retries):
         try:
+            await msg.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
+            return
+        except BadRequest:
+            # Markdown parsing failed (unmatched backticks, underscores, etc.)
             await msg.reply_text(text, reply_markup=reply_markup)
             return
         except (NetworkError, TimedOut) as e:
