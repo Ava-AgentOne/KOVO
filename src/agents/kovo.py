@@ -237,6 +237,19 @@ class KovoAgent:
             "Use this whenever the owner asks to see a photo, image, picture, or visual."
         )
 
+        
+        # ── Always: voice call capability ────────────────────────────────
+        parts.append(
+            "## Voice Calls\n"
+            "You can place real Telegram voice calls to the owner.\n"
+            "To make a call, include `[MAKE_CALL: message to speak]` in your response.\n"
+            "Example: `[MAKE_CALL: Good morning Esam, the weather in Al Ain is 35 degrees and sunny]`\n"
+            "The bot will generate TTS audio and ring the owner\'s phone.\n"
+            "If the call is not answered, it automatically falls back to a voice message.\n"
+            "Use this when the owner says \'call me\', \'ring me\', \'phone me\', or asks for a voice call.\n"
+            "Also use for urgent alerts that need immediate attention."
+        )
+
         return "\n\n---\n\n".join(parts)
 
     # ── Keyword classifiers (pure Python, zero cost) ──────────────────────

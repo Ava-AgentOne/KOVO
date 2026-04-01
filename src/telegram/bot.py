@@ -101,6 +101,7 @@ async def _handle_google_auth_code(
 
 _IMAGE_TAG_RE = re.compile(r"\[SEND_IMAGE:\s*(.+?)\]", re.IGNORECASE)
 _REMINDER_RE = re.compile(r"\[SET_REMINDER:\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\]", re.IGNORECASE)
+_CALL_RE = re.compile(r"\[MAKE_CALL:\s*(.+?)\]", re.IGNORECASE)
 _URL_RE = re.compile(r"https?://\S+")
 
 
@@ -185,6 +186,37 @@ async def _handle_reminder_tags(update: Update, response_text: str, context) -> 
         )
 
     return _REMINDER_RE.sub("", response_text).strip()
+
+
+
+async def _handle_call_tags(update: Update, response_text: str, context) -> str:
+    """
+    Parse [MAKE_CALL: message] tags from agent response.
+    Triggers a real Telegram voice call (with voice message fallback).
+    Returns cleaned response text (tags removed).
+    """
+    tags = _CALL_RE.findall(response_text)
+    if not tags:
+        return response_text
+
+    agent = context.bot_data.get("agent")
+    if not agent:
+        return _CALL_RE.sub("", response_text).strip()
+
+    for call_msg in tags:
+        call_msg = call_msg.strip()
+        log.info("MAKE_CALL tag: %r", call_msg[:80])
+        await _safe_action(update.message.chat, ChatAction.TYPING)
+        try:
+            result = await agent.make_call(call_msg, urgent=False)
+            method = result.get("method", "unknown")
+            emoji = "📞" if method == "call" else "🎤"
+            await update.message.reply_text(f"{emoji} {result.get('text', 'Done.')}")
+        except Exception as e:
+            log.error("MAKE_CALL failed: %s", e)
+            await update.message.reply_text(f"❌ Call failed: {e}")
+
+    return _CALL_RE.sub("", response_text).strip()
 
 
 def _ffmpeg(args: list[str]) -> None:
@@ -453,6 +485,7 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Handle any [SEND_IMAGE: ...] or [SET_REMINDER: ...] tags
         response_text = await _handle_image_tags(update, response_text)
         response_text = await _handle_reminder_tags(update, response_text, context)
+        response_text = await _handle_call_tags(update, response_text, context)
 
         # Sub-agent recommendation → store pending + attach inline button to last chunk
         sub_topic = result.get("__sub_agent_topic__")

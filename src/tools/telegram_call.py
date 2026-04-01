@@ -153,8 +153,12 @@ class TelegramCaller:
             # play() rings the recipient and automatically starts streaming
             # once they answer. It raises if unanswered within py-tgcalls'
             # internal timeout (~30s).
-            log.info("Placing call to user %s …", user_id)
-            await pytgcalls.play(user_id, MediaStream(audio_path), CallConfig())
+            log.info("Placing call to user %s with audio %s …", user_id, audio_path)
+            try:
+                await pytgcalls.play(user_id, MediaStream(audio_path), CallConfig())
+            except Exception as play_err:
+                log.error("pytgcalls.play() FAILED: %s (%s)", play_err, type(play_err).__name__)
+                raise
 
             log.info("Call answered — waiting for audio to finish …")
 
