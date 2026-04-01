@@ -468,7 +468,7 @@ function ServicesPage({ services, onToggle }) {
 }
 
 // ── CORE CREDENTIALS ─────────────────────────────────────────────
-function CorePage({ form, set }) {
+function CorePage({ form, set, onTokenVerified }) {
   const [verifying, setVerifying] = useState(false)
   const [tokenStatus, setTokenStatus] = useState(null)  // null | 'valid' | 'invalid'
   const [botUsername, setBotUsername] = useState('')
@@ -482,11 +482,14 @@ function CorePage({ form, set }) {
       if (d.ok && d.result?.username) {
         setTokenStatus('valid')
         setBotUsername(d.result.username)
+        onTokenVerified?.(true)
       } else {
         setTokenStatus('invalid')
+        onTokenVerified?.(false)
       }
     } catch {
       setTokenStatus('invalid')
+      onTokenVerified?.(false)
     }
     setVerifying(false)
   }
@@ -504,7 +507,7 @@ function CorePage({ form, set }) {
         <p><strong>Step 3:</strong> To find your User ID, message <ExtLink href="https://t.me/userinfobot">@userinfobot</ExtLink> on Telegram — it replies with your numeric ID.</p>
       </HelpBox>
 
-      <Field label="Telegram Bot Token" name="telegram_bot_token" value={form.telegram_bot_token} onChange={(n, v) => { set(n, v); setTokenStatus(null) }} placeholder="1234567890:AABBCCDDeeffgghh..." />
+      <Field label="Telegram Bot Token" name="telegram_bot_token" value={form.telegram_bot_token} onChange={(n, v) => { set(n, v); setTokenStatus(null); onTokenVerified?.(false) }} placeholder="1234567890:AABBCCDDeeffgghh..." />
       {form.telegram_bot_token && (
         <div className="flex items-center gap-2 -mt-1">
           {tokenStatus === null && (
@@ -637,7 +640,7 @@ function GroqPage({ form, set }) {
 }
 
 // ── REVIEW ────────────────────────────────────────────────────────
-function ReviewPage({ form, services, error }) {
+function ReviewPage({ form, services, error, tokenVerified }) {
   const mask = val => {
     if (!val) return '—'
     if (val.length <= 8) return '•'.repeat(val.length)
@@ -671,6 +674,12 @@ function ReviewPage({ form, services, error }) {
           </div>
         ))}
       </div>
+      {!tokenVerified && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-xl p-3 kovo-fade-up">
+          <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">⚠️ Telegram bot token not verified</p>
+          <p className="text-xs text-amber-500 dark:text-amber-500 mt-1">Go back to Credentials and click "Verify Token" to confirm your bot token is correct. An invalid token will prevent KOVO from starting.</p>
+        </div>
+      )}
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40 rounded-xl p-3 kovo-fade-up">
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -762,6 +771,7 @@ export default function Setup() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(5)
+  const [tokenVerified, setTokenVerified] = useState(false)
 
   const toggleService = useCallback((key) => {
     setServices(prev => ({ ...prev, [key]: !prev[key] }))
@@ -831,11 +841,11 @@ export default function Setup() {
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 mt-6 shadow-sm">
           <div key={currentStep} className="kovo-step-enter">
             {currentStep === 'services' && <ServicesPage services={services} onToggle={toggleService} />}
-            {currentStep === 'core'     && <CorePage form={form} set={set} />}
+            {currentStep === 'core'     && <CorePage form={form} set={set} onTokenVerified={setTokenVerified} />}
             {currentStep === 'google'   && <GooglePage form={form} set={set} />}
             {currentStep === 'calls'    && <CallsPage form={form} set={set} />}
             {currentStep === 'groq'     && <GroqPage form={form} set={set} />}
-            {currentStep === 'review'   && <ReviewPage form={form} services={services} error={error} />}
+            {currentStep === 'review'   && <ReviewPage form={form} services={services} error={error} tokenVerified={tokenVerified} />}
           </div>
 
           <div className="flex justify-between mt-8 pt-4 border-t border-gray-100 dark:border-gray-800">
@@ -848,7 +858,7 @@ export default function Setup() {
             {isLast ? (
               <button
                 onClick={save}
-                disabled={saving || !form.telegram_bot_token || !form.owner_telegram_id}
+                disabled={saving || !form.telegram_bot_token || !form.owner_telegram_id || !tokenVerified}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold px-8 py-2.5 rounded-xl disabled:opacity-40 transition-all hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.02]"
               >
                 {saving ? (
