@@ -67,3 +67,6 @@ scripts/experiments/
 data/.update_notified
 CLAUDE.md
 config/kovo.env
+
+# Agent-generated workspace scripts (never commit)
+workspace/*.py

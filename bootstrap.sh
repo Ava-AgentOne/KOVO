@@ -1,7 +1,7 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
-KOVO_VERSION="0.9"
-# KOVO — Self-Hosted AI Agent Installer v5.3
+KOVO_VERSION="1.0"
+# KOVO — Self-Hosted AI Agent Installer v1.0
 # https://github.com/Ava-AgentOne/kovo
 #
 # Usage:
@@ -16,7 +16,6 @@ KOVO_VERSION="0.9"
 
 set -euo pipefail
 
-INSTALLER_VERSION="5.3"
 
 # ─── Cross-platform detection ────────────────────────────────────
 OS_TYPE="$(uname -s)"
