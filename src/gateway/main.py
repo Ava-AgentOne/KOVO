@@ -109,6 +109,7 @@ def _build_deps():
     transcriber = Transcriber(
         groq_api_key=t_cfg.get("groq_api_key", ""),
         whisper_model=t_cfg.get("whisper_model", "base"),
+        language=t_cfg.get("language", "en"),
     )
 
     return {

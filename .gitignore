@@ -70,3 +70,4 @@ config/kovo.env
 
 # Agent-generated workspace scripts (never commit)
 workspace/*.py
+scripts/*.py
