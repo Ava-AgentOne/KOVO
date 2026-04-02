@@ -567,6 +567,9 @@ function GooglePage({ form, set }) {
         <p><strong>Step 3:</strong> Go to <ExtLink href="https://console.cloud.google.com/apis/credentials">Credentials</ExtLink> → click <strong>"Create Credentials" → "OAuth 2.0 Client ID"</strong> → select <strong>"Desktop app"</strong></p>
         <p><strong>Step 4:</strong> Download the JSON file and paste its contents below</p>
         <p className="text-xs text-gray-400">Full guide: <ExtLink href="https://developers.google.com/workspace/guides/create-credentials">Google Workspace API setup</ExtLink></p>
+        <div className="bg-amber-50 dark:bg-amber-900/15 rounded-lg p-2.5 mt-2">
+          <p className="text-xs text-amber-700 dark:text-amber-400"><strong>Step 5 — after finishing this wizard:</strong> Open your Kovo bot in Telegram and send <code className="bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded font-mono text-xs">/auth_google</code> — Kovo will give you a URL to sign in and authorize access to your Google account. This is a one-time step.</p>
+        </div>
       </HelpBox>
 
       <div className="space-y-1.5 kovo-fade-up">
