@@ -34,9 +34,10 @@ class Transcriber:
     Tries Groq first; falls back to local Whisper on any failure.
     """
 
-    def __init__(self, groq_api_key: str = "", whisper_model: str = "base"):
+    def __init__(self, groq_api_key: str = "", whisper_model: str = "base", language: str = "en"):
         self.groq_api_key = groq_api_key
         self.whisper_model = whisper_model
+        self.language = language
         self._whisper_instance = None  # lazy-loaded
 
     # ── public entry point ────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ class Transcriber:
                 response = await client.post(
                     _GROQ_URL,
                     headers={"Authorization": f"Bearer {self.groq_api_key}"},
-                    data={"model": _GROQ_MODEL},
+                    data={"model": _GROQ_MODEL, "language": self.language},
                     files={"file": (Path(audio_path).name, f, "audio/mpeg")},
                 )
             response.raise_for_status()
@@ -125,9 +126,9 @@ class Transcriber:
         try:
             from faster_whisper import WhisperModel
             if isinstance(model, WhisperModel):
-                segments, _ = model.transcribe(wav_path, beam_size=5)
+                segments, _ = model.transcribe(wav_path, beam_size=5, language=self.language)
                 return " ".join(s.text.strip() for s in segments).strip()
         except ImportError:
             pass
-        result = model.transcribe(wav_path)
+        result = model.transcribe(wav_path, language=self.language)
         return result["text"].strip()
