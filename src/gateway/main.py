@@ -297,9 +297,15 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
 app = FastAPI(title="Kovo Gateway", version="1.0", lifespan=lifespan)
 
 # API routes
-app.include_router(api_router)
-app.include_router(setup_router)
-app.include_router(dashboard_api_router)
+from fastapi import Depends as _Depends
+from src.dashboard.auth import require_auth as _require_auth
+from src.dashboard.auth_api import router as auth_router
+
+app.include_router(api_router)                 # /health + /webhook — public
+app.include_router(auth_router)                # /api/auth/* — public (login flow)
+# Setup wizard: open while unconfigured, session-protected once a bot token exists
+app.include_router(setup_router, dependencies=[_Depends(_require_auth)])
+app.include_router(dashboard_api_router)       # auth enforced at router level
 
 # Serve built React SPA — catch-all that serves exact files or falls back to index.html.
 # StaticFiles(html=True) does NOT do SPA fallback; it only serves index.html for directory

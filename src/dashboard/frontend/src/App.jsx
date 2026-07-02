@@ -11,12 +11,16 @@ import Logs from './pages/Logs'
 import Heartbeat from './pages/Heartbeat'
 import Settings from './pages/Settings'
 import Setup from './pages/Setup'
+import Login from './pages/Login'
 
 export default function App() {
   return (
     <Routes>
       {/* Setup wizard — full-screen, no sidebar */}
       <Route path="/setup" element={<Setup />} />
+
+      {/* Telegram-approved login — full-screen, no sidebar */}
+      <Route path="/login" element={<Login />} />
 
       {/* Main dashboard — wrapped in Layout */}
       <Route path="*" element={
