@@ -29,11 +29,15 @@ class ModelRouter:
         session_id: str | None = None,
         force_complexity: str | None = None,
         files: list[str] | None = None,
+        on_delta=None,
     ) -> dict:
         """
         Route the message to the right Claude model.
         Returns {"text": str, "model_used": str, "complexity": str, "session_id": str|None}.
         files: optional file paths attached via --file (images, PDFs, etc.).
+        on_delta: optional async callback awaited with the accumulated reply
+        text while it is being generated (streaming brains only — silently
+        ignored when the active brain can't stream).
         """
         if force_complexity:
             complexity = force_complexity
@@ -47,17 +51,9 @@ class ModelRouter:
         model = "opus" if complexity == "complex" else "sonnet"
 
         try:
-            loop = asyncio.get_event_loop()
-            fn = partial(
-                call_claude,
-                message,
-                session_id=session_id,
-                model=model,
-                system_prompt=system_prompt,
-                timeout=cfg.claude_timeout(),
-                files=files,
+            response = await self._call_model(
+                message, model, system_prompt, session_id, files, on_delta
             )
-            response = await loop.run_in_executor(None, fn)
 
             # Propagate permission-needed signal up to the bot layer
             if response.get("__permission_needed__"):
@@ -87,3 +83,31 @@ class ModelRouter:
                 "complexity": complexity,
                 "session_id": session_id,
             }
+
+    async def _call_model(self, message, model, system_prompt, session_id, files, on_delta) -> dict:
+        """Streaming path when the active brain supports it, else executor + call_claude."""
+        if on_delta is not None:
+            from src.brains import get_claude_brain
+            brain = get_claude_brain()
+            if brain is not None and brain.supports_streaming:
+                return await brain.generate_stream(
+                    message,
+                    session_id=session_id,
+                    model=model,
+                    system_prompt=system_prompt,
+                    timeout=cfg.claude_timeout(),
+                    files=files,
+                    on_delta=on_delta,
+                )
+
+        loop = asyncio.get_event_loop()
+        fn = partial(
+            call_claude,
+            message,
+            session_id=session_id,
+            model=model,
+            system_prompt=system_prompt,
+            timeout=cfg.claude_timeout(),
+            files=files,
+        )
+        return await loop.run_in_executor(None, fn)

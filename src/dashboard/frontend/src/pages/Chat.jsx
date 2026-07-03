@@ -101,6 +101,7 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [connected, setConnected] = useState(false)
   const [typing, setTyping] = useState(false)
+  const [streamText, setStreamText] = useState(null)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const wsRef = useRef(null)
   const bottomRef = useRef(null)
@@ -111,7 +112,7 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
-  useEffect(() => { scrollToBottom() }, [messages, typing])
+  useEffect(() => { scrollToBottom() }, [messages, typing, streamText])
 
   // Track scroll position to show/hide scroll-to-bottom button
   const handleScroll = useCallback(() => {
@@ -144,8 +145,13 @@ export default function Chat() {
           setMessages(data.messages || [])
         } else if (data.type === 'typing') {
           setTyping(true)
+        } else if (data.type === 'delta') {
+          // Streaming preview — accumulated text so far
+          setTyping(false)
+          setStreamText(data.content || '')
         } else if (data.type === 'message') {
           setTyping(false)
+          setStreamText(null)
           if (data.role === 'assistant') {
             setMessages(prev => [...prev, {
               role: data.role,
@@ -242,9 +248,12 @@ export default function Chat() {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 min-h-0 relative"
       >
-        {messages.length === 0 && !typing && <EmptyState />}
+        {messages.length === 0 && !typing && streamText === null && <EmptyState />}
         {messages.map((msg, i) => <Message key={i} msg={msg} />)}
-        {typing && <TypingIndicator />}
+        {streamText !== null && (
+          <Message msg={{ role: 'assistant', content: streamText + ' ▌', streaming: true }} />
+        )}
+        {typing && streamText === null && <TypingIndicator />}
         <div ref={bottomRef} />
       </div>
 

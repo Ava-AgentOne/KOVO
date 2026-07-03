@@ -91,8 +91,25 @@ async def chat_websocket(websocket: WebSocket):
                 response_text = "Agent not available — system still starting up."
                 model_used = "none"
             else:
+                # Stream the reply as it generates (Phase 3b): throttled
+                # "delta" frames carry the accumulated text so far; the
+                # final "message" frame stays authoritative.
+                import time as _time
+                _last_delta = 0.0
+
+                async def _ws_delta(text: str):
+                    nonlocal _last_delta
+                    now = _time.monotonic()
+                    if now - _last_delta < 0.4:
+                        return
+                    _last_delta = now
+                    try:
+                        await websocket.send_json({"type": "delta", "content": text})
+                    except Exception:
+                        pass  # client gone — the final send will surface it
+
                 try:
-                    result = await agent.handle(message=message, user_id=0)
+                    result = await agent.handle(message=message, user_id=0, on_delta=_ws_delta)
                     response_text = result.get("text", "(no response)")
                     model_used = result.get("model_used", "?")
                 except Exception as e:

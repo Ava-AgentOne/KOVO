@@ -24,6 +24,7 @@ log = logging.getLogger(__name__)
 
 class ClaudeAgentSDKBrain(Brain):
     name = "claude-sdk"
+    supports_streaming = True
 
     def generate(
         self,
@@ -44,11 +45,26 @@ class ClaudeAgentSDKBrain(Brain):
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             return pool.submit(asyncio.run, coro).result()
 
-    async def _generate(self, prompt, session_id, model, system_prompt, timeout, files) -> dict:
+    async def generate_stream(
+        self,
+        prompt: str,
+        session_id: str | None = None,
+        model: str | None = None,
+        system_prompt: str | None = None,
+        timeout: int = 600,
+        files: list[str] | None = None,
+        on_delta=None,
+    ) -> dict:
+        return await self._generate(
+            prompt, session_id, model, system_prompt, timeout, files, on_delta=on_delta
+        )
+
+    async def _generate(self, prompt, session_id, model, system_prompt, timeout, files, on_delta=None) -> dict:
         from claude_agent_sdk import (
             AssistantMessage,
             ClaudeAgentOptions,
             ResultMessage,
+            StreamEvent,
             TextBlock,
             query,
         )
@@ -67,14 +83,29 @@ class ClaudeAgentSDKBrain(Brain):
             cwd=str(kovo_dir()),
             # Load /opt/kovo/.claude settings — same allowlist the CLI used
             setting_sources=["project", "local"],
+            include_partial_messages=bool(on_delta),
         )
 
         text_parts: list[str] = []
         result: dict = {}
+        preview_parts: list[str] = []
 
         async def _run():
             async for msg in query(prompt=prompt, options=options):
-                if isinstance(msg, AssistantMessage):
+                if isinstance(msg, StreamEvent):
+                    # Raw Anthropic stream event — text deltas feed the live
+                    # preview only; the authoritative text still comes from
+                    # the complete messages below.
+                    if on_delta is not None:
+                        ev = msg.event or {}
+                        delta = ev.get("delta") or {}
+                        if ev.get("type") == "content_block_delta" and delta.get("type") == "text_delta":
+                            preview_parts.append(delta.get("text", ""))
+                            try:
+                                await on_delta("".join(preview_parts))
+                            except Exception as cb_err:
+                                log.debug("on_delta callback error: %s", cb_err)
+                elif isinstance(msg, AssistantMessage):
                     for block in msg.content:
                         if isinstance(block, TextBlock):
                             text_parts.append(block.text)

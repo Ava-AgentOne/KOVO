@@ -290,7 +290,10 @@ class KovoAgent:
         user_id: int = 0,
         force_complexity: str | None = None,
         files: list[str] | None = None,
+        on_delta=None,
     ) -> dict:
+        """on_delta: optional async callback receiving the accumulated reply
+        text as it streams (Phase 3b). Sub-agent replies don't stream."""
         session_id = self._sessions.get(user_id)
         system_prompt = self.build_system_prompt(message)
 
@@ -309,6 +312,7 @@ class KovoAgent:
             session_id=session_id,
             force_complexity=force_complexity,
             files=files,
+            on_delta=on_delta,
         )
         result["agent"] = self.name
 
