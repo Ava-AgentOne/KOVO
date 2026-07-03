@@ -18,6 +18,18 @@ claude:
 brains:
   # Claude backend: cli (claude -p subprocess) or sdk (Claude Agent SDK)
   claude: cli
+# External MCP servers (SDK brain only) — manage from the dashboard MCP page.
+# mcp:
+#   home_assistant:
+#     type: sse
+#     url: http://10.0.1.20:8123/mcp_server/sse
+#     headers:
+#       Authorization: "Bearer ${HA_TOKEN}"
+#   github:
+#     type: http
+#     url: https://api.githubcopilot.com/mcp/
+#     headers:
+#       Authorization: "Bearer ${GITHUB_TOKEN}"
 telegram_call:
   api_id: ${TELEGRAM_API_ID}
   api_hash: ${TELEGRAM_API_HASH}
