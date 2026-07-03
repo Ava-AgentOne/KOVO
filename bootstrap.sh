@@ -737,29 +737,37 @@ install_python_env() {
         warn "py-tgcalls failed to build (voice calls disabled — other features unaffected)"
     fi
 
-    # Patch py-tgcalls: GroupcallForbidden import incompatible with current Pyrogram
+    # Patch py-tgcalls: Groupcall* error imports incompatible with stock Pyrogram.
+    # Generic: wraps EVERY bare "from <client>.errors... import Groupcall*" in
+    # try/except (2.2.x has GroupcallForbidden; newer versions add more).
+    # Same logic as scripts/patch_pytgcalls.py — keep the two in sync.
     if "$VENV/bin/python" -c "import pytgcalls" 2>/dev/null; then
         "$VENV/bin/python" << 'GCPATCH'
-import glob
+import glob, re
+pattern = re.compile(
+    r"^from ((?:pyrogram|hydrogram|telethon)\.errors[\w.]*) import (Groupcall\w+)$"
+)
 for f in glob.glob("venv/**/pytgcalls/mtproto/*.py", recursive=True):
     with open(f) as fh:
-        c = fh.read()
-    changed = False
-    for old_imp, cls in [
-        ("pyrogram.errors import GroupcallForbidden", "GroupcallForbidden"),
-        ("hydrogram.errors.exceptions import GroupcallForbidden", "GroupcallForbidden"),
-        ("telethon.errors import GroupcallForbiddenError", "GroupcallForbiddenError"),
-    ]:
-        bare = "from " + old_imp
-        wrapped = "try:\n    from " + old_imp
-        if bare in c and wrapped not in c:
-            c = c.replace(bare, "try:\n    from " + old_imp + "\nexcept ImportError:\n    " + cls + " = Exception")
-            changed = True
-    if changed:
+        original = fh.read()
+    lines = original.splitlines()
+    out = []
+    for i, line in enumerate(lines):
+        m = pattern.match(line)
+        prev = lines[i - 1].strip() if i else ""
+        if m and prev != "try:":
+            out.append(
+                "try:\n    from " + m.group(1) + " import " + m.group(2)
+                + "\nexcept ImportError:\n    " + m.group(2) + " = Exception"
+            )
+        else:
+            out.append(line)
+    patched = "\n".join(out) + ("\n" if original.endswith("\n") else "")
+    if patched != original:
         with open(f, "w") as fh:
-            fh.write(c)
+            fh.write(patched)
 GCPATCH
-        ok "py-tgcalls GroupcallForbidden patch applied"
+        ok "py-tgcalls Groupcall* import patch applied"
 
     # ── Group 5: PyTorch (optional on macOS) ──────────────────
     progress_bar 5 7
