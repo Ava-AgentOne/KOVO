@@ -768,6 +768,7 @@ for f in glob.glob("venv/**/pytgcalls/mtproto/*.py", recursive=True):
             fh.write(patched)
 GCPATCH
         ok "py-tgcalls Groupcall* import patch applied"
+    fi
 
     # ── Group 5: PyTorch (optional on macOS) ──────────────────
     progress_bar 5 7
