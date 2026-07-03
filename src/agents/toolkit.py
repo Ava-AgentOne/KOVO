@@ -26,7 +26,6 @@ class _Runtime:
     main_loop: asyncio.AbstractEventLoop | None = None
     agent = None          # KovoAgent (make_call: tts + caller)
     reminders = None      # ReminderManager
-    tg_bot = None         # telegram Bot (send_photo etc.)
     owner_chat_id: int | None = None
 
     @property
@@ -37,12 +36,21 @@ class _Runtime:
 RUNTIME = _Runtime()
 
 
-def set_runtime(main_loop, agent, reminders=None, tg_bot=None, owner_chat_id=None) -> None:
-    """Called once by the gateway after all deps exist."""
+def _owner_channel():
+    """Owner's preferred channel from the registry (Phase 3e)."""
+    from src.channels import registry
+    return registry.owner_channel()
+
+
+def set_runtime(main_loop, agent, reminders=None, owner_chat_id=None) -> None:
+    """Called once by the gateway after all deps exist.
+
+    Message/photo delivery goes through src.channels (registry) — the
+    toolkit no longer holds a bot object directly.
+    """
     RUNTIME.main_loop = main_loop
     RUNTIME.agent = agent
     RUNTIME.reminders = reminders
-    RUNTIME.tg_bot = tg_bot
     RUNTIME.owner_chat_id = owner_chat_id
     log.info("Native toolkit runtime wired (chat_id=%s)", owner_chat_id)
 
@@ -77,8 +85,12 @@ async def _send_image(args: dict) -> dict:
     query = str(args.get("query", "")).strip()
     if not query:
         return _text("Error: query is required.")
-    if RUNTIME.tg_bot is None or RUNTIME.owner_chat_id is None:
-        return _text("Telegram not available — cannot send images right now.")
+    from src.channels import PHOTOS
+    channel = _owner_channel()
+    if channel is None or RUNTIME.owner_chat_id is None:
+        return _text("No chat channel available — cannot send images right now.")
+    if not channel.can(PHOTOS):
+        return _text(f"The {channel.name} channel cannot display photos.")
     try:
         from src.tools.image import fetch_image
     except ImportError:
@@ -88,11 +100,7 @@ async def _send_image(args: dict) -> dict:
         path = await fetch_image(query, filename="tg_image")
         if not path:
             return None
-        with open(path, "rb") as fh:
-            await RUNTIME.tg_bot.send_photo(
-                chat_id=RUNTIME.owner_chat_id, photo=fh, caption=f"🔍 {query}",
-                read_timeout=30, write_timeout=60, connect_timeout=15,
-            )
+        await channel.send_photo(RUNTIME.owner_chat_id, path, caption=f"🔍 {query}")
         return path
 
     try:

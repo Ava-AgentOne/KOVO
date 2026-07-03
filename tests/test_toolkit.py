@@ -20,14 +20,12 @@ def clean_runtime():
     toolkit.RUNTIME.main_loop = None
     toolkit.RUNTIME.agent = None
     toolkit.RUNTIME.reminders = None
-    toolkit.RUNTIME.tg_bot = None
     toolkit.RUNTIME.owner_chat_id = None
     toolkit._server = None
     yield
     toolkit.RUNTIME.main_loop = None
     toolkit.RUNTIME.agent = None
     toolkit.RUNTIME.reminders = None
-    toolkit.RUNTIME.tg_bot = None
     toolkit.RUNTIME.owner_chat_id = None
     toolkit._server = None
 
@@ -37,7 +35,6 @@ def _wire(loop=None, **kw):
         main_loop=loop,
         agent=MagicMock(),
         reminders=MagicMock(),
-        tg_bot=MagicMock(),
         owner_chat_id=42,
     )
     defaults.update(kw)

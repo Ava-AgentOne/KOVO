@@ -194,25 +194,28 @@ class HeartbeatScheduler:
 
             log.info("Firing reminder #%d: '%s' (%s)", rid, msg[:40], delivery)
 
-            # --- Telegram message ---
+            # Delivery goes through the owner's channel (Phase 3e).
+            # Calls are a capability - channels without it fall back to text.
+            from src.channels import CALLS, VOICE, registry as _channels
+            channel = _channels.owner_channel()
+
+            # --- Text message ---
             if delivery in ("message", "both"):
                 try:
-                    if self._tg_bot:
-                        await self._tg_bot.send_message(
-                            chat_id=user_id,
-                            text=f"\u23f0 *Reminder*\n\n{msg}",
-                            parse_mode="Markdown",
-                        )
+                    if channel:
+                        await channel.send_text(user_id, f"\u23f0 *Reminder*\n\n{msg}")
                 except Exception as e:
                     log.error("Reminder #%d message failed: %s", rid, e)
 
-            # --- Voice call ---
+            # --- Voice call (capability-gated: Telegram only today) ---
             if delivery in ("call", "both"):
                 try:
                     agent = self._agent
-                    if agent and getattr(agent, "caller", None) and getattr(agent, "tts", None):
-                        from pathlib import Path
-                        import asyncio
+                    can_call = (
+                        channel is not None and channel.can(CALLS)
+                        and agent and getattr(agent, "caller", None) and getattr(agent, "tts", None)
+                    )
+                    if can_call:
                         audio_dir = data_path() / "audio"
                         audio_dir.mkdir(parents=True, exist_ok=True)
                         mp3 = str(audio_dir / f"reminder_{rid}.mp3")
@@ -221,21 +224,17 @@ class HeartbeatScheduler:
                             await agent.caller.call(user_id, mp3, timeout=30)
                         except Exception as call_err:
                             log.warning("Reminder #%d call failed, sending voice msg: %s", rid, call_err)
-                            if self._tg_bot:
+                            if channel.can(VOICE):
                                 try:
-                                    await self._tg_bot.send_voice(
-                                        chat_id=user_id,
-                                        voice=open(mp3, "rb"),
-                                        caption=f"\u23f0 Reminder: {msg[:200]}",
+                                    await channel.send_voice(
+                                        user_id, mp3, caption=f"\u23f0 Reminder: {msg[:200]}"
                                     )
                                 except Exception:
                                     pass
-                    elif self._tg_bot:
-                        # No caller configured — fall back to message
-                        await self._tg_bot.send_message(
-                            chat_id=user_id,
-                            text=f"\U0001f4de *Reminder (call unavailable)*\n\n{msg}",
-                            parse_mode="Markdown",
+                    elif channel:
+                        # No call capability — fall back to message
+                        await channel.send_text(
+                            user_id, f"\U0001f4de *Reminder (call unavailable)*\n\n{msg}"
                         )
                 except Exception as e:
                     log.error("Reminder #%d call delivery failed: %s", rid, e)
