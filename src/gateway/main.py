@@ -200,6 +200,17 @@ async def lifespan(app: FastAPI):
     # Wire TTS + caller + transcriber into the main agent
     _init_phone_tools(deps["agent"], tg_app, deps["transcriber"])
 
+    # Wire the native toolkit (Phase 3c) — real tools for the SDK brain
+    import asyncio as _asyncio
+    from src.agents import toolkit as _toolkit
+    _toolkit.set_runtime(
+        main_loop=_asyncio.get_running_loop(),
+        agent=deps["agent"],
+        reminders=deps.get("reminders"),
+        tg_bot=tg_app.bot,
+        owner_chat_id=cfg.allowed_users()[0],
+    )
+
     webhook_url = os.environ.get("WEBHOOK_URL", "").strip()
     if webhook_url:
         await tg_app.initialize()

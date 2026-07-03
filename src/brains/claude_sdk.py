@@ -75,6 +75,11 @@ class ClaudeAgentSDKBrain(Brain):
             # itself, so reference them in the prompt (vision.py parity).
             prompt = prompt + "\n\nFiles to examine:\n" + "\n".join(f"- {f}" for f in files)
 
+        # Native tools (Phase 3c): in-process MCP server, empty until the
+        # gateway wires the runtime (heartbeat/memory jobs run without it).
+        from src.agents import toolkit
+        mcp_servers = toolkit.sdk_mcp_config()
+
         options = ClaudeAgentOptions(
             model=model,
             system_prompt=system_prompt,
@@ -84,6 +89,8 @@ class ClaudeAgentSDKBrain(Brain):
             # Load /opt/kovo/.claude settings — same allowlist the CLI used
             setting_sources=["project", "local"],
             include_partial_messages=bool(on_delta),
+            mcp_servers=mcp_servers,
+            allowed_tools=toolkit.allowed_tool_names() if mcp_servers else [],
         )
 
         text_parts: list[str] = []
