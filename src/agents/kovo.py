@@ -233,6 +233,20 @@ class KovoAgent:
         from src.brains import claude_backend
         if claude_backend() == "sdk" and toolkit.RUNTIME.ready:
             parts.append(toolkit.system_prompt_block())
+            # External MCP integrations (Phase 3d) — hint that they exist so
+            # Claude reaches for them; full tool schemas are supplied by the SDK.
+            try:
+                from src.agents import mcp_config
+                ext = list(mcp_config.external_servers().keys())
+            except Exception:
+                ext = []
+            if ext:
+                parts.append(
+                    "## Connected Integrations\n"
+                    "You have tools from these connected MCP servers: "
+                    + ", ".join(ext) + ".\n"
+                    "Use them when the owner's request relates to those services."
+                )
         else:
             parts.append(
                 "## Image Sending\n"

@@ -77,8 +77,19 @@ class ClaudeAgentSDKBrain(Brain):
 
         # Native tools (Phase 3c): in-process MCP server, empty until the
         # gateway wires the runtime (heartbeat/memory jobs run without it).
-        from src.agents import toolkit
-        mcp_servers = toolkit.sdk_mcp_config()
+        from src.agents import mcp_config, toolkit
+        mcp_servers = dict(toolkit.sdk_mcp_config())
+        allowed = list(toolkit.allowed_tool_names()) if mcp_servers else []
+
+        # External MCP servers (Phase 3d): Home Assistant, GitHub, etc.
+        try:
+            external = mcp_config.external_servers()
+        except Exception as e:
+            log.error("MCP config error: %s", e)
+            external = {}
+        if external:
+            mcp_servers.update(external)
+            allowed += mcp_config.external_allowed_tools(external.keys())
 
         options = ClaudeAgentOptions(
             model=model,
@@ -90,9 +101,8 @@ class ClaudeAgentSDKBrain(Brain):
             setting_sources=["project", "local"],
             include_partial_messages=bool(on_delta),
             mcp_servers=mcp_servers,
-            # Native KOVO tools + Claude Code's built-in live web access
-            allowed_tools=(toolkit.allowed_tool_names() if mcp_servers else [])
-            + ["WebSearch", "WebFetch"],
+            # Native + external MCP tools + Claude Code's built-in live web access
+            allowed_tools=allowed + ["WebSearch", "WebFetch"],
         )
 
         text_parts: list[str] = []

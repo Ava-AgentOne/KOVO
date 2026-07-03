@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquare, Wrench, Bot, Brain,
-  Zap, HeartPulse, Shield, ScrollText, Settings,
+  Zap, HeartPulse, Shield, ScrollText, Settings, Plug,
   Sun, Moon, Menu, X, LogOut,
 } from 'lucide-react'
 import KovoLogo from './KovoLogo'
@@ -15,6 +15,7 @@ const NAV = [
   { to: '/agents',    label: 'Agents',    Icon: Bot },
   { to: '/memory',    label: 'Memory',    Icon: Brain },
   { to: '/skills',    label: 'Skills',    Icon: Zap },
+  { to: '/mcp',       label: 'Integrations', Icon: Plug },
   { to: '/heartbeat', label: 'Heartbeat', Icon: HeartPulse },
   { to: '/security',  label: 'Security',  Icon: Shield },
   { to: '/logs',      label: 'Logs',      Icon: ScrollText },
