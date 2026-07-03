@@ -14,7 +14,8 @@ py-tgcalls==2.2.11
 ntgcalls==2.1.0
 
 # AI / Claude
-# claude-code is installed via npm, not pip
+# claude-code CLI is installed via npm/native installer, not pip
+claude-agent-sdk>=0.2.110              # Brain backend (src/brains/claude_sdk.py)
 
 # Voice — Speech-to-Text
 # faster-whisper                   # preferred STT backend
