@@ -226,29 +226,33 @@ class KovoAgent:
             if tools_block:
                 parts.append(tools_block)
 
-        # ── Always: image sending capability ─────────────────────────────
-        parts.append(
-            "## Image Sending\n"
-            "You can send images directly to the owner in Telegram.\n"
-            "To send an image, include `[SEND_IMAGE: your search query]` anywhere in your response.\n"
-            "Example: `[SEND_IMAGE: cat playing piano]`\n"
-            "The bot will search for the image, download it, and send it as a photo.\n"
-            "You can include one or more image tags per response.\n"
-            "Use this whenever the owner asks to see a photo, image, picture, or visual."
-        )
-
-        
-        # ── Always: voice call capability ────────────────────────────────
-        parts.append(
-            "## Voice Calls\n"
-            "You can place real Telegram voice calls to the owner.\n"
-            "To make a call, include `[MAKE_CALL: message to speak]` in your response.\n"
-            "Example: `[MAKE_CALL: Good morning Esam, the weather in Al Ain is 35 degrees and sunny]`\n"
-            "The bot will generate TTS audio and ring the owner\'s phone.\n"
-            "If the call is not answered, it automatically falls back to a voice message.\n"
-            "Use this when the owner says \'call me\', \'ring me\', \'phone me\', or asks for a voice call.\n"
-            "Also use for urgent alerts that need immediate attention."
-        )
+        # ── Always: action capabilities ───────────────────────────────────
+        # SDK brain (with wired runtime): real tools invoked directly.
+        # CLI brain: historical text-tag convention, parsed by bot.py.
+        from src.agents import toolkit
+        from src.brains import claude_backend
+        if claude_backend() == "sdk" and toolkit.RUNTIME.ready:
+            parts.append(toolkit.system_prompt_block())
+        else:
+            parts.append(
+                "## Image Sending\n"
+                "You can send images directly to the owner in Telegram.\n"
+                "To send an image, include `[SEND_IMAGE: your search query]` anywhere in your response.\n"
+                "Example: `[SEND_IMAGE: cat playing piano]`\n"
+                "The bot will search for the image, download it, and send it as a photo.\n"
+                "You can include one or more image tags per response.\n"
+                "Use this whenever the owner asks to see a photo, image, picture, or visual."
+            )
+            parts.append(
+                "## Voice Calls\n"
+                "You can place real Telegram voice calls to the owner.\n"
+                "To make a call, include `[MAKE_CALL: message to speak]` in your response.\n"
+                "Example: `[MAKE_CALL: Good morning Esam, the weather in Al Ain is 35 degrees and sunny]`\n"
+                "The bot will generate TTS audio and ring the owner\'s phone.\n"
+                "If the call is not answered, it automatically falls back to a voice message.\n"
+                "Use this when the owner says \'call me\', \'ring me\', \'phone me\', or asks for a voice call.\n"
+                "Also use for urgent alerts that need immediate attention."
+            )
 
         return "\n\n---\n\n".join(parts)
 
