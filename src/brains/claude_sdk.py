@@ -90,7 +90,9 @@ class ClaudeAgentSDKBrain(Brain):
             setting_sources=["project", "local"],
             include_partial_messages=bool(on_delta),
             mcp_servers=mcp_servers,
-            allowed_tools=toolkit.allowed_tool_names() if mcp_servers else [],
+            # Native KOVO tools + Claude Code's built-in live web access
+            allowed_tools=(toolkit.allowed_tool_names() if mcp_servers else [])
+            + ["WebSearch", "WebFetch"],
         )
 
         text_parts: list[str] = []
