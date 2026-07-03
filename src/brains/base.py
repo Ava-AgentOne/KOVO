@@ -22,6 +22,7 @@ class Brain(ABC):
     """Common interface for AI backends."""
 
     name: str = "base"
+    supports_streaming: bool = False
 
     @abstractmethod
     def generate(
@@ -39,3 +40,21 @@ class Brain(ABC):
         May instead return the {"__permission_needed__": True, ...} sentinel
         when a command was blocked by the sandbox allowlist.
         """
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        session_id: str | None = None,
+        model: str | None = None,
+        system_prompt: str | None = None,
+        timeout: int = 600,
+        files: list[str] | None = None,
+        on_delta=None,
+    ) -> dict:
+        """Async variant that reports progress (Phase 3b).
+
+        on_delta: async callable awaited with the accumulated reply text as
+        it grows. The final return dict is identical to generate()'s. Brains
+        that don't stream (supports_streaming=False) don't implement this.
+        """
+        raise NotImplementedError(f"{self.name} does not support streaming")
