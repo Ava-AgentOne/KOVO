@@ -144,6 +144,20 @@ def call_claude(
       {"__permission_needed__": True, "pattern": "Bash(cmd *)", "blocked_command": "cmd", ...}
     instead of raising, so the caller can ask the user for approval.
     """
+    # v2.0: dispatch to the configured brain (settings.yaml brains.claude).
+    # Returns None when the CLI subprocess below should handle the call.
+    from src.brains import get_claude_brain
+    brain = get_claude_brain()
+    if brain is not None:
+        return brain.generate(
+            prompt,
+            session_id=session_id,
+            model=model,
+            system_prompt=system_prompt,
+            timeout=timeout,
+            files=files,
+        )
+
     cmd = ["claude", "-p", prompt, "--output-format", "json", "--permission-mode", "acceptEdits"]
     if session_id:
         cmd.extend(["--resume", session_id])
