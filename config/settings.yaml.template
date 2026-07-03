@@ -18,6 +18,10 @@ claude:
 brains:
   # Claude backend: cli (claude -p subprocess) or sdk (Claude Agent SDK)
   claude: cli
+channels:
+  # Owner's preferred surface for outbound messages (alerts, reminders).
+  # Available: telegram, dashboard. (Future surfaces, e.g. teams, plug in here.)
+  default: telegram
 # External MCP servers (SDK brain only) — manage from the dashboard MCP page.
 # mcp:
 #   home_assistant:

@@ -30,6 +30,27 @@ router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 _chat_history: List[dict] = []
 _MAX_HISTORY = 200
 
+# Live WebSocket connections — lets DashboardChannel push outbound
+# messages (alerts, reminders) to open dashboard tabs (Phase 3e).
+_active_sockets: set = set()
+
+
+def _append_history(msg: dict) -> None:
+    _chat_history.append(msg)
+    if len(_chat_history) > _MAX_HISTORY:
+        _chat_history.pop(0)
+
+
+async def broadcast_assistant(content: str, model: str = "system") -> None:
+    """Append an assistant message to history and push it to live clients."""
+    assistant_msg = {"role": "assistant", "content": content, "model": model}
+    _append_history(assistant_msg)
+    for ws in list(_active_sockets):
+        try:
+            await ws.send_json({"type": "message", **assistant_msg})
+        except Exception:
+            _active_sockets.discard(ws)
+
 
 # ── WebSocket Chat ─────────────────────────────────────────────────────────────
 
@@ -53,6 +74,7 @@ async def chat_websocket(websocket: WebSocket):
     Connects to Kovo (user_id=0 for dashboard).
     """
     await websocket.accept()
+    _active_sockets.add(websocket)
 
     # Everything after accept() is wrapped so any startup error is logged
     # rather than causing a silent immediate disconnect.
@@ -137,3 +159,5 @@ async def chat_websocket(websocket: WebSocket):
             await websocket.close()
         except Exception:
             pass
+    finally:
+        _active_sockets.discard(websocket)

@@ -179,9 +179,12 @@ async def lifespan(app: FastAPI):
     app.state.tool_registry = deps["tool_registry"]
     app.state.sub_agent_runner = deps["sub_agent_runner"]
 
-    # Build and start Telegram app
-    from src.telegram.bot import build_application
-    tg_app = build_application(
+    # Build channels (Phase 3e): Telegram owns the bot lifecycle; the
+    # dashboard chat is a second surface. Consumers send via the registry.
+    from src.channels import registry as channel_registry
+    from src.channels.dashboard import DashboardChannel
+    from src.channels.telegram import TelegramChannel
+    telegram_channel = TelegramChannel(
         agent=deps["agent"],
         ollama=deps["ollama"],
         memory=deps["memory"],
@@ -195,6 +198,11 @@ async def lifespan(app: FastAPI):
         auto_extractor=deps["auto_extractor"],
         reminders=deps.get("reminders"),
     )
+    channel_registry.register(telegram_channel)
+    channel_registry.register(DashboardChannel())
+    app.state.channels = channel_registry
+
+    tg_app = telegram_channel.app
     app.state.tg_app = tg_app
 
     # Wire TTS + caller + transcriber into the main agent
@@ -207,32 +215,19 @@ async def lifespan(app: FastAPI):
         main_loop=_asyncio.get_running_loop(),
         agent=deps["agent"],
         reminders=deps.get("reminders"),
-        tg_bot=tg_app.bot,
         owner_chat_id=cfg.allowed_users()[0],
     )
 
-    webhook_url = os.environ.get("WEBHOOK_URL", "").strip()
-    if webhook_url:
-        await tg_app.initialize()
-        await tg_app.bot.set_webhook(
-            url=f"{webhook_url}/webhook",
-            allowed_updates=["message", "callback_query"],
-        )
-        await tg_app.start()
-        log.info("Telegram webhook registered at %s/webhook", webhook_url)
-    else:
-        log.info("No WEBHOOK_URL — starting long-polling mode")
-        await tg_app.initialize()
-        await tg_app.start()
-        await tg_app.updater.start_polling(drop_pending_updates=True)
-        log.info("Telegram polling started")
+    # Start all channels (webhook-vs-polling logic lives in TelegramChannel)
+    for _channel in channel_registry.all():
+        await _channel.start()
 
     # Heartbeat scheduler
     from src.heartbeat.reporter import HeartbeatReporter
     from src.heartbeat.scheduler import HeartbeatScheduler
     hb_cfg = cfg.get().get("heartbeat", {})
     reporter = HeartbeatReporter(
-        tg_app=tg_app,
+        channel=channel_registry.owner_channel(),
         owner_user_id=cfg.allowed_users()[0],
         structured_store=deps["store"],
     )
@@ -272,10 +267,11 @@ async def lifespan(app: FastAPI):
     # ── shutdown ─────────────────────────────────────────────────────────────
     log.info("Shutting down Kovo...")
     heartbeat.stop()
-    if tg_app.updater and tg_app.updater.running:
-        await tg_app.updater.stop()
-    await tg_app.stop()
-    await tg_app.shutdown()
+    for _channel in channel_registry.all():
+        try:
+            await _channel.stop()
+        except Exception as e:
+            log.warning("Channel %s stop failed: %s", _channel.name, e)
     log.info("Kovo shutdown complete")
 
 
