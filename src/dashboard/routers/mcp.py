@@ -29,6 +29,7 @@ class McpServerBody(BaseModel):
     command: str | None = None
     args: list[str] | None = None
     headers: dict[str, str] | None = None
+    env: dict[str, str] | None = None    # stdio servers; ${VAR} supported
     enabled: bool = True
 
 
@@ -45,6 +46,8 @@ async def add_mcp_server(body: McpServerBody):
         entry["args"] = body.args
     if body.headers:
         entry["headers"] = body.headers
+    if body.env:
+        entry["env"] = body.env
     try:
         mcp_config.add_server(body.name, entry)
     except ValueError as e:

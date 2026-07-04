@@ -150,3 +150,43 @@ class TestReminderDashboardHelpers:
         assert mgr.list_all_pending() == []
         assert mgr.cancel_any(rid) is False  # already cancelled
         assert mgr.cancel_any(9999) is False
+
+
+class TestCreateReminderEndpoint:
+    """v2.1 Step 5: POST /api/reminders (dashboard Reminders UI)."""
+
+    def _req(self, mgr):
+        from types import SimpleNamespace
+        return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(reminders=mgr)))
+
+    @pytest.fixture
+    def mgr(self, tmp_path, monkeypatch):
+        from src.gateway import config as cfg
+        from src.tools.reminders import ReminderManager
+        monkeypatch.setattr(cfg, "allowed_users", lambda: [777])
+        return ReminderManager(db_path=tmp_path / "r.db")
+
+    def test_creates_for_owner(self, mgr):
+        import asyncio
+        from src.dashboard.routers.overview import ReminderBody, create_reminder
+        res = asyncio.run(create_reminder(
+            self._req(mgr), ReminderBody(message="water plants", due_at="2199-01-01T10:00")
+        ))
+        assert res["created"] is True
+        pending = mgr.list_all_pending()
+        assert pending[0]["user_id"] == 777
+        assert pending[0]["delivery"] == "message"
+
+    def test_rejects_bad_delivery_and_date(self, mgr):
+        import asyncio
+        from fastapi import HTTPException
+        from src.dashboard.routers.overview import ReminderBody, create_reminder
+        req = self._req(mgr)
+        with pytest.raises(HTTPException):
+            asyncio.run(create_reminder(req, ReminderBody(
+                message="x", due_at="2199-01-01T10:00", delivery="pigeon")))
+        with pytest.raises(HTTPException):
+            asyncio.run(create_reminder(req, ReminderBody(message="x", due_at="tomorrow")))
+        with pytest.raises(HTTPException):
+            asyncio.run(create_reminder(req, ReminderBody(message="   ", due_at="2199-01-01T10:00")))
+        assert mgr.list_all_pending() == []
