@@ -347,6 +347,12 @@ if _FRONTEND_DIST.exists():
                     headers={"Cache-Control": "public, max-age=31536000, immutable"},
                 )
             return _FileResponse(candidate)
+        # Missing asset files must 404, not fall back to index.html — a browser
+        # holding a stale index.html would receive HTML for a .js request and
+        # render a blank page ("Unexpected token '<'").
+        if full_path.startswith("assets/"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404)
         # SPA fallback: always serve index.html so React Router handles the path.
         # no-cache = browsers must revalidate, or they keep loading stale bundles
         # after a dashboard update (ETag still allows cheap 304s).
