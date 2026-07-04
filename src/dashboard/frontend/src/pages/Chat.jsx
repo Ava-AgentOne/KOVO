@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { RefreshCw, Trash2, ArrowDown, MessageSquare } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 
 function renderMarkdown(text) {
   if (!text) return ''
@@ -231,7 +232,7 @@ export default function Chat() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chat</h1>
+        <PageHeader title="Chat" icon={MessageSquare} accent="brand" />
         <div className="flex items-center gap-2">
           {messages.length > 0 && (
             <button

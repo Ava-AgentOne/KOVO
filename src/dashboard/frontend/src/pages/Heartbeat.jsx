@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Zap, BarChart2, HeartPulse, HeartCrack, Clock, Brain, Archive, GitBranch, Bell, Loader2 } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 
 const JOB_META = {
   auto_extract:                { icon: Brain,     desc: 'Extract learnings from daily logs → MEMORY.md',     color: 'text-brand-500' },
@@ -79,7 +80,7 @@ export default function Heartbeat() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Heartbeat</h1>
+        <PageHeader title="Heartbeat" subtitle="Scheduled checks, reports, and alerts" icon={HeartPulse} accent="rose" />
         <div className="flex items-center gap-2">
           <button
             onClick={() => runCheck('/api/heartbeat/check', 'quick')}

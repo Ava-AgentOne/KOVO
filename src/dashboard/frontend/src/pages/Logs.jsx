@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, AlertTriangle, AlertCircle, Search } from 'lucide-react'
+import { RefreshCw, AlertTriangle, AlertCircle, Search, ScrollText } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 
 const TS_REGEX = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/
 
@@ -82,7 +83,7 @@ export default function Logs() {
     <div className="space-y-3 h-[calc(100vh-140px)] flex flex-col">
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Logs</h1>
+          <PageHeader title="Logs" icon={ScrollText} accent="sky" />
           {errorCount > 0 && (
             <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20">
               <AlertCircle size={11} /> {errorCount}

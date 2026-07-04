@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import {
   CheckCircle, XCircle, AlertTriangle,
   Terminal, Globe, Volume2, Database, Brain, Mic,
-  Phone, Cloud, Github,
+  Phone, Cloud, Github, Wrench,
 } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 
 // ── Tool metadata — icons, categories, better descriptions ──────
 const TOOL_META = {
@@ -104,14 +105,8 @@ export default function Tools() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tools</h1>
-          {!loading && (
-            <p className="text-sm text-gray-500 mt-0.5">
-              {ready}/{tools.length} ready{needsConfig > 0 ? ` \u00b7 ${needsConfig} need configuration` : ''}
-            </p>
-          )}
-        </div>
+        <PageHeader title="Tools" icon={Wrench} accent="emerald"
+          subtitle={!loading ? `${ready}/${tools.length} ready${needsConfig > 0 ? ` \u00b7 ${needsConfig} need configuration` : ''}` : undefined} />
 
       </div>
 
