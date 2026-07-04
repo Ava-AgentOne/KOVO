@@ -165,7 +165,7 @@ info "Reinstalling user-added packages..."
 if [ -f "$STAGE/packages/pip_delta.txt" ] && [ -s "$STAGE/packages/pip_delta.txt" ]; then
     delta_count=$(wc -l < "$STAGE/packages/pip_delta.txt" | tr -d ' ')
     info "Installing $delta_count user-added Python packages..."
-    "$KOVO_DIR/venv/bin/pip" install -r "$STAGE/packages/pip_delta.txt" -q 2>&1 | tail -3
+    "$KOVO_DIR/venv/bin/python" -m pip install -r "$STAGE/packages/pip_delta.txt" -q 2>&1 | tail -3
     ok "pip: $delta_count packages reinstalled"
 else
     ok "pip: no user-added packages to install"

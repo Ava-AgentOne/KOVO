@@ -198,7 +198,7 @@ if [ "$MODE" = "apply" ]; then
 
     if $REQUIREMENTS_CHANGED; then
         log "Step 6: Installing new dependencies..."
-        "$KOVO_DIR/venv/bin/pip" install -r "$KOVO_DIR/requirements.txt" -q 2>&1 | tail -3
+        "$KOVO_DIR/venv/bin/python" -m pip install -r "$KOVO_DIR/requirements.txt" -q 2>&1 | tail -3
     fi
 
     if $FRONTEND_CHANGED; then
