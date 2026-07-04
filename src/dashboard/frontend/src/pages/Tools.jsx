@@ -10,7 +10,7 @@ import {
 const TOOL_META = {
   shell:          { icon: Terminal, color: 'bg-gray-600',   category: 'core',          desc: 'Execute system commands, manage files, install packages' },
   browser:        { icon: Globe,    color: 'bg-blue-500',   category: 'core',          desc: 'Playwright headless Chromium for scraping, screenshots, automation' },
-  claude_cli:     { icon: Brain,    color: 'bg-brand-500',  category: 'ai',            desc: 'Claude Code CLI subprocess — KOVO\'s brain for complex reasoning' },
+  claude_cli:     { icon: Brain,    color: 'bg-brand-500',  category: 'ai',            desc: 'Claude — KOVO\'s brain via the Agent SDK (CLI fallback) for complex reasoning' },
   ollama:         { icon: Database, color: 'bg-gray-500',   category: 'ai',            desc: 'Local LLM for heartbeats and cheap tasks (optional)' },
   whisper:        { icon: Mic,      color: 'bg-purple-500', category: 'ai',            desc: 'Voice transcription via Groq API (whisper-large-v3-turbo)' },
   tts:            { icon: Volume2,  color: 'bg-emerald-500',category: 'communication', desc: 'Text-to-speech engine (edge-tts) for voice messages and calls' },

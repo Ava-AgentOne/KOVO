@@ -34,6 +34,8 @@ export default function App() {
             <Route path="/memory" element={<Memory />} />
             <Route path="/skills" element={<Skills />} />
             <Route path="/mcp" element={<Mcp />} />
+            {/* Alias — the nav label says "Integrations", deep links must work too */}
+            <Route path="/integrations" element={<Navigate to="/mcp" replace />} />
             <Route path="/security" element={<Security />} />
             <Route path="/heartbeat" element={<Heartbeat />} />
             <Route path="/logs" element={<Logs />} />
