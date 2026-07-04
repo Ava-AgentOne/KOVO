@@ -243,7 +243,7 @@ export default function Overview() {
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Agent</h2>
-              <Link to="/agents" className="text-xs text-brand-500 hover:text-brand-600">Manage &rarr;</Link>
+              <Link to="/skills" className="text-xs text-brand-500 hover:text-brand-600">Manage &rarr;</Link>
             </div>
             <div className="flex items-center gap-3 p-3 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-700/40 rounded-lg">
               <span className="w-2.5 h-2.5 rounded-full bg-brand-500 flex-shrink-0" />
