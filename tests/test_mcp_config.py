@@ -102,6 +102,15 @@ class TestCrud:
         assert "supersecrettoken123" not in h["Authorization"]  # masked
         assert h["X-Ref"] == "${HA_TOKEN}"                       # placeholder preserved
 
+    def test_placeholder_with_prefix_not_mangled(self, temp_settings):
+        """v2.1 bug fix: 'Bearer ${HA_TOKEN}' used to display as 'Bear…N}'."""
+        mcp_config.add_server("ha", {
+            "type": "sse", "url": "http://ha/sse",
+            "headers": {"Authorization": "Bearer ${HA_TOKEN}"},
+        })
+        h = mcp_config.list_servers()[0]["headers"]
+        assert h["Authorization"] == "Bearer ${HA_TOKEN}"
+
     def test_toggle(self, temp_settings):
         mcp_config.add_server("ha", {"type": "sse", "url": "http://ha/sse"})
         assert mcp_config.set_enabled("ha", False) is True

@@ -257,6 +257,10 @@ async def lifespan(app: FastAPI):
         heartbeat._caller = agent.caller
         heartbeat._reporter = reporter
 
+    # Metrics history sampler (v2.1 Mission Control sparklines)
+    from src.dashboard import metrics_history as _metrics_history
+    metrics_task = _asyncio.create_task(_metrics_history.run_sampler())
+
     log.info("Kovo fully started (1 main agent, %d sub-agents, %d skills, %d tools)",
              len(deps["sub_agent_runner"].all()),
              len(deps["skills"].all()),
@@ -266,6 +270,7 @@ async def lifespan(app: FastAPI):
 
     # ── shutdown ─────────────────────────────────────────────────────────────
     log.info("Shutting down Kovo...")
+    metrics_task.cancel()
     heartbeat.stop()
     for _channel in channel_registry.all():
         try:
@@ -301,7 +306,7 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
         log.warning("Phone tools init failed (telegram_call may not be configured): %s", e)
 
 
-app = FastAPI(title="Kovo Gateway", version="2.0", lifespan=lifespan)
+app = FastAPI(title="Kovo Gateway", version="2.1", lifespan=lifespan)
 
 # API routes
 from fastapi import Depends as _Depends
@@ -340,9 +345,26 @@ if _FRONTEND_DIST.exists():
         # Serve the exact file if it exists (assets, favicon, etc.)
         candidate = _FRONTEND_DIST / full_path
         if candidate.is_file():
+            if full_path.startswith("assets/"):
+                # Vite content-hashes asset filenames — cache them hard
+                return _FileResponse(
+                    candidate,
+                    headers={"Cache-Control": "public, max-age=31536000, immutable"},
+                )
             return _FileResponse(candidate)
-        # SPA fallback: always serve index.html so React Router handles the path
-        return _FileResponse(_FRONTEND_DIST / "index.html")
+        # Missing asset files must 404, not fall back to index.html — a browser
+        # holding a stale index.html would receive HTML for a .js request and
+        # render a blank page ("Unexpected token '<'").
+        if full_path.startswith("assets/"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404)
+        # SPA fallback: always serve index.html so React Router handles the path.
+        # no-cache = browsers must revalidate, or they keep loading stale bundles
+        # after a dashboard update (ETag still allows cheap 304s).
+        return _FileResponse(
+            _FRONTEND_DIST / "index.html",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     pass  # SPA route registered — logged at startup
 else:
