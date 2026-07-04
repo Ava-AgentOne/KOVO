@@ -3,9 +3,8 @@ import Layout from './components/Layout'
 import Overview from './pages/Overview'
 import Chat from './pages/Chat'
 import Tools from './pages/Tools'
-import Agents from './pages/Agents'
 import Memory from './pages/Memory'
-import Skills from './pages/Skills'
+import SkillsAgents from './pages/SkillsAgents'
 import Mcp from './pages/Mcp'
 import Security from './pages/Security'
 import Logs from './pages/Logs'
@@ -30,12 +29,13 @@ export default function App() {
             <Route path="/" element={<Overview />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/tools" element={<Tools />} />
-            <Route path="/agents" element={<Agents />} />
             <Route path="/memory" element={<Memory />} />
-            <Route path="/skills" element={<Skills />} />
-            <Route path="/mcp" element={<Mcp />} />
-            {/* Alias — the nav label says "Integrations", deep links must work too */}
-            <Route path="/integrations" element={<Navigate to="/mcp" replace />} />
+            {/* Merged Skills + Agents page (v2.1 IA regroup) */}
+            <Route path="/skills" element={<SkillsAgents />} />
+            <Route path="/agents" element={<Navigate to="/skills" replace />} />
+            {/* Renamed from /mcp so the URL matches the nav label */}
+            <Route path="/integrations" element={<Mcp />} />
+            <Route path="/mcp" element={<Navigate to="/integrations" replace />} />
             <Route path="/security" element={<Security />} />
             <Route path="/heartbeat" element={<Heartbeat />} />
             <Route path="/logs" element={<Logs />} />
