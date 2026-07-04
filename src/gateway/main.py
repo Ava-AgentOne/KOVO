@@ -257,6 +257,10 @@ async def lifespan(app: FastAPI):
         heartbeat._caller = agent.caller
         heartbeat._reporter = reporter
 
+    # Metrics history sampler (v2.1 Mission Control sparklines)
+    from src.dashboard import metrics_history as _metrics_history
+    metrics_task = _asyncio.create_task(_metrics_history.run_sampler())
+
     log.info("Kovo fully started (1 main agent, %d sub-agents, %d skills, %d tools)",
              len(deps["sub_agent_runner"].all()),
              len(deps["skills"].all()),
@@ -266,6 +270,7 @@ async def lifespan(app: FastAPI):
 
     # ── shutdown ─────────────────────────────────────────────────────────────
     log.info("Shutting down Kovo...")
+    metrics_task.cancel()
     heartbeat.stop()
     for _channel in channel_registry.all():
         try:
