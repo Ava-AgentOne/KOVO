@@ -455,14 +455,22 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         await _safe_action(msg.chat, ChatAction.TYPING)
 
+        # Stream the reply live into a placeholder message (Phase 3b).
+        # Falls back to the classic single-reply flow automatically when the
+        # active brain doesn't stream (no placeholder is ever created).
+        from src.telegram.streaming import StreamingReply
+        streamer = StreamingReply(msg)
+
         result = await agent.handle(
             message=message_text,
             user_id=user_id,
             force_complexity=force_complexity,
+            on_delta=streamer.on_delta,
         )
 
         # Permission-needed: store state and show inline approve/deny buttons
         if result.get("__permission_needed__"):
+            await streamer.discard()
             pattern = result["pattern"]
             blocked_cmd = result.get("blocked_command", pattern)
             context.bot_data["pending_permission"] = {
@@ -497,16 +505,10 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if sub_topic:
             context.bot_data["pending_agent"] = {"topic": sub_topic}
 
-        # Send in 4096-char chunks; attach MAIN_KEYBOARD (or agent_inline) to last chunk
-        chunks = [response_text[i : i + 4096] for i in range(0, max(len(response_text), 1), 4096)]
-        for idx, chunk in enumerate(chunks):
-            if chunk:
-                is_last = (idx == len(chunks) - 1)
-                if is_last:
-                    markup = agent_inline() if sub_topic else MAIN_KEYBOARD
-                else:
-                    markup = None
-                await _reply_with_retry(msg, chunk, reply_markup=markup)
+        # Final render: replaces the streamed placeholder (or sends fresh
+        # chunks when nothing streamed), Markdown + 4096-char chunking as before
+        markup = agent_inline() if sub_topic else MAIN_KEYBOARD
+        await streamer.finalize(response_text, reply_markup=markup, reply_fn=_reply_with_retry)
 
     except Exception as e:
         log.error("_handle_message error (user=%s): %s", update.effective_user.id if update.effective_user else "?", e, exc_info=True)

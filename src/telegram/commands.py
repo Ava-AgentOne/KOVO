@@ -713,6 +713,23 @@ async def button_callback(update: Update, context: CallbackContext) -> None:
     await query.answer()
     data = query.data or ""
 
+    # ── Dashboard login approve/deny ───────────────────────────────────────
+    if data.startswith("auth_approve:") or data.startswith("auth_deny:"):
+        from src.dashboard import auth as dashboard_auth
+        from src.gateway import config as cfg
+        if update.effective_user.id != cfg.allowed_users()[0]:
+            await query.edit_message_text("⛔ Only the owner can approve dashboard logins.")
+            return
+        action, rid = data.split(":", 1)
+        approved = action == "auth_approve"
+        if not dashboard_auth.resolve_request(rid, approved):
+            await query.edit_message_text("⏱ Login request expired or already handled.")
+            return
+        await query.edit_message_text(
+            "✅ Dashboard login approved." if approved else "❌ Dashboard login denied."
+        )
+        return
+
     # ── Permission approve ─────────────────────────────────────────────────
     if data == "perm_approve":
         pending = context.bot_data.get("pending_permission")
