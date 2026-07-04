@@ -312,6 +312,24 @@ class KovoAgent:
     ) -> dict:
         """on_delta: optional async callback receiving the accumulated reply
         text as it streams (Phase 3b). Sub-agent replies don't stream."""
+        # Mission Control busy indicator (v2.1) — any channel
+        from src.dashboard import activity as _activity
+        _activity.set_busy(user_id, message)
+        try:
+            return await self._handle_inner(
+                message, user_id, force_complexity, files, on_delta
+            )
+        finally:
+            _activity.clear_busy()
+
+    async def _handle_inner(
+        self,
+        message: str,
+        user_id: int,
+        force_complexity: str | None,
+        files: list[str] | None,
+        on_delta,
+    ) -> dict:
         session_id = self._sessions.get(user_id)
         system_prompt = self.build_system_prompt(message)
 

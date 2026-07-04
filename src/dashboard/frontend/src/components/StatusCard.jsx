@@ -1,9 +1,16 @@
-export default function StatusCard({ title, value, percent, sub, ok, icon: Icon }) {
+import Sparkline from './Sparkline'
+
+export default function StatusCard({ title, value, percent, sub, ok, icon: Icon, spark }) {
   const barColor =
     percent === undefined ? 'bg-brand-500'
     : percent > 85 ? 'bg-red-500'
     : percent > 60 ? 'bg-amber-400'
     : 'bg-emerald-500'
+  const sparkColor =
+    percent === undefined ? 'text-brand-500'
+    : percent > 85 ? 'text-red-500'
+    : percent > 60 ? 'text-amber-400'
+    : 'text-emerald-500'
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 space-y-2">
@@ -15,7 +22,9 @@ export default function StatusCard({ title, value, percent, sub, ok, icon: Icon 
         )}
       </div>
       <p className={`text-2xl font-bold ${ok === false ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>{value ?? '—'}</p>
-      {percent !== undefined && (
+      {spark && spark.length > 1 ? (
+        <Sparkline data={spark} className={sparkColor} />
+      ) : percent !== undefined && (
         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
           <div
             className={`h-2 rounded-full transition-all duration-500 ${barColor}`}

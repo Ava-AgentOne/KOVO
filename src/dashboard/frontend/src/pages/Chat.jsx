@@ -103,6 +103,8 @@ export default function Chat() {
   const [typing, setTyping] = useState(false)
   const [streamText, setStreamText] = useState(null)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+  const autoSentRef = useRef(false)
   const wsRef = useRef(null)
   const bottomRef = useRef(null)
   const scrollRef = useRef(null)
@@ -143,6 +145,7 @@ export default function Chat() {
         try { data = JSON.parse(event.data) } catch { return }
         if (data.type === 'history') {
           setMessages(data.messages || [])
+          setHistoryLoaded(true)
         } else if (data.type === 'typing') {
           setTyping(true)
         } else if (data.type === 'delta') {
@@ -173,6 +176,18 @@ export default function Chat() {
   }, [])
 
   useEffect(() => connect(), [connect])
+
+  // Auto-send a message handed over from the Overview quick-chat (?q=…)
+  useEffect(() => {
+    if (!historyLoaded || autoSentRef.current) return
+    const params = new URLSearchParams(window.location.search)
+    const q = (params.get('q') || '').trim()
+    if (!q) return
+    autoSentRef.current = true
+    window.history.replaceState({}, '', window.location.pathname)
+    setMessages(prev => [...prev, { role: 'user', content: q, timestamp: new Date().toISOString() }])
+    wsRef.current?.send(JSON.stringify({ message: q }))
+  }, [historyLoaded])
 
   const reconnect = () => {
     if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close() }
