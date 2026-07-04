@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Trash2, RefreshCw, Plug, X, CheckCircle2, XCircle, Loader2, Store, Search, ExternalLink, Download } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, Plug, X, CheckCircle2, XCircle, Loader2, Store, Search, ExternalLink, Download, Globe, ShieldAlert } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
@@ -65,6 +65,9 @@ function StoreCard({ entry, installed, onInstall }) {
         </div>
         <span className="text-[10px] uppercase bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded flex-shrink-0">{entry.type}</span>
       </div>
+      {entry.publisher && (
+        <p className="text-[10px] text-gray-400 font-mono truncate mb-1">{entry.publisher}{entry.version ? ` · v${entry.version}` : ''}</p>
+      )}
       <p className="text-xs text-gray-500 mb-2">{entry.desc}</p>
       {entry.needs && (
         <p className="text-[11px] text-amber-600 dark:text-amber-400/90 mb-2">Needs: {entry.needs}</p>
@@ -105,7 +108,27 @@ export default function Mcp() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [registry, setRegistry] = useState({ state: 'idle', servers: [] })
   const topRef = useRef(null)
+
+  // Live search against the official MCP registry (debounced)
+  useEffect(() => {
+    const q = search.trim()
+    if (tab !== 'store' || q.length < 2) {
+      setRegistry({ state: 'idle', servers: [] })
+      return
+    }
+    setRegistry(r => ({ ...r, state: 'loading' }))
+    const t = setTimeout(() => {
+      fetch(`/api/mcp/registry?q=${encodeURIComponent(q)}`)
+        .then(r => r.json())
+        .then(d => setRegistry(d.ok
+          ? { state: 'ok', servers: d.servers || [] }
+          : { state: 'error', servers: [], error: d.error }))
+        .catch(e => setRegistry({ state: 'error', servers: [], error: e.message }))
+    }, 450)
+    return () => clearTimeout(t)
+  }, [search, tab])
 
   const fetchServers = () => {
     fetch('/api/mcp/servers')
@@ -346,20 +369,67 @@ export default function Mcp() {
             )}
           </div>
 
+          {/* Curated catalog */}
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={14} className="text-teal-500" />
+            <h2 className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Curated</h2>
+            <span className="text-xs text-gray-400">hand-checked, ships with KOVO</span>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {catalog.map(entry => (
               <StoreCard key={entry.id} entry={entry}
                 installed={installedIds.has(entry.id)} onInstall={installFromStore} />
             ))}
           </div>
-
           {catalog.length === 0 && (
-            <EmptyState icon={Search} title={`No catalog matches for “${search}”`}
-              hint="Try a different term, or add the server manually on the Servers tab" />
+            <p className="text-sm text-gray-400">No curated matches for “{search}”.</p>
+          )}
+
+          {/* Live registry */}
+          <div className="flex items-center gap-2 pt-3">
+            <Globe size={14} className="text-teal-500" />
+            <h2 className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">MCP Registry</h2>
+            <span className="text-xs text-gray-400">live · registry.modelcontextprotocol.io</span>
+          </div>
+
+          {registry.state === 'idle' && (
+            <p className="text-sm text-gray-400">
+              Type at least 2 characters to search thousands of community-published servers.
+            </p>
+          )}
+          {registry.state === 'loading' && (
+            <div className="flex items-center gap-2 text-gray-400 text-sm py-2">
+              <Loader2 size={14} className="animate-spin" /> Searching the registry…
+            </div>
+          )}
+          {registry.state === 'error' && (
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              Registry unreachable right now — the curated catalog above still works. ({registry.error})
+            </p>
+          )}
+          {registry.state === 'ok' && (
+            <>
+              {registry.servers.length > 0 ? (
+                <>
+                  <div className="flex items-start gap-2 text-[11px] text-amber-600 dark:text-amber-400/90 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2">
+                    <ShieldAlert size={13} className="flex-shrink-0 mt-0.5" />
+                    <span>Registry entries are community-published and <strong>not vetted</strong> — install only servers whose publisher you trust, and check the docs link before adding credentials.</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {registry.servers.map(entry => (
+                      <StoreCard key={`reg-${entry.id}`} entry={entry}
+                        installed={installedIds.has(entry.id)} onInstall={installFromStore} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-gray-400">No registry matches for “{search}”.</p>
+              )}
+            </>
           )}
 
           <p className="text-[11px] text-gray-400">
-            Curated catalog — Install prefills the Add form; you supply paths and tokens.
+            Install prefills the Add form; you supply paths and tokens.
             Secrets go in <code>config/.env</code> and are referenced as <code>${'{'}VAR{'}'}</code>.
           </p>
         </>

@@ -131,6 +131,56 @@ class TestMcpProbe:
             asyncio.run(test_mcp_server("ghost"))
 
 
+class TestRegistryNormalizer:
+    """v2.1 Store: flatten official-registry entries (fixtures mirror the
+    real registry.modelcontextprotocol.io/v0/servers response shape)."""
+
+    def test_remote_with_secret_header(self):
+        from src.dashboard.routers.mcp import _normalize_registry_entry
+        entry = {"server": {
+            "name": "ai.smithery/weather", "title": "Weather", "version": "1.2.0",
+            "description": "Forecasts.",
+            "remotes": [{"type": "streamable-http", "url": "https://x.example/mcp",
+                         "headers": [{"name": "Authorization", "isRequired": True,
+                                      "isSecret": True, "value": "Bearer {api_key}",
+                                      "description": "token"}]}],
+            "repository": {"url": "https://github.com/x/y"},
+        }}
+        n = _normalize_registry_entry(entry)
+        assert n["id"] == "weather"
+        assert n["type"] == "http"
+        assert n["url"] == "https://x.example/mcp"
+        assert n["headers"]["Authorization"] == "Bearer ${API_KEY}"  # {var} -> ${VAR}
+        assert "Authorization header" in n["needs"]
+        assert n["docs"] == "https://github.com/x/y"
+
+    def test_npm_package_with_env(self):
+        from src.dashboard.routers.mcp import _normalize_registry_entry
+        entry = {"server": {
+            "name": "com.pulse/fs-server", "version": "0.1.5", "description": "Files.",
+            "packages": [{"registryType": "npm", "identifier": "fs-mcp-server",
+                          "runtimeHint": "npx", "transport": {"type": "stdio"},
+                          "runtimeArguments": [{"value": "-y", "type": "positional"}],
+                          "environmentVariables": [
+                              {"name": "GCS_BUCKET", "isRequired": True, "description": "bucket"},
+                              {"name": "OPTIONAL_FLAG"}]}],
+        }}
+        n = _normalize_registry_entry(entry)
+        assert n["type"] == "stdio"
+        assert n["command"] == "npx"
+        assert n["args"] == ["-y", "fs-mcp-server"]
+        assert n["env"] == {"GCS_BUCKET": "${GCS_BUCKET}"}
+        assert "GCS_BUCKET" in n["needs"]
+
+    def test_unusable_entry_returns_none(self):
+        from src.dashboard.routers.mcp import _normalize_registry_entry
+        assert _normalize_registry_entry({"server": {"name": "x/y"}}) is None
+        # mcpb-only package (no npm/pypi/oci) — not runnable by KOVO
+        assert _normalize_registry_entry({"server": {
+            "name": "x/y", "packages": [{"registryType": "mcpb", "identifier": "z"}],
+        }}) is None
+
+
 class TestReminderDashboardHelpers:
     @pytest.fixture
     def mgr(self, tmp_path):
