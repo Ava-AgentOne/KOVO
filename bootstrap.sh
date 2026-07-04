@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
-KOVO_VERSION="1.0"
+KOVO_VERSION="2.0"
 # KOVO — Self-Hosted AI Agent Installer v1.0
 # https://github.com/Ava-AgentOne/kovo
 #
