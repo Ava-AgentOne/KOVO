@@ -340,9 +340,20 @@ if _FRONTEND_DIST.exists():
         # Serve the exact file if it exists (assets, favicon, etc.)
         candidate = _FRONTEND_DIST / full_path
         if candidate.is_file():
+            if full_path.startswith("assets/"):
+                # Vite content-hashes asset filenames — cache them hard
+                return _FileResponse(
+                    candidate,
+                    headers={"Cache-Control": "public, max-age=31536000, immutable"},
+                )
             return _FileResponse(candidate)
-        # SPA fallback: always serve index.html so React Router handles the path
-        return _FileResponse(_FRONTEND_DIST / "index.html")
+        # SPA fallback: always serve index.html so React Router handles the path.
+        # no-cache = browsers must revalidate, or they keep loading stale bundles
+        # after a dashboard update (ETag still allows cheap 304s).
+        return _FileResponse(
+            _FRONTEND_DIST / "index.html",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     pass  # SPA route registered — logged at startup
 else:
