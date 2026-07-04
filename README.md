@@ -23,17 +23,19 @@
 
 **KOVO** is a self-hosted AI agent powered by **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** that runs on a Linux VM or macOS machine and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, and learn new skills — all while keeping your data private on your own hardware.
 
-Inspired by **[OpenClaw](https://github.com/openclaw)**, KOVO takes a different approach to the AI backbone — it uses **Claude Code CLI as a subprocess** (`claude -p`), powered by your Claude Max subscription. This gives it access to Claude Sonnet and Opus for real multi-step reasoning, not pay-per-token API calls. It optionally uses a **local LLM** (like [Ollama](https://ollama.com)) for cheap tasks like heartbeats and quick classification.
+Inspired by **[OpenClaw](https://github.com/openclaw)**, KOVO takes a different approach to the AI backbone — since v2.0 it runs on the **[Claude Agent SDK](https://docs.anthropic.com/en/api/agent-sdk/overview)** (in-process, streaming, native tool use), powered by your Claude Max subscription. This gives it Claude Sonnet and Opus for real multi-step reasoning at a flat rate, not pay-per-token API calls. The classic `claude -p` subprocess remains as a config-selectable fallback, and an optional **local LLM** (like [Ollama](https://ollama.com)) handles cheap tasks like heartbeat summaries.
 
-### 🧠 Why Claude Code?
+### 🧠 Why the Claude Agent SDK?
 
-Most self-hosted agents rely on basic API calls to an LLM. KOVO is different — it uses **Claude Code as a subprocess** (`claude -p`), which means:
+Most self-hosted agents rely on basic API calls to an LLM. KOVO runs Claude through the **Agent SDK**, which means:
 
 - **Full Claude reasoning** — Sonnet for medium tasks, Opus for complex ones
-- **Smart model routing** — local LLM handles simple tasks (free), Claude handles the rest
-- **Tool use** — Claude Code can execute shell commands, edit files, and reason about code
+- **Live streaming replies** — watch answers appear in Telegram (message edits) and the dashboard
+- **Real tool use** — Claude calls KOVO's tools natively (phone calls, images, reminders) and reacts to their results
+- **MCP integrations** — connect Home Assistant, GitHub, and any Model Context Protocol server; install more from the built-in Store
 - **No API key management** — uses your Claude Max/Pro subscription directly
 - **Self-evolving** — the agent can install packages, create services, and write new skills
+- **Pluggable by design** — brains (AI backends) and channels (chat surfaces) are config, not code
 
 ### 🎯 Who Is This For?
 
@@ -46,9 +48,10 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO is different —
 
 | Feature | Description |
 |---------|-------------|
-| 🧠 **Claude Code Backbone** | Full Claude Sonnet/Opus reasoning via `claude -p` subprocess |
+| 🧠 **Claude Agent SDK Backbone** | Full Sonnet/Opus reasoning, in-process, with streaming + native tool use (CLI subprocess fallback) |
 | 💬 **Telegram Chat** | Talk to KOVO through Telegram with persistent keyboard buttons |
-| 🖥️ **Web Dashboard** | Real-time system monitoring with dark/light mode |
+| 🖥️ **Mission Control Dashboard** | Live activity feed, "Kovo is working on…" indicator, 24h sparklines, quick-chat — Telegram-approved login |
+| 🔌 **MCP Integrations + Store** | Connect any MCP server (Home Assistant verified); browse a curated catalog or search the official registry live |
 | 🛡️ **Security Audits** | Automated port scanning, malware checks, rootkit detection |
 | 🧠 **Memory System** | Daily logs, learnings, and long-term memory across sessions |
 | ⚡ **Skill System** | Modular skills — browse web, shell commands, phone calls, reports |
@@ -56,33 +59,33 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO is different —
 | 📊 **Health Monitoring** | CPU, RAM, disk, uptime — all visible from dashboard and Telegram |
 | 🔧 **Smart Model Router** | Local LLM for simple tasks, Claude for complex ones |
 | 📞 **Voice Calls** | Real Telegram voice calls for critical alerts |
-| 🔍 **Web Search** | Auto DuckDuckGo search for current-info questions |
+| 🔍 **Web Search** | Native Claude web search (SDK brain); DuckDuckGo fallback for the CLI brain |
 | 🔗 **Link Reader** | Auto-extracts page content from URLs in messages |
-| ⏰ **Smart Reminders** | SQLite-backed reminders with message, call, or both delivery |
+| ⏰ **Smart Reminders** | Set by chat or dashboard — message, voice call, or both; full management UI |
 
 ## 🏗️ Architecture
 
 ```
-                    ┌──────────────────┐
-                    │   Claude Code    │  ← The Brain
-                    │  (claude -p CLI) │
-                    │  Sonnet / Opus   │
-                    └────────┬─────────┘
-                             │
-┌─────────────┐     ┌───────┴────────┐     ┌──────────────┐
+              ┌───────────────────────────┐
+              │    Claude Agent SDK       │  ← The Brain (pluggable)
+              │  Sonnet / Opus, streaming │     `claude -p` CLI fallback
+              │  native tools + MCP       │
+              └────────────┬──────────────┘
+                           │
+┌─────────────┐     ┌──────┴─────────┐     ┌──────────────┐
 │  Telegram   │────▶│    Gateway     │────▶│  Local LLM   │
-│  (Mobile)   │◀────│   (FastAPI)    │◀────│  (Optional)  │
-└─────────────┘     └───────┬────────┘     └──────────────┘
-                            │
-                     ┌──────┴───────┐
-                     │  Dashboard   │
-                     │  (React UI)  │
-                     └──────────────┘
+│  (channel)  │◀────│   (FastAPI)    │◀────│  (Optional)  │
+└─────────────┘     └──────┬─────────┘     └──────────────┘
+                           │                ┌──────────────────────┐
+                    ┌──────┴───────┐        │ External MCP servers │
+                    │  Dashboard   │────────│ Home Assistant, ...  │
+                    │  (channel)   │        │ + Store to add more  │
+                    └──────────────┘        └──────────────────────┘
 ```
 
 | Component | Technology |
 |-----------|-----------|
-| **Brain** | Claude Code CLI (`claude -p`) — Sonnet & Opus |
+| **Brain** | Claude Agent SDK — Sonnet & Opus, streaming, tools (CLI fallback, pluggable via `src/brains/`) |
 | **Gateway** | Python 3.13, FastAPI, Uvicorn |
 | **Telegram** | python-telegram-bot |
 | **Local LLM** | Ollama, LM Studio, or any OpenAI-compatible endpoint (optional) |
@@ -106,15 +109,19 @@ KOVO intelligently routes messages to the right model:
 
 The built-in web dashboard gives you full visibility into KOVO's state:
 
+Redesigned in v2.1 with a cool slate design system, per-domain accent colors, and a
+three-section navigation (Agent · Capabilities · System). Login is Telegram-approved:
+the dashboard shows a code, your bot asks you to approve it.
+
 | Section | What It Shows |
 |---------|---------------|
-| 📡 **Overview** | CPU, RAM, disk metrics + service status dots + quick actions |
-| 💬 **Chat** | Talk to KOVO from the browser (WebSocket) |
-| 🔧 **Tools** | All registered tools with status and install commands |
-| 🤖 **Agents** | Main agent + any sub-agents with their tools |
+| 📡 **Overview (Mission Control)** | Live activity feed, "Kovo is working on…" indicator, 24h CPU/RAM/disk sparklines, quick-chat, reminders + integrations + security widgets |
+| 💬 **Chat** | Talk to KOVO from the browser with live streaming replies (WebSocket) |
 | 🧠 **Memory** | Browse daily logs and workspace files |
-| ⚡ **Skills** | View, create, delete, and reload skills |
-| 💓 **Heartbeat** | Scheduled job status and health reports |
+| ⚡ **Skills & Agents** | The main agent, full skills management, and sub-agents in one place |
+| 🔧 **Tools** | All registered tools with status and install commands |
+| 🔌 **Integrations** | MCP servers with connection tests + **Store**: curated catalog and live search of the official MCP registry |
+| 💓 **Heartbeat** | Scheduled job status, health reports, and full reminders management |
 | 🛡️ **Security** | Latest audit results, history, run/reset from UI |
 | 📜 **Logs** | Live gateway logs |
 | ⚙️ **Settings** | YAML config editor + environment variables |
@@ -272,9 +279,9 @@ KOVO is inspired by [OpenClaw](https://github.com/openclaw) and uses a compatibl
 
 | | KOVO | OpenClaw |
 |---|------|----------|
-| **AI connection** | Claude Code CLI (`claude -p`) | Direct API calls (OpenAI, Anthropic, etc.) |
+| **AI connection** | Claude Agent SDK (streaming, tools, MCP; CLI fallback) | Direct API calls (OpenAI, Anthropic, etc.) |
 | **Billing** | Flat rate — Claude Max subscription (~$100-200/mo) | Pay per token — costs vary with usage |
-| **Models** | Claude Sonnet & Opus via Claude Code | Any provider (OpenAI, Anthropic, Groq, local) |
+| **Models** | Claude Sonnet & Opus (pluggable brains — more backends addable) | Any provider (OpenAI, Anthropic, Groq, local) |
 | **Local LLM** | Optional — for heartbeats & cheap tasks | Core — primary model for many setups |
 | **Workspace format** | SOUL.md, MEMORY.md, SKILL.md — compatible | ✅ Same format |
 | **Platform** | Linux + macOS (self-hosted) | Linux VM (self-hosted) |
