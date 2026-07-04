@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom'
 import {
   CheckCircle, XCircle, AlertTriangle,
   Terminal, Globe, Volume2, Database, Brain, Mic,
-  Phone, Cloud, Github,
+  Phone, Cloud, Github, Wrench,
 } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 
 // ── Tool metadata — icons, categories, better descriptions ──────
 const TOOL_META = {
   shell:          { icon: Terminal, color: 'bg-gray-600',   category: 'core',          desc: 'Execute system commands, manage files, install packages' },
   browser:        { icon: Globe,    color: 'bg-blue-500',   category: 'core',          desc: 'Playwright headless Chromium for scraping, screenshots, automation' },
-  claude_cli:     { icon: Brain,    color: 'bg-brand-500',  category: 'ai',            desc: 'Claude Code CLI subprocess — KOVO\'s brain for complex reasoning' },
+  claude_cli:     { icon: Brain,    color: 'bg-brand-500',  category: 'ai',            desc: 'Claude — KOVO\'s brain via the Agent SDK (CLI fallback) for complex reasoning' },
   ollama:         { icon: Database, color: 'bg-gray-500',   category: 'ai',            desc: 'Local LLM for heartbeats and cheap tasks (optional)' },
   whisper:        { icon: Mic,      color: 'bg-purple-500', category: 'ai',            desc: 'Voice transcription via Groq API (whisper-large-v3-turbo)' },
   tts:            { icon: Volume2,  color: 'bg-emerald-500',category: 'communication', desc: 'Text-to-speech engine (edge-tts) for voice messages and calls' },
@@ -104,14 +105,8 @@ export default function Tools() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tools</h1>
-          {!loading && (
-            <p className="text-sm text-gray-500 mt-0.5">
-              {ready}/{tools.length} ready{needsConfig > 0 ? ` \u00b7 ${needsConfig} need configuration` : ''}
-            </p>
-          )}
-        </div>
+        <PageHeader title="Tools" icon={Wrench} accent="emerald"
+          subtitle={!loading ? `${ready}/${tools.length} ready${needsConfig > 0 ? ` \u00b7 ${needsConfig} need configuration` : ''}` : undefined} />
 
       </div>
 

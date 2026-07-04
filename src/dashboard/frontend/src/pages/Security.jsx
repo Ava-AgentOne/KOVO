@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Shield, RefreshCw, RotateCcw, AlertTriangle, CheckCircle, XCircle, Info, Wrench, Loader2, Play } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 import useApi from '../hooks/useApi'
+import PageHeader from '../components/PageHeader'
 
 function InstallToolsCard() {
   const [toolStatus, setToolStatus] = useState(null)
@@ -346,7 +347,7 @@ export default function Security() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Security</h1>
+        <PageHeader title="Security" icon={Shield} accent="amber" />
         <div className="flex gap-2">
           <button
             onClick={() => setResetOpen(true)}

@@ -3,88 +3,217 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   Cpu, MemoryStick, HardDrive, Clock, Shield, MessageSquare,
   RefreshCw, Trash2, Save, RotateCcw, Settings as SettingsIcon,
-  ScrollText,
+  ScrollText, Bell, AlertTriangle, Phone, Image as ImageIcon,
+  FileText, Plug, Send, X,
 } from 'lucide-react'
 import StatusCard from '../components/StatusCard'
 import useApi from '../hooks/useApi'
 import ConfirmModal from '../components/ConfirmModal'
 
+// ── Mission Control (v2.1) — the Overview answers "what has Kovo been doing?"
+// Live busy indicator, activity feed, sparkline metrics, reminders and
+// integration-health widgets. Data endpoints: src/dashboard/routers/overview.py
 
-
-function SimpleMarkdown({ text }) {
-  if (!text) return null
-  const html = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\*\*`([^`]+)`\*\*/g, '<strong><code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">$1</code></strong>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-900 dark:text-white">$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs text-brand-600 dark:text-yellow-300 font-mono">$1</code>')
-    // Session headers -> 12h format (must run BEFORE generic ## heading)
-    .replace(/^## Session (\d{2}):(\d{2})$/gm, (_, h, m) => {
-      const hr = parseInt(h); const ampm = hr >= 12 ? 'PM' : 'AM';
-      const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
-      return '<p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-3 mb-1 uppercase tracking-wide">Session ' + h12 + ':' + m + ' ' + ampm + '</p>';
-    })
-    .replace(/^## (.+)$/gm, '<p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-3 mb-1">$1</p>')
-    .replace(/^# (.+)$/gm, '<p class="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1">$1</p>')
-    // Log timestamps [HH:MM] → 12h format
-    .replace(/\[(\d{2}):(\d{2})\]/g, (_, h, m) => {
-      const hr = parseInt(h); const ampm = hr >= 12 ? 'PM' : 'AM';
-      const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
-      return '<span class="text-brand-500 font-mono text-xs font-medium">' + h12 + ':' + m + ' ' + ampm + '</span>';
-    })
-    // Parenthetical times (HH:MM) in summaries -> 12h
-    .replace(/\((\d{2}):(\d{2})\)/g, (_, h, m) => {
-      const hr = parseInt(h); const ampm = hr >= 12 ? 'PM' : 'AM';
-      const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
-      return '(' + h12 + ':' + m + ' ' + ampm + ')';
-    })
-    // Bare HH:MM times not in brackets (e.g. session summaries)
-    .replace(/(\d{2}):(\d{2})(?= and| -|\)| —)/g, (_, h, m) => {
-      const hr = parseInt(h); const ampm = hr >= 12 ? 'PM' : 'AM';
-      const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
-      return h12 + ':' + m + ' ' + ampm;
-    })
-    // agent=kovo model=claude/sonnet metadata
-    .replace(/agent=(\w+)\s+model=([\w/]+)/g, '<span class="text-gray-400 text-xs">$2</span>')
-    // User: and Reply: labels
-    .replace(/User:\s*/g, '<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">You: </span>')
-    .replace(/Reply:\s*/g, '<br/><span class="text-xs font-semibold text-brand-500">Kovo: </span>')
-
-    .replace(/\n/g, '<br/>')
-  return <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
+function fmt12(hhmm) {
+  if (!hhmm) return ''
+  const [h, m] = hhmm.split(':')
+  const hr = parseInt(h, 10)
+  const ampm = hr >= 12 ? 'PM' : 'AM'
+  const h12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr
+  return `${h12}:${m} ${ampm}`
 }
 
-const ENTRY_LIMIT = 300
+function fmtDue(iso) {
+  try {
+    const d = new Date(iso)
+    const today = new Date()
+    const sameDay = d.toDateString() === today.toDateString()
+    const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    if (sameDay) return `Today ${time}`
+    return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`
+  } catch { return iso }
+}
 
-function LogEntry({ raw }) {
-  const [expanded, setExpanded] = useState(false)
-  const isLong = raw.length > ENTRY_LIMIT
-  const display = isLong && !expanded ? raw.slice(0, ENTRY_LIMIT) + '\u2026' : raw
+const FEED_ICONS = {
+  chat: MessageSquare,
+  reminder: Bell,
+  alert: AlertTriangle,
+  call: Phone,
+  image: ImageIcon,
+  note: FileText,
+}
+
+function BusyPill({ busy }) {
+  if (!busy) return null
   return (
-    <div className="border-b border-gray-100 dark:border-gray-800 last:border-0 py-2.5">
-      <SimpleMarkdown text={display} />
-      {isLong && (
-        <button onClick={() => setExpanded(e => !e)} className="mt-1 text-xs text-brand-500 hover:text-brand-600 transition-colors">
-          {expanded ? '\u25b2 show less' : '\u25bc show more'}
-        </button>
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-700/40 rounded-full max-w-full">
+      <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500" />
+      </span>
+      <span className="text-xs text-brand-600 dark:text-brand-400 font-medium truncate">
+        Kovo is working on: “{busy.preview}”
+      </span>
+      <span className="text-[10px] text-gray-400 flex-shrink-0">via {busy.channel}</span>
+    </div>
+  )
+}
+
+function QuickChat() {
+  const [text, setText] = useState('')
+  const navigate = useNavigate()
+  const go = () => {
+    const msg = text.trim()
+    if (!msg) return
+    navigate(`/chat?q=${encodeURIComponent(msg)}`)
+  }
+  return (
+    <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-2.5 focus-within:border-brand-400 transition-colors">
+      <MessageSquare size={16} className="text-brand-500 flex-shrink-0" />
+      <input
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') go() }}
+        placeholder="Ask Kovo anything…"
+        className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
+      />
+      <button onClick={go} disabled={!text.trim()}
+        className="flex items-center gap-1.5 text-xs bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white px-3 py-1.5 rounded-lg transition-colors">
+        <Send size={12} /> Send
+      </button>
+    </div>
+  )
+}
+
+function ActivityFeed({ entries }) {
+  if (!entries?.length) {
+    return (
+      <div className="text-center py-10">
+        <FileText size={26} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+        <p className="text-sm text-gray-500">All quiet — nothing logged today yet.</p>
+        <p className="text-xs text-gray-400 mt-1">Chats, reminders, calls, and alerts show up here as they happen.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="space-y-0.5">
+      {entries.map((e, i) => {
+        const Icon = FEED_ICONS[e.type] || FileText
+        return (
+          <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+            <span className="text-[11px] text-brand-500 font-mono font-medium w-16 flex-shrink-0 pt-0.5">{fmt12(e.time)}</span>
+            <Icon size={14} className="text-gray-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-gray-700 dark:text-gray-300 min-w-0 flex-1">{e.text}</p>
+            {e.model && <span className="text-[10px] text-gray-400 flex-shrink-0">{e.model}</span>}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function RemindersWidget() {
+  const { data, reload } = useApi('/api/reminders', 30000)
+  const reminders = data?.reminders || []
+  const cancel = async (id) => {
+    try { await fetch(`/api/reminders/${id}`, { method: 'DELETE' }) } catch {}
+    reload()
+  }
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Reminders</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">{reminders.length} upcoming</span>
+          <Link to="/heartbeat" className="text-xs text-brand-500 hover:text-brand-600">Manage &rarr;</Link>
+        </div>
+      </div>
+      {reminders.length === 0 ? (
+        <p className="text-sm text-gray-400">Nothing scheduled. Ask Kovo to remind you about something.</p>
+      ) : (
+        <div className="space-y-2">
+          {reminders.map(r => (
+            <div key={r.id} className="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-800/60 rounded-lg group">
+              <Bell size={13} className="text-brand-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{r.message}</p>
+                <p className="text-[11px] text-gray-400">
+                  {fmtDue(r.due_at)}
+                  {r.delivery && r.delivery !== 'message' && (
+                    <span className="ml-1.5 text-amber-500">· {r.delivery}</span>
+                  )}
+                </p>
+              </div>
+              <button onClick={() => cancel(r.id)} title="Cancel reminder"
+                className="text-gray-300 hover:text-red-500 transition-colors p-0.5 flex-shrink-0">
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
 }
 
-function DailyLog({ content }) {
-  if (!content) return <p className="text-gray-400 text-sm italic">No activity logged today yet.</p>
-  const parts = content.split(/(?=^- \[\d{2}:\d{2}\])/m).filter(Boolean)
-  if (parts.length <= 1) return <LogEntry raw={content} />
-  return <div>{parts.map((entry, i) => <LogEntry key={i} raw={entry.trimEnd()} />)}</div>
+function IntegrationsWidget() {
+  const { data } = useApi('/api/mcp/servers', 60000)
+  const servers = data?.servers || []
+  const [results, setResults] = useState({})
+
+  const test = async (name) => {
+    setResults(r => ({ ...r, [name]: 'testing' }))
+    try {
+      const res = await fetch(`/api/mcp/servers/${name}/test`, { method: 'POST' })
+      const d = await res.json()
+      setResults(r => ({ ...r, [name]: d.reachable ? 'ok' : 'fail' }))
+    } catch {
+      setResults(r => ({ ...r, [name]: 'fail' }))
+    }
+  }
+
+  useEffect(() => {
+    servers.filter(s => s.enabled && results[s.name] === undefined).forEach(s => test(s.name))
+  }, [servers])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Integrations</h2>
+        <Link to="/integrations" className="text-xs text-brand-500 hover:text-brand-600">Manage &rarr;</Link>
+      </div>
+      {servers.length === 0 ? (
+        <p className="text-sm text-gray-400">No MCP servers connected yet.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {servers.map(s => {
+            const state = !s.enabled ? 'disabled' : (results[s.name] || 'testing')
+            return (
+              <div key={s.name} className="flex items-center gap-2.5 py-1">
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  state === 'ok' ? 'bg-emerald-500' :
+                  state === 'fail' ? 'bg-red-500' :
+                  state === 'disabled' ? 'bg-gray-300 dark:bg-gray-600' :
+                  'bg-amber-400 animate-pulse'
+                }`} />
+                <Plug size={13} className="text-gray-400 flex-shrink-0" />
+                <span className="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">{s.name}</span>
+                <span className="text-[11px] text-gray-400">
+                  {state === 'ok' ? 'connected' : state === 'fail' ? 'unreachable' : state === 'disabled' ? 'off' : 'checking…'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ServiceDot({ name, status, sub }) {
   const isOnline = status === true || status === 'Online' || status === 'Running'
   return (
-    <div className="flex items-center gap-3 py-1.5">
+    <div className="flex items-center gap-3 py-1">
       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
       <span className="text-sm text-gray-800 dark:text-gray-200">{name}</span>
       {sub && <span className="text-xs text-gray-400 ml-auto">{sub}</span>}
@@ -115,9 +244,10 @@ function getGreeting() {
 
 export default function Overview() {
   const { data: status } = useApi('/api/status', 15000)
-  const { data: agents } = useApi('/api/agents', 30000)
-  const { data: memory } = useApi('/api/memory/today', 30000)
   const { data: metrics, loading: metricsLoading } = useApi('/api/metrics', 10000)
+  const { data: history } = useApi('/api/metrics/history', 60000)
+  const { data: busyData } = useApi('/api/activity/busy', 3000)
+  const { data: activityData } = useApi('/api/activity/recent', 10000)
   const { data: secLatest } = useApi('/api/security/latest', 60000)
   const [auditRunning, setAuditRunning] = useState(false)
   const [confirmRestart, setConfirmRestart] = useState(false)
@@ -125,6 +255,9 @@ export default function Overview() {
   const navigate = useNavigate()
 
   const [auditResult, setAuditResult] = useState(null)
+
+  const samples = history?.samples || []
+  const spark = (key) => samples.map(s => s[key])
 
   const runAudit = async () => {
     setAuditRunning(true)
@@ -163,57 +296,67 @@ export default function Overview() {
   if (metricsLoading && !metrics) return <LoadingSkeleton />
 
   return (
-    <div className="space-y-6">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{getGreeting()}</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          {status ? `${status.tools_ready ?? 0} tools ready \u00b7 ${status.skill_count ?? 0} skills loaded` : 'Connecting\u2026'}
-        </p>
+    <div className="space-y-5">
+      {/* Greeting + busy indicator */}
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{getGreeting()}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {status ? `${status.tools_ready ?? 0} tools ready · ${status.skill_count ?? 0} skills loaded` : 'Connecting…'}
+          </p>
+        </div>
+        <BusyPill busy={busyData?.busy} />
       </div>
 
-      {/* Metric cards */}
+      {/* Quick chat */}
+      <QuickChat />
+
+      {/* Metric cards with 24h sparklines */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatusCard title="CPU" value={metrics?.cpu_percent !== undefined ? `${metrics.cpu_percent}%` : '\u2014'} percent={metrics?.cpu_percent} icon={Cpu} sub={metrics?.cpu_cores ? `${metrics.cpu_cores} cores` : undefined} />
-        <StatusCard title="RAM" value={metrics?.ram_used_gb ? `${metrics.ram_used_gb} GB` : '\u2014'} percent={metrics?.ram_percent} icon={MemoryStick} sub={metrics?.ram_total_gb ? `${metrics.ram_used_gb} / ${metrics.ram_total_gb} GB` : undefined} />
-        <StatusCard title="Disk" value={metrics?.disk_percent !== undefined ? `${metrics.disk_percent}%` : '\u2014'} percent={metrics?.disk_percent} icon={HardDrive} sub={metrics?.disk_used_gb ? `${metrics.disk_used_gb} / ${metrics.disk_total_gb} GB` : undefined} />
-        <StatusCard title="Uptime" value={metrics?.uptime ?? '\u2014'} icon={Clock} sub="System uptime" />
+        <StatusCard title="CPU" value={metrics?.cpu_percent !== undefined ? `${metrics.cpu_percent}%` : '—'} percent={metrics?.cpu_percent} icon={Cpu} sub={metrics?.cpu_cores ? `${metrics.cpu_cores} cores · 24h` : undefined} spark={spark('cpu')} />
+        <StatusCard title="RAM" value={metrics?.ram_used_gb ? `${metrics.ram_used_gb} GB` : '—'} percent={metrics?.ram_percent} icon={MemoryStick} sub={metrics?.ram_total_gb ? `${metrics.ram_used_gb} / ${metrics.ram_total_gb} GB · 24h` : undefined} spark={spark('ram')} />
+        <StatusCard title="Disk" value={metrics?.disk_percent !== undefined ? `${metrics.disk_percent}%` : '—'} percent={metrics?.disk_percent} icon={HardDrive} sub={metrics?.disk_used_gb ? `${metrics.disk_used_gb} / ${metrics.disk_total_gb} GB · 24h` : undefined} spark={spark('disk')} />
+        <StatusCard title="Uptime" value={metrics?.uptime ?? '—'} icon={Clock} sub="System uptime" />
       </div>
 
-      {/* Services + Security | Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left: Services + Security stacked */}
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Services</h2>
-            <ServiceDot name="Ollama" status={status?.ollama} sub="Local LLM" />
-            <ServiceDot name="Telegram" status={status?.telegram} sub="Bot" />
-            <ServiceDot name="Heartbeat" status={status?.heartbeat_running} sub="Scheduler" />
-            <ServiceDot name="Tools" status={status && status.tools_ready === status.tool_count} sub={status ? `${status.tools_ready}/${status.tool_count} ready` : ''} />
-            <ServiceDot name="Skills" status={true} sub={status?.skill_count ? `${status.skill_count} loaded` : ''} />
+      {/* Main grid: activity feed | widgets */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* Live activity */}
+        <div className="xl:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Live Activity</h2>
+            <Link to="/memory" className="text-xs text-brand-500 hover:text-brand-600">All logs &rarr;</Link>
           </div>
+          <ActivityFeed entries={activityData?.entries} />
+        </div>
 
+        {/* Right column widgets */}
+        <div className="space-y-4">
+          <RemindersWidget />
+          <IntegrationsWidget />
+
+          {/* Security */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Security</h2>
               <Link to="/security" className="text-xs text-brand-500 hover:text-brand-600">Details &rarr;</Link>
             </div>
             {secLatest && secLatest.status ? (
-              <div className="space-y-3">
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
-                  secLatest.status === 'clean' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' :
-                  secLatest.status === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' :
-                  'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${
-                    secLatest.status === 'clean' ? 'bg-emerald-500' : secLatest.status === 'warning' ? 'bg-amber-500' : 'bg-red-500'
-                  }`} />
-                  {secLatest.status === 'clean' ? 'No threats detected' : secLatest.status === 'warning' ? 'Warnings found' : 'Critical issues'}
-                </div>
-                <p className="text-xs text-gray-500">Last scan: {secLatest.timestamp ? new Date(secLatest.timestamp).toLocaleDateString() : '\u2014'}</p>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                secLatest.status === 'clean' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' :
+                secLatest.status === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' :
+                'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${
+                  secLatest.status === 'clean' ? 'bg-emerald-500' : secLatest.status === 'warning' ? 'bg-amber-500' : 'bg-red-500'
+                }`} />
+                {secLatest.status === 'clean' ? 'No threats detected' : secLatest.status === 'warning' ? 'Warnings found' : 'Critical issues'}
+                <span className="ml-auto text-[11px] font-normal text-gray-400">
+                  {secLatest.timestamp ? new Date(secLatest.timestamp).toLocaleDateString() : ''}
+                </span>
               </div>
             ) : (
-              <p className="text-sm text-gray-400">No scans yet. Run your first audit below.</p>
+              <p className="text-sm text-gray-400">No scans yet.</p>
             )}
             <button onClick={runAudit} disabled={auditRunning}
               className={`mt-3 flex items-center justify-center gap-2 w-full py-2 text-xs rounded-lg transition-all duration-300 ${
@@ -223,7 +366,7 @@ export default function Overview() {
                 'bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-50'
               }`}>
               {auditRunning ? (
-                <><RefreshCw size={12} className="animate-spin" /> Scanning\u2026</>
+                <><RefreshCw size={12} className="animate-spin" /> Scanning{'…'}</>
               ) : auditResult === 'clean' ? (
                 <><Shield size={12} /> All Clear</>
               ) : auditResult === 'warning' ? (
@@ -235,33 +378,15 @@ export default function Overview() {
               )}
             </button>
           </div>
-        </div>
 
-        {/* Right: Agent card + Quick Actions */}
-        <div className="space-y-4">
-          {/* Agent */}
+          {/* Services */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Agent</h2>
-              <Link to="/agents" className="text-xs text-brand-500 hover:text-brand-600">Manage &rarr;</Link>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-700/40 rounded-lg">
-              <span className="w-2.5 h-2.5 rounded-full bg-brand-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">Kovo</p>
-                <p className="text-xs text-gray-500 truncate">Main agent &middot; {status?.tools_ready ?? '?'} tools &middot; {status?.skill_count ?? '?'} skills</p>
-              </div>
-              <Link to="/chat" className="flex items-center gap-1 text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">
-                <MessageSquare size={12} /> Chat
-              </Link>
-            </div>
-            {agents?.sub_agents?.length > 0 && agents.sub_agents.map(a => (
-              <div key={a.name} className="flex items-center gap-3 p-3 mt-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                <div className="min-w-0"><p className="text-sm font-semibold text-gray-900 dark:text-white">{a.name}</p>
-                <p className="text-xs text-gray-500 truncate">{a.purpose || 'Sub-agent'}</p></div>
-              </div>
-            ))}
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Services</h2>
+            <ServiceDot name="Ollama" status={status?.ollama} sub="Local LLM" />
+            <ServiceDot name="Telegram" status={status?.telegram} sub="Bot" />
+            <ServiceDot name="Heartbeat" status={status?.heartbeat_running} sub="Scheduler" />
+            <ServiceDot name="Tools" status={status && status.tools_ready === status.tool_count} sub={status ? `${status.tools_ready}/${status.tool_count} ready` : ''} />
+            <ServiceDot name="Skills" status={true} sub={status?.skill_count ? `${status.skill_count} loaded` : ''} />
           </div>
 
           {/* Quick Actions */}
@@ -294,15 +419,6 @@ export default function Overview() {
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Today's Activity */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Today &mdash; {memory?.date ?? '\u2026'}</h2>
-          <Link to="/memory" className="text-xs text-brand-500 hover:text-brand-600">All logs &rarr;</Link>
-        </div>
-        <DailyLog content={memory?.content} />
       </div>
 
       <ConfirmModal

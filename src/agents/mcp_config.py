@@ -30,6 +30,7 @@ and writes the RAW settings.yaml so `${VAR}` placeholders survive edits.
 from __future__ import annotations
 
 import logging
+import re
 
 from src.utils.platform import kovo_dir
 
@@ -116,13 +117,16 @@ def _write_raw(data: dict) -> None:
     cfg.reload()
 
 
+_PLACEHOLDER_RE = re.compile(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}")
+
+
 def _mask_headers(headers: dict) -> dict:
     """Hide secret-ish header values for display (keeps ${VAR} placeholders visible)."""
     masked = {}
     for k, v in (headers or {}).items():
         s = str(v)
-        if s.startswith("${") and s.endswith("}"):
-            masked[k] = s  # placeholder is not a secret
+        if _PLACEHOLDER_RE.search(s):
+            masked[k] = s  # raw value with a ${VAR} placeholder holds no secret
         elif len(s) > 8:
             masked[k] = s[:4] + "…" + s[-2:]
         else:

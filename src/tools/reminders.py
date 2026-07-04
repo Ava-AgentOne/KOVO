@@ -116,3 +116,28 @@ class ReminderManager:
         if ok:
             log.info("Reminder #%d cancelled", reminder_id)
         return ok
+
+    def list_all_pending(self) -> list[dict]:
+        """All pending reminders regardless of user — for the dashboard."""
+        c = self._conn()
+        rows = c.execute(
+            "SELECT * FROM reminders WHERE status='pending' ORDER BY due_at"
+        ).fetchall()
+        c.close()
+        return [dict(r) for r in rows]
+
+    def cancel_any(self, reminder_id: int) -> bool:
+        """Cancel a pending reminder without a user check — for the dashboard
+        (the dashboard session is already owner-authenticated)."""
+        c = self._conn()
+        cur = c.execute(
+            "UPDATE reminders SET status='cancelled' "
+            "WHERE id=? AND status='pending'",
+            (reminder_id,),
+        )
+        c.commit()
+        ok = cur.rowcount > 0
+        c.close()
+        if ok:
+            log.info("Reminder #%d cancelled (dashboard)", reminder_id)
+        return ok

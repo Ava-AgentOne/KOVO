@@ -188,8 +188,8 @@ done
 mkdir -p "$STAGE/packages"
 
 # pip freeze — full and delta
-if [ -f "$KOVO_DIR/venv/bin/pip" ]; then
-    "$KOVO_DIR/venv/bin/pip" freeze 2>/dev/null > "$STAGE/packages/pip_freeze.txt"
+if [ -x "$KOVO_DIR/venv/bin/python" ]; then
+    "$KOVO_DIR/venv/bin/python" -m pip freeze 2>/dev/null > "$STAGE/packages/pip_freeze.txt"
 
     # Calculate delta from requirements.txt
     if [ -f "$KOVO_DIR/requirements.txt" ]; then
@@ -198,7 +198,7 @@ if [ -f "$KOVO_DIR/venv/bin/pip" ]; then
             sed 's/[>=<!\[].*//; s/ //g' | tr '[:upper:]' '[:lower:]' | sort -u)
 
         # Get current packages, find ones not in base
-        "$KOVO_DIR/venv/bin/pip" freeze 2>/dev/null | while IFS= read -r line; do
+        "$KOVO_DIR/venv/bin/python" -m pip freeze 2>/dev/null | while IFS= read -r line; do
             pkg_name=$(echo "$line" | sed 's/==.*//' | tr '[:upper:]' '[:lower:]')
             if ! echo "$base_pkgs" | grep -qx "$pkg_name"; then
                 echo "$line"

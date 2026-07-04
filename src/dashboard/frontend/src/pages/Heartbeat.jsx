@@ -1,5 +1,140 @@
 import { useState, useEffect } from 'react'
-import { Zap, BarChart2, HeartPulse, HeartCrack, Clock, Brain, Archive, GitBranch, Bell, Loader2 } from 'lucide-react'
+import { Zap, BarChart2, HeartPulse, HeartCrack, Clock, Brain, Archive, GitBranch, Bell, Loader2, Plus, X, Phone, MessageSquare } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
+
+const inputCls = 'w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-brand-500'
+
+const DELIVERY_BADGES = {
+  message: { Icon: MessageSquare, cls: 'bg-sky-500/10 text-sky-600 dark:text-sky-400' },
+  call:    { Icon: Phone,         cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
+  both:    { Icon: Bell,          cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
+}
+
+function fmtDue(iso) {
+  try {
+    const d = new Date(iso)
+    const sameDay = d.toDateString() === new Date().toDateString()
+    const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    return sameDay ? `Today ${time}`
+      : `${d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}, ${time}`
+  } catch { return iso }
+}
+
+// v2.1 Step 5 (D): full reminders management — list, create, cancel
+function RemindersManager() {
+  const [reminders, setReminders] = useState([])
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({ message: '', due_at: '', delivery: 'message' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const load = () =>
+    fetch('/api/reminders').then(r => r.json())
+      .then(d => setReminders(d.reminders || [])).catch(() => {})
+
+  useEffect(() => {
+    load()
+    const id = setInterval(load, 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  const create = async () => {
+    if (!form.message.trim() || !form.due_at) return
+    setSaving(true); setError('')
+    try {
+      const r = await fetch('/api/reminders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const d = await r.json()
+      if (d.created) {
+        setForm({ message: '', due_at: '', delivery: 'message' })
+        setShowAdd(false); load()
+      } else { setError(d.detail || 'Create failed') }
+    } catch (e) { setError(e.message) }
+    setSaving(false)
+  }
+
+  const cancel = async (id) => {
+    try { await fetch(`/api/reminders/${id}`, { method: 'DELETE' }) } catch {}
+    load()
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Bell size={16} className="text-brand-500" />
+          <h2 className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Reminders</h2>
+          <span className="text-xs text-gray-400">{reminders.length} upcoming</span>
+        </div>
+        <button onClick={() => setShowAdd(!showAdd)}
+          className="flex items-center gap-1.5 text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg transition-colors">
+          <Plus size={13} /> New Reminder
+        </button>
+      </div>
+
+      {showAdd && (
+        <div className="mb-3 p-4 bg-gray-50 dark:bg-gray-800/60 rounded-lg space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="md:col-span-1">
+              <label className="text-xs text-gray-500 block mb-1">Remind me to…</label>
+              <input placeholder="water the plants" value={form.message}
+                onChange={e => setForm(f => ({...f, message: e.target.value}))} className={inputCls} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">When</label>
+              <input type="datetime-local" value={form.due_at}
+                onChange={e => setForm(f => ({...f, due_at: e.target.value}))} className={inputCls} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Delivery</label>
+              <select value={form.delivery} onChange={e => setForm(f => ({...f, delivery: e.target.value}))} className={inputCls}>
+                <option value="message">Message</option>
+                <option value="call">Voice call</option>
+                <option value="both">Message + call</option>
+              </select>
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="flex gap-2">
+            <button onClick={create} disabled={saving || !form.message.trim() || !form.due_at}
+              className="bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+              {saving ? 'Saving…' : 'Create Reminder'}
+            </button>
+            <button onClick={() => setShowAdd(false)} className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-4 py-2">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {reminders.length === 0 ? (
+        <p className="text-sm text-gray-400">
+          Nothing scheduled. Create one here, or just tell Kovo — “remind me to call mom at 6pm”.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {reminders.map(r => {
+            const badge = DELIVERY_BADGES[r.delivery] || DELIVERY_BADGES.message
+            const BadgeIcon = badge.Icon
+            return (
+              <div key={r.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg group">
+                <span className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-full flex-shrink-0 ${badge.cls}`}>
+                  <BadgeIcon size={11} /> {r.delivery}
+                </span>
+                <p className="text-sm text-gray-800 dark:text-gray-200 flex-1 min-w-0 truncate">{r.message}</p>
+                <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 font-mono">{fmtDue(r.due_at)}</span>
+                <button onClick={() => cancel(r.id)} title="Cancel reminder"
+                  className="text-gray-300 hover:text-red-500 transition-colors p-1 flex-shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const JOB_META = {
   auto_extract:                { icon: Brain,     desc: 'Extract learnings from daily logs → MEMORY.md',     color: 'text-brand-500' },
@@ -79,7 +214,7 @@ export default function Heartbeat() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Heartbeat</h1>
+        <PageHeader title="Heartbeat" subtitle="Scheduled checks, reports, and alerts" icon={HeartPulse} accent="rose" />
         <div className="flex items-center gap-2">
           <button
             onClick={() => runCheck('/api/heartbeat/check', 'quick')}
@@ -144,6 +279,9 @@ export default function Heartbeat() {
           </div>
         </div>
       </div>
+
+      {/* Reminders management (v2.1) */}
+      <RemindersManager />
 
       {/* Report output */}
       {(loading || report) && (

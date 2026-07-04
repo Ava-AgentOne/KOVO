@@ -1,28 +1,36 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, MessageSquare, Wrench, Bot, Brain,
+  LayoutDashboard, MessageSquare, Wrench, Brain,
   Zap, HeartPulse, Shield, ScrollText, Settings, Plug,
   Sun, Moon, Menu, X, LogOut,
 } from 'lucide-react'
 import KovoLogo from './KovoLogo'
 import { useTheme } from '../context/ThemeContext'
 
+// v2.1 IA regroup: three sections instead of 11 flat items.
+// Icon colors are the per-domain accents from the design system (Step 4) —
+// they match each page's PageHeader accent.
 const NAV = [
-  { to: '/',          label: 'Overview',  Icon: LayoutDashboard },
-  { to: '/chat',      label: 'Chat',      Icon: MessageSquare },
-  { to: '/tools',     label: 'Tools',     Icon: Wrench },
-  { to: '/agents',    label: 'Agents',    Icon: Bot },
-  { to: '/memory',    label: 'Memory',    Icon: Brain },
-  { to: '/skills',    label: 'Skills',    Icon: Zap },
-  { to: '/mcp',       label: 'Integrations', Icon: Plug },
-  { to: '/heartbeat', label: 'Heartbeat', Icon: HeartPulse },
-  { to: '/security',  label: 'Security',  Icon: Shield },
-  { to: '/logs',      label: 'Logs',      Icon: ScrollText },
-  { to: '/settings',  label: 'Settings',  Icon: Settings },
+  { section: 'Agent', items: [
+    { to: '/',        label: 'Overview',        Icon: LayoutDashboard, color: 'text-brand-500' },
+    { to: '/chat',    label: 'Chat',            Icon: MessageSquare,   color: 'text-brand-500' },
+    { to: '/memory',  label: 'Memory',          Icon: Brain,           color: 'text-violet-500' },
+    { to: '/skills',  label: 'Skills & Agents', Icon: Zap,             color: 'text-fuchsia-500' },
+  ]},
+  { section: 'Capabilities', items: [
+    { to: '/tools',        label: 'Tools',        Icon: Wrench, color: 'text-emerald-500' },
+    { to: '/integrations', label: 'Integrations', Icon: Plug,   color: 'text-teal-500' },
+  ]},
+  { section: 'System', items: [
+    { to: '/heartbeat', label: 'Heartbeat', Icon: HeartPulse, color: 'text-rose-500' },
+    { to: '/security',  label: 'Security',  Icon: Shield,     color: 'text-amber-500' },
+    { to: '/logs',      label: 'Logs',      Icon: ScrollText, color: 'text-sky-500' },
+    { to: '/settings',  label: 'Settings',  Icon: Settings,   color: 'text-gray-400' },
+  ]},
 ]
 
-function NavItem({ to, label, Icon, onClick }) {
+function NavItem({ to, label, Icon, color, onClick }) {
   return (
     <NavLink
       to={to}
@@ -36,8 +44,12 @@ function NavItem({ to, label, Icon, onClick }) {
         }`
       }
     >
-      <Icon size={18} />
-      {label}
+      {({ isActive }) => (
+        <>
+          <Icon size={18} className={isActive ? '' : color} />
+          {label}
+        </>
+      )}
     </NavLink>
   )
 }
@@ -92,9 +104,18 @@ export default function Layout({ children }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {NAV.map(item => (
-            <NavItem key={item.to} {...item} onClick={closeMobile} />
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+          {NAV.map(group => (
+            <div key={group.section}>
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                {group.section}
+              </p>
+              <div className="space-y-1">
+                {group.items.map(item => (
+                  <NavItem key={item.to} {...item} onClick={closeMobile} />
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 

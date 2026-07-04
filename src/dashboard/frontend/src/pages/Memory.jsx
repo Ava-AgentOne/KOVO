@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Pencil, FileText, BookOpen, Brain, Loader2 } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 
 const WORKSPACE_FILES = ['MEMORY.md', 'SOUL.md', 'USER.md']
 
@@ -131,7 +132,7 @@ export default function Memory() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Memory</h1>
+        <PageHeader title="Memory" icon={Brain} accent="violet" />
         <div className="flex items-center gap-3">
           {flushMsg && <span className="text-xs text-gray-500">{flushMsg}</span>}
           <button
