@@ -1,36 +1,30 @@
 """
-Heartbeat reporter — sends health alerts and reports to the owner via Telegram.
+Heartbeat reporter — sends health alerts and reports to the owner via the
+owner's preferred channel (Phase 3e: channel-agnostic; was Telegram-only).
 Optionally logs every check to the structured SQLite store.
 """
 from __future__ import annotations
 
 import logging
 
-from telegram.ext import Application
-
 log = logging.getLogger(__name__)
-
-# Max Telegram message length
-_MAX_LEN = 4096
 
 
 class HeartbeatReporter:
-    def __init__(self, tg_app: Application, owner_user_id: int, structured_store=None):
-        self._app = tg_app
+    def __init__(self, channel, owner_user_id: int, structured_store=None):
+        """channel: a src.channels Channel (chunking is the channel's job)."""
+        self._channel = channel
         self._uid = owner_user_id
         self._store = structured_store
 
     async def send(self, text: str, parse_mode: str = "Markdown") -> None:
-        """Send a message to the owner. Splits if >4096 chars."""
+        """Send a message to the owner via the configured channel."""
         if not text:
             return
         try:
-            for i in range(0, len(text), _MAX_LEN):
-                await self._app.bot.send_message(
-                    chat_id=self._uid,
-                    text=text[i : i + _MAX_LEN],
-                    parse_mode=parse_mode,
-                )
+            await self._channel.send_text(
+                self._uid, text, markdown=(parse_mode == "Markdown")
+            )
         except Exception as e:
             log.error("Failed to send heartbeat message: %s", e)
 

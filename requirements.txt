@@ -8,13 +8,18 @@ PyYAML>=6.0
 
 # Telegram
 python-telegram-bot[webhooks]>=21.0
+# Voice-call stack — pinned as a set. py-tgcalls >= 2.3 requires a pyrogram
+# fork with InputGroupCallSlug (pyrofork); stock pyrogram 2.0.106 lacks it.
+# bootstrap.sh patches the remaining Groupcall* error imports post-install.
+# Revisit when migrating to pyrofork (v2.1 candidate).
 pyrogram==2.0.106
 tgcrypto
 py-tgcalls==2.2.11
 ntgcalls==2.1.0
 
 # AI / Claude
-# claude-code is installed via npm, not pip
+# claude-code CLI is installed via npm/native installer, not pip
+claude-agent-sdk>=0.2.110              # Brain backend (src/brains/claude_sdk.py)
 
 # Voice — Speech-to-Text
 # faster-whisper                   # preferred STT backend
@@ -47,3 +52,6 @@ Pillow                           # image processing (src/tools/vision.py)
 # Install separately to avoid pulling 3GB of NVIDIA drivers:
 # pip install torch --index-url https://download.pytorch.org/whl/cpu
 python-multipart
+
+# Dev / tests
+pytest

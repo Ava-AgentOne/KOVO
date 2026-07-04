@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquare, Wrench, Bot, Brain,
-  Zap, HeartPulse, Shield, ScrollText, Settings,
-  Sun, Moon, Menu, X,
+  Zap, HeartPulse, Shield, ScrollText, Settings, Plug,
+  Sun, Moon, Menu, X, LogOut,
 } from 'lucide-react'
 import KovoLogo from './KovoLogo'
 import { useTheme } from '../context/ThemeContext'
@@ -15,6 +15,7 @@ const NAV = [
   { to: '/agents',    label: 'Agents',    Icon: Bot },
   { to: '/memory',    label: 'Memory',    Icon: Brain },
   { to: '/skills',    label: 'Skills',    Icon: Zap },
+  { to: '/mcp',       label: 'Integrations', Icon: Plug },
   { to: '/heartbeat', label: 'Heartbeat', Icon: HeartPulse },
   { to: '/security',  label: 'Security',  Icon: Shield },
   { to: '/logs',      label: 'Logs',      Icon: ScrollText },
@@ -97,7 +98,7 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        {/* Theme toggle */}
+        {/* Theme toggle + logout */}
         <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-800">
           <button
             onClick={toggle}
@@ -105,6 +106,16 @@ export default function Layout({ children }) {
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
+          <button
+            onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' })
+              window.location.href = '/dashboard/login'
+            }}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <LogOut size={16} />
+            Log out
           </button>
         </div>
       </aside>

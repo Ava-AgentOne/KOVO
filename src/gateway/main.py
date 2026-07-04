@@ -179,9 +179,12 @@ async def lifespan(app: FastAPI):
     app.state.tool_registry = deps["tool_registry"]
     app.state.sub_agent_runner = deps["sub_agent_runner"]
 
-    # Build and start Telegram app
-    from src.telegram.bot import build_application
-    tg_app = build_application(
+    # Build channels (Phase 3e): Telegram owns the bot lifecycle; the
+    # dashboard chat is a second surface. Consumers send via the registry.
+    from src.channels import registry as channel_registry
+    from src.channels.dashboard import DashboardChannel
+    from src.channels.telegram import TelegramChannel
+    telegram_channel = TelegramChannel(
         agent=deps["agent"],
         ollama=deps["ollama"],
         memory=deps["memory"],
@@ -195,33 +198,36 @@ async def lifespan(app: FastAPI):
         auto_extractor=deps["auto_extractor"],
         reminders=deps.get("reminders"),
     )
+    channel_registry.register(telegram_channel)
+    channel_registry.register(DashboardChannel())
+    app.state.channels = channel_registry
+
+    tg_app = telegram_channel.app
     app.state.tg_app = tg_app
 
     # Wire TTS + caller + transcriber into the main agent
     _init_phone_tools(deps["agent"], tg_app, deps["transcriber"])
 
-    webhook_url = os.environ.get("WEBHOOK_URL", "").strip()
-    if webhook_url:
-        await tg_app.initialize()
-        await tg_app.bot.set_webhook(
-            url=f"{webhook_url}/webhook",
-            allowed_updates=["message", "callback_query"],
-        )
-        await tg_app.start()
-        log.info("Telegram webhook registered at %s/webhook", webhook_url)
-    else:
-        log.info("No WEBHOOK_URL — starting long-polling mode")
-        await tg_app.initialize()
-        await tg_app.start()
-        await tg_app.updater.start_polling(drop_pending_updates=True)
-        log.info("Telegram polling started")
+    # Wire the native toolkit (Phase 3c) — real tools for the SDK brain
+    import asyncio as _asyncio
+    from src.agents import toolkit as _toolkit
+    _toolkit.set_runtime(
+        main_loop=_asyncio.get_running_loop(),
+        agent=deps["agent"],
+        reminders=deps.get("reminders"),
+        owner_chat_id=cfg.allowed_users()[0],
+    )
+
+    # Start all channels (webhook-vs-polling logic lives in TelegramChannel)
+    for _channel in channel_registry.all():
+        await _channel.start()
 
     # Heartbeat scheduler
     from src.heartbeat.reporter import HeartbeatReporter
     from src.heartbeat.scheduler import HeartbeatScheduler
     hb_cfg = cfg.get().get("heartbeat", {})
     reporter = HeartbeatReporter(
-        tg_app=tg_app,
+        channel=channel_registry.owner_channel(),
         owner_user_id=cfg.allowed_users()[0],
         structured_store=deps["store"],
     )
@@ -261,10 +267,11 @@ async def lifespan(app: FastAPI):
     # ── shutdown ─────────────────────────────────────────────────────────────
     log.info("Shutting down Kovo...")
     heartbeat.stop()
-    if tg_app.updater and tg_app.updater.running:
-        await tg_app.updater.stop()
-    await tg_app.stop()
-    await tg_app.shutdown()
+    for _channel in channel_registry.all():
+        try:
+            await _channel.stop()
+        except Exception as e:
+            log.warning("Channel %s stop failed: %s", _channel.name, e)
     log.info("Kovo shutdown complete")
 
 
@@ -294,12 +301,18 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
         log.warning("Phone tools init failed (telegram_call may not be configured): %s", e)
 
 
-app = FastAPI(title="Kovo Gateway", version="1.0", lifespan=lifespan)
+app = FastAPI(title="Kovo Gateway", version="2.0", lifespan=lifespan)
 
 # API routes
-app.include_router(api_router)
-app.include_router(setup_router)
-app.include_router(dashboard_api_router)
+from fastapi import Depends as _Depends
+from src.dashboard.auth import require_auth as _require_auth
+from src.dashboard.auth_api import router as auth_router
+
+app.include_router(api_router)                 # /health + /webhook — public
+app.include_router(auth_router)                # /api/auth/* — public (login flow)
+# Setup wizard: open while unconfigured, session-protected once a bot token exists
+app.include_router(setup_router, dependencies=[_Depends(_require_auth)])
+app.include_router(dashboard_api_router)       # auth enforced at router level
 
 # Serve built React SPA — catch-all that serves exact files or falls back to index.html.
 # StaticFiles(html=True) does NOT do SPA fallback; it only serves index.html for directory

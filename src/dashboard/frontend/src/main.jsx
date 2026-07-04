@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import App from './App'
 import './index.css'
+import './lib/authFetch'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <BrowserRouter basename="/dashboard">

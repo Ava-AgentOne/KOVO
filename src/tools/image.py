@@ -44,7 +44,7 @@ async def _download(url: str, dest: Path) -> Path:
 async def _search_ddg(query: str) -> str | None:
     """Return the first image URL from DuckDuckGo image search."""
     try:
-        from duckduckgo_search import DDGS  # type: ignore
+        from ddgs import DDGS  # type: ignore  (duckduckgo-search was renamed)
 
         results = list(DDGS().images(query, max_results=5))
         for r in results:
