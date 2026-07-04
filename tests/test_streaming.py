@@ -14,6 +14,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 class TestRouterStreaming:
+    @pytest.fixture(autouse=True)
+    def _stub_config(self, monkeypatch):
+        """Stub claude_timeout so tests don't need a deployed settings.yaml
+        (a fresh clone ships only settings.yaml.template)."""
+        from src.router import model_router
+        monkeypatch.setattr(model_router.cfg, "claude_timeout", lambda: 300)
+
     def _router(self):
         from src.router.classifier import MessageClassifier
         from src.router.model_router import ModelRouter
