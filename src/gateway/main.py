@@ -306,7 +306,7 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
         log.warning("Phone tools init failed (telegram_call may not be configured): %s", e)
 
 
-app = FastAPI(title="Kovo Gateway", version="2.0", lifespan=lifespan)
+app = FastAPI(title="Kovo Gateway", version="2.1", lifespan=lifespan)
 
 # API routes
 from fastapi import Depends as _Depends
