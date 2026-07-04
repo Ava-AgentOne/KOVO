@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Bot, X, Trash2, Brain, Zap, ChevronDown, ChevronUp, RefreshCw, Eye } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
 
 // Merged Skills + Agents page (v2.1 IA regroup): the main-agent card, full
 // skills management, and the advanced sub-agents section live together —
@@ -223,7 +225,7 @@ export default function SkillsAgents() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Skills &amp; Agents</h1>
+        <PageHeader title="Skills & Agents" icon={Zap} accent="fuchsia" />
         <div className="animate-pulse space-y-4">
           <div className="h-40 bg-gray-200 dark:bg-gray-800 rounded-xl" />
           <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl" />
@@ -236,7 +238,7 @@ export default function SkillsAgents() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Skills &amp; Agents</h1>
+      <PageHeader title="Skills & Agents" icon={Zap} accent="fuchsia" />
 
       {/* Main Agent Card */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
@@ -361,11 +363,9 @@ export default function SkillsAgents() {
         </div>
 
         {skills.length === 0 && (
-          <div className="text-center py-12 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
-            <Zap size={28} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-            <p className="text-gray-500 text-sm">No skills loaded</p>
-            <p className="text-xs text-gray-400 mt-1">Create a skill to teach Kovo new procedures</p>
-          </div>
+          <EmptyState icon={Zap} title="No skills loaded"
+            hint="Create a skill to teach Kovo new procedures"
+            actionLabel="New Skill" onAction={() => setShowSkillCreate(true)} />
         )}
 
         <p className="text-xs text-gray-400 mt-2 italic">

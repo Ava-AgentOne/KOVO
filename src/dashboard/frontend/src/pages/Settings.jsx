@@ -8,6 +8,7 @@ import {
   MessageSquare, Phone, Cloud, Github, Mic, Settings2, Database,
   Server, HardDrive, Plug, Eye, EyeOff,
 } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 
 // ── Tab system ──────────────────────────────────────────────────
 const TABS = [
@@ -873,7 +874,7 @@ export default function Settings() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <PageHeader title="Settings" icon={Settings2} accent="gray" />
         {version && <span className="text-sm text-gray-400 font-mono">v{version}</span>}
       </div>
 

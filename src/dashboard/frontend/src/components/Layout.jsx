@@ -8,27 +8,29 @@ import {
 import KovoLogo from './KovoLogo'
 import { useTheme } from '../context/ThemeContext'
 
-// v2.1 IA regroup: three sections instead of 11 flat items
+// v2.1 IA regroup: three sections instead of 11 flat items.
+// Icon colors are the per-domain accents from the design system (Step 4) —
+// they match each page's PageHeader accent.
 const NAV = [
   { section: 'Agent', items: [
-    { to: '/',        label: 'Overview',        Icon: LayoutDashboard },
-    { to: '/chat',    label: 'Chat',            Icon: MessageSquare },
-    { to: '/memory',  label: 'Memory',          Icon: Brain },
-    { to: '/skills',  label: 'Skills & Agents', Icon: Zap },
+    { to: '/',        label: 'Overview',        Icon: LayoutDashboard, color: 'text-brand-500' },
+    { to: '/chat',    label: 'Chat',            Icon: MessageSquare,   color: 'text-brand-500' },
+    { to: '/memory',  label: 'Memory',          Icon: Brain,           color: 'text-violet-500' },
+    { to: '/skills',  label: 'Skills & Agents', Icon: Zap,             color: 'text-fuchsia-500' },
   ]},
   { section: 'Capabilities', items: [
-    { to: '/tools',        label: 'Tools',        Icon: Wrench },
-    { to: '/integrations', label: 'Integrations', Icon: Plug },
+    { to: '/tools',        label: 'Tools',        Icon: Wrench, color: 'text-emerald-500' },
+    { to: '/integrations', label: 'Integrations', Icon: Plug,   color: 'text-teal-500' },
   ]},
   { section: 'System', items: [
-    { to: '/heartbeat', label: 'Heartbeat', Icon: HeartPulse },
-    { to: '/security',  label: 'Security',  Icon: Shield },
-    { to: '/logs',      label: 'Logs',      Icon: ScrollText },
-    { to: '/settings',  label: 'Settings',  Icon: Settings },
+    { to: '/heartbeat', label: 'Heartbeat', Icon: HeartPulse, color: 'text-rose-500' },
+    { to: '/security',  label: 'Security',  Icon: Shield,     color: 'text-amber-500' },
+    { to: '/logs',      label: 'Logs',      Icon: ScrollText, color: 'text-sky-500' },
+    { to: '/settings',  label: 'Settings',  Icon: Settings,   color: 'text-gray-400' },
   ]},
 ]
 
-function NavItem({ to, label, Icon, onClick }) {
+function NavItem({ to, label, Icon, color, onClick }) {
   return (
     <NavLink
       to={to}
@@ -42,8 +44,12 @@ function NavItem({ to, label, Icon, onClick }) {
         }`
       }
     >
-      <Icon size={18} />
-      {label}
+      {({ isActive }) => (
+        <>
+          <Icon size={18} className={isActive ? '' : color} />
+          {label}
+        </>
+      )}
     </NavLink>
   )
 }

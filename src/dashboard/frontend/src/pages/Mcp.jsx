@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, RefreshCw, Plug, X, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
 
 const inputCls = 'w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-brand-500'
 
@@ -107,10 +109,8 @@ export default function Mcp() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Integrations (MCP)</h1>
-          {!loading && <p className="text-sm text-gray-500 mt-0.5">{servers.length} server{servers.length === 1 ? '' : 's'} · connect Kovo to external tools</p>}
-        </div>
+        <PageHeader title="Integrations" icon={Plug} accent="teal"
+          subtitle={!loading ? `${servers.length} MCP server${servers.length === 1 ? '' : 's'} · connect Kovo to external tools` : undefined} />
         <div className="flex items-center gap-2">
           <button onClick={fetchServers} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Reload">
             <RefreshCw size={14} />
@@ -181,11 +181,9 @@ export default function Mcp() {
       )}
 
       {!loading && servers.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
-          <Plug size={28} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No integrations connected</p>
-          <p className="text-xs text-gray-400 mt-1">Add an MCP server to give Kovo new tools (Home Assistant, GitHub, …)</p>
-        </div>
+        <EmptyState icon={Plug} title="No integrations connected"
+          hint="Add an MCP server to give Kovo new tools (Home Assistant, GitHub, …)"
+          actionLabel="Add Server" onAction={() => setShowAdd(true)} />
       )}
 
       <ConfirmModal
