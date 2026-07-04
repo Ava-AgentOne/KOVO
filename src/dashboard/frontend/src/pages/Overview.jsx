@@ -123,7 +123,10 @@ function RemindersWidget() {
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Reminders</h2>
-        <span className="text-xs text-gray-400">{reminders.length} upcoming</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">{reminders.length} upcoming</span>
+          <Link to="/heartbeat" className="text-xs text-brand-500 hover:text-brand-600">Manage &rarr;</Link>
+        </div>
       </div>
       {reminders.length === 0 ? (
         <p className="text-sm text-gray-400">Nothing scheduled. Ask Kovo to remind you about something.</p>
