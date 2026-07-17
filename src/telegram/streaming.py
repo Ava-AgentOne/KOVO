@@ -32,7 +32,7 @@ class StreamingReply:
         self._interval = interval
         self._placeholder = None        # our sent message being edited
         self._latest = ""
-        self._last_edit = 0.0
+        self._last_edit = None   # monotonic time of last edit; None = never
         self._last_preview = ""
 
     # ── streaming callback (wired into agent.handle on_delta) ────────────
@@ -40,7 +40,9 @@ class StreamingReply:
     async def on_delta(self, text: str) -> None:
         self._latest = text
         now = time.monotonic()
-        if now - self._last_edit < self._interval:
+        # None-check matters: time.monotonic() is small on a freshly booted
+        # machine, so `now - 0.0 < interval` would throttle the FIRST delta.
+        if self._last_edit is not None and now - self._last_edit < self._interval:
             return
         preview = text[-_PREVIEW_LIMIT:] + _CURSOR
         if preview == self._last_preview:
