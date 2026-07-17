@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Bot, X, Trash2, Brain, Zap, ChevronDown, ChevronUp, RefreshCw, Eye } from 'lucide-react'
+import { Plus, Bot, X, Trash2, Brain, Zap, ChevronDown, ChevronUp, RefreshCw, Eye, GraduationCap, Check } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
@@ -47,6 +47,12 @@ function SkillCard({ skill, onDelete, onView }) {
         <div className="flex items-center gap-2">
           <Zap size={14} className="text-brand-500 flex-shrink-0" />
           <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{skill.name}</h3>
+          {skill.learned && (
+            <span title="Learned by Kovo (owner-approved)"
+              className="flex items-center gap-1 text-[10px] bg-fuchsia-500/10 text-fuchsia-500 px-1.5 py-0.5 rounded-full">
+              <GraduationCap size={10} /> learned
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <button onClick={() => onView(skill)} className="text-gray-300 hover:text-brand-500 transition-colors p-1" title="View SKILL.md">
@@ -116,6 +122,78 @@ function ViewModal({ skill, onClose }) {
             <pre className="text-sm text-gray-700 dark:text-gray-300 font-mono leading-relaxed whitespace-pre-wrap">{content}</pre>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// v3.0 auto-learning: proposals Kovo drafted, awaiting the owner's decision
+function PendingSkills({ onDecided }) {
+  const [pending, setPending] = useState([])
+  const [expanded, setExpanded] = useState(null)
+  const [busy, setBusy] = useState(null)
+
+  const load = () =>
+    fetch('/api/skills/pending').then(r => r.json())
+      .then(d => setPending(d.pending || [])).catch(() => {})
+
+  useEffect(() => {
+    load()
+    const id = setInterval(load, 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  const decide = async (pid, action) => {
+    setBusy(pid)
+    try { await fetch(`/api/skills/pending/${pid}/${action}`, { method: 'POST' }) } catch {}
+    setBusy(null)
+    load()
+    onDecided?.()
+  }
+
+  if (!pending.length) return null
+  return (
+    <div className="bg-fuchsia-500/5 border border-fuchsia-500/25 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <GraduationCap size={16} className="text-fuchsia-500" />
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Kovo wants to learn</h2>
+        <span className="text-xs text-gray-400">{pending.length} proposal{pending.length === 1 ? '' : 's'} awaiting your approval</span>
+      </div>
+      <div className="space-y-2">
+        {pending.map(p => (
+          <div key={p.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{p.name}</p>
+                <p className="text-xs text-gray-500">{p.description}</p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <button onClick={() => setExpanded(expanded === p.id ? null : p.id)}
+                  className="text-gray-400 hover:text-brand-500 p-1" title="Preview SKILL.md">
+                  <Eye size={14} />
+                </button>
+                <button onClick={() => decide(p.id, 'approve')} disabled={busy === p.id}
+                  className="flex items-center gap-1 text-xs bg-fuchsia-500 hover:bg-fuchsia-600 disabled:opacity-40 text-white px-3 py-1.5 rounded-lg transition-colors">
+                  <Check size={12} /> Learn it
+                </button>
+                <button onClick={() => decide(p.id, 'reject')} disabled={busy === p.id}
+                  className="text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 transition-colors">
+                  Not now
+                </button>
+              </div>
+            </div>
+            {expanded === p.id && (
+              <div className="mt-2 text-xs">
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {(p.triggers || []).map((tr, i) => (
+                    <span key={i} className="bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded">{tr}</span>
+                  ))}
+                </div>
+                <pre className="text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-800 rounded-lg p-2 overflow-auto max-h-48 whitespace-pre-wrap">{p.body}</pre>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -279,6 +357,9 @@ export default function SkillsAgents() {
           </div>
         </div>
       </div>
+
+      {/* Pending skill proposals (v3.0 auto-learning) */}
+      <PendingSkills onDecided={fetchAll} />
 
       {/* Skills — full management */}
       <div>

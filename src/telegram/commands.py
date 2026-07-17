@@ -730,6 +730,33 @@ async def button_callback(update: Update, context: CallbackContext) -> None:
         )
         return
 
+    # ── Skill-learning approve/deny (v3.0) ─────────────────────────────────
+    if data.startswith("learn_approve:") or data.startswith("learn_deny:"):
+        from src.gateway import config as cfg
+        if update.effective_user.id != cfg.allowed_users()[0]:
+            await query.edit_message_text("⛔ Only the owner can approve skill proposals.")
+            return
+        learner = context.bot_data.get("learner")
+        if learner is None:
+            await query.edit_message_text("Skill learning is not available.")
+            return
+        action, pid = data.split(":", 1)
+        try:
+            if action == "learn_approve":
+                skill = learner.approve(int(pid))
+                await query.edit_message_text(
+                    f"🎓 Learned *{skill.name}* — I'll use this skill from now on.",
+                    parse_mode="Markdown",
+                )
+            else:
+                learner.reject(int(pid))
+                await query.edit_message_text("👍 Okay, I won't learn that one.")
+        except ValueError:
+            await query.edit_message_text("⏱ That proposal was already handled.")
+        except Exception as e:
+            await query.edit_message_text(f"❌ Skill approval failed: {e}")
+        return
+
     # ── Permission approve ─────────────────────────────────────────────────
     if data == "perm_approve":
         pending = context.bot_data.get("pending_permission")

@@ -13,7 +13,7 @@
 [![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support_KOVO-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/erumaithi)
 
-*A personal AI agent powered by Claude Code — chat via Telegram, monitor via dashboard, extend with skills.*
+*A personal AI agent powered by Claude Code — chat via Telegram, run scheduled Routines, talk by voice, extend with skills.*
 
 ---
 
@@ -21,9 +21,11 @@
 
 ## 📖 What Is KOVO?
 
-**KOVO** is a self-hosted AI agent powered by **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** that runs on a Linux VM or macOS machine and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, and learn new skills — all while keeping your data private on your own hardware.
+**KOVO** is a self-hosted AI agent powered by **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** that runs on a Linux VM or macOS machine and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, run recurring **Routines** on a schedule, and **learn new skills with your approval** — all while keeping your data private on your own hardware.
 
 Inspired by **[OpenClaw](https://github.com/openclaw)**, KOVO takes a different approach to the AI backbone — since v2.0 it runs on the **[Claude Agent SDK](https://docs.anthropic.com/en/api/agent-sdk/overview)** (in-process, streaming, native tool use), powered by your Claude Max subscription. This gives it Claude Sonnet and Opus for real multi-step reasoning at a flat rate, not pay-per-token API calls. The classic `claude -p` subprocess remains as a config-selectable fallback, and an optional **local LLM** (like [Ollama](https://ollama.com)) handles cheap tasks like heartbeat summaries.
+
+**v3.0 is the Autonomy Release.** Everything through v2.1 made KOVO an agent you *talk to*. v3.0 makes it an agent that **runs your day** (Routines), **speaks with you** (voice-note conversations, plus an experimental Live Call mode), and **gets smarter on its own** (owner-approved skill learning) — with off-site backups and a guided Add-ons page rounding out the self-hosting story.
 
 ### 🧠 Why the Claude Agent SDK?
 
@@ -31,10 +33,10 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO runs Claude thro
 
 - **Full Claude reasoning** — Sonnet for medium tasks, Opus for complex ones
 - **Live streaming replies** — watch answers appear in Telegram (message edits) and the dashboard
-- **Real tool use** — Claude calls KOVO's tools natively (phone calls, images, reminders) and reacts to their results
+- **Real tool use** — Claude calls KOVO's tools natively (phone calls, images, reminders, routines) and reacts to their results
 - **MCP integrations** — connect Home Assistant, GitHub, and any Model Context Protocol server; install more from the built-in Store
 - **No API key management** — uses your Claude Max/Pro subscription directly
-- **Self-evolving** — the agent can install packages, create services, and write new skills
+- **Self-evolving** — the agent can install packages, create services, and propose new skills (you approve them)
 - **Pluggable by design** — brains (AI backends) and channels (chat surfaces) are config, not code
 
 ### 🎯 Who Is This For?
@@ -44,21 +46,40 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO runs Claude thro
 - **Privacy-conscious users** who want AI without cloud data storage
 - Anyone who wants to **automate** server management via natural language
 
+## 🆕 What's New in v3.0
+
+| Headline | What It Means |
+|----------|---------------|
+| ⏰ **Kovo Routines** | Recurring autonomous tasks. Say "check my email every Sunday at 9" — Claude converts it to a cron schedule, runs the task through the full agent on time, and delivers the result to your chat. Each routine keeps its own conversation memory across runs, so "what changed since last time?" actually works. Manage them by chat or from the new dashboard Routines page (presets or custom cron, Run now, per-run history). |
+| 🎓 **Auto-Skill Learning** | When a topic keeps coming up and no installed skill covers it, KOVO drafts a new skill in the background and asks you first — Telegram inline buttons or a pending queue on the dashboard, with a full preview. **Nothing ever self-activates**: max 2 proposals a day, a rejected topic is never proposed again, and learned skills carry a 🎓 provenance badge. |
+| 🎙️ **Voice Conversations** | Send KOVO a voice message and it replies with a spoken voice note (plus the full text). Replies are speech-shaped — no markdown or URLs read aloud — with a `voice.reply_in_kind` toggle (default on). And behind an opt-in flag: 🧪 **Live Call**, a real-time phone conversation with KOVO. |
+| 🧪 **Live Call (experimental)** | `/livecall` or "call me and let's talk" — KOVO rings you on Telegram, listens (voice-activity detection), thinks, and speaks back, walkie-talkie style (~3–6 s per turn in v1). Say "goodbye" to hang up. **Off by default** — enable with `experimental.live_call: true` in `settings.yaml`. |
+| 🧩 **Add-ons Page** | Guided one-click setup for system-level companions — Tailscale (remote access), Google Workspace, Ollama, Home Assistant. Each card shows live status (not installed → installed → ready), and every install **shows you the exact commands before anything runs**, with a live log while it works. |
+| ☁️ **Off-Site Backups** | Nightly upload of the latest core backup to a "KOVO Backups" folder in **your own Google Drive**, pruned to the last 7 (configurable). Quiet on success, Telegram alert on failure. |
+| 🔑 **Google Dashboard Sign-In (optional)** | Alongside the Telegram-approved login: "Sign in with Google", restricted to a single owner-allowlisted account. Hidden until fully configured via env vars — Telegram login remains the default. |
+
+Also in v3.0: the voice-call stack migrated to actively maintained packages (pyrofork + current py-tgcalls), the Telegram **bot command menu** is registered (commands autocomplete when you type `/`), a 📞 Live Call button joins the persistent keyboard, and a long-standing scheduler bug that prevented reminders from firing was found and fixed.
+
 ## ✨ Features
 
 | Feature | Description |
 |---------|-------------|
 | 🧠 **Claude Agent SDK Backbone** | Full Sonnet/Opus reasoning, in-process, with streaming + native tool use (CLI subprocess fallback) |
-| 💬 **Telegram Chat** | Talk to KOVO through Telegram with persistent keyboard buttons |
-| 🖥️ **Mission Control Dashboard** | Live activity feed, "Kovo is working on…" indicator, 24h sparklines, quick-chat — Telegram-approved login |
+| ⏰ **Routines** | User-defined recurring autonomous tasks — natural language in, cron-scheduled agent runs out |
+| 🎓 **Auto-Skill Learning** | KOVO drafts skills for repeated topics — owner-approved, never self-activating |
+| 🎙️ **Voice Conversations** | Voice note in → spoken voice note back; 🧪 experimental Live Call for real-time conversations |
+| 💬 **Telegram Chat** | Talk to KOVO through Telegram with persistent keyboard buttons and command autocomplete |
+| 🖥️ **Mission Control Dashboard** | Live activity feed, "Kovo is working on…" indicator, 24h sparklines, quick-chat — Telegram-approved login (optional Google sign-in) |
 | 🔌 **MCP Integrations + Store** | Connect any MCP server (Home Assistant verified); browse a curated catalog or search the official registry live |
+| 🧩 **Add-ons** | Guided companion setup — Tailscale, Google Workspace, Ollama, Home Assistant — commands shown before they run |
+| ☁️ **Off-Site Backups** | Nightly backup upload to your own Google Drive with pruning and failure alerts |
 | 🛡️ **Security Audits** | Automated port scanning, malware checks, rootkit detection |
 | 🧠 **Memory System** | Daily logs, learnings, and long-term memory across sessions |
 | ⚡ **Skill System** | Modular skills — browse web, shell commands, phone calls, reports |
 | 🤖 **Sub-Agents** | Spawn specialized agents for recurring tasks |
 | 📊 **Health Monitoring** | CPU, RAM, disk, uptime — all visible from dashboard and Telegram |
 | 🔧 **Smart Model Router** | Local LLM for simple tasks, Claude for complex ones |
-| 📞 **Voice Calls** | Real Telegram voice calls for critical alerts |
+| 📞 **Voice Calls** | Real Telegram voice calls for critical alerts and reminders |
 | 🔍 **Web Search** | Native Claude web search (SDK brain); DuckDuckGo fallback for the CLI brain |
 | 🔗 **Link Reader** | Auto-extracts page content from URLs in messages |
 | ⏰ **Smart Reminders** | Set by chat or dashboard — message, voice call, or both; full management UI |
@@ -90,8 +111,8 @@ Most self-hosted agents rely on basic API calls to an LLM. KOVO runs Claude thro
 | **Telegram** | python-telegram-bot |
 | **Local LLM** | Ollama, LM Studio, or any OpenAI-compatible endpoint (optional) |
 | **Dashboard** | React, Vite, Tailwind CSS, Lucide Icons |
-| **Database** | SQLite (memories, reminders, heartbeat log, permissions, stats) |
-| **Voice** | py-tgcalls + FFmpeg for Telegram calls |
+| **Database** | SQLite (memories, reminders, routines, heartbeat log, permissions, stats) |
+| **Voice** | pyrofork + py-tgcalls + FFmpeg for Telegram calls · Whisper (Groq or local) for transcription · edge-tts for speech |
 
 ### Smart Model Router
 
@@ -103,29 +124,33 @@ KOVO intelligently routes messages to the right model:
 | **Medium** | Claude Sonnet | Most tasks, code, analysis |
 | **Complex** | Claude Opus | Deep reasoning, architecture, planning |
 
-> Local LLM (Ollama) is used exclusively for heartbeat health summaries — never in the message routing path.
+> Local LLM (Ollama) is used exclusively for heartbeat health summaries — never in the message routing path. Live Call turns use a fast model to keep conversation latency down.
 
 ## 🖥️ Dashboard
 
 The built-in web dashboard gives you full visibility into KOVO's state:
 
 Redesigned in v2.1 with a cool slate design system, per-domain accent colors, and a
-three-section navigation (Agent · Capabilities · System). Login is Telegram-approved:
-the dashboard shows a code, your bot asks you to approve it.
+three-section navigation (Agent · Capabilities · System). v3.0 adds the **Routines**
+and **Add-ons** pages. Login is Telegram-approved: the dashboard shows a code, your
+bot asks you to approve it — with an optional owner-allowlisted **Google sign-in**
+once configured.
 
 | Section | What It Shows |
 |---------|---------------|
-| 📡 **Overview (Mission Control)** | Live activity feed, "Kovo is working on…" indicator, 24h CPU/RAM/disk sparklines, quick-chat, reminders + integrations + security widgets |
+| 📡 **Overview (Mission Control)** | Live activity feed, "Kovo is working on…" indicator, 24h CPU/RAM/disk sparklines, quick-chat, routines + reminders + integrations + security widgets |
 | 💬 **Chat** | Talk to KOVO from the browser with live streaming replies (WebSocket) |
+| ⏰ **Routines** | Create and manage recurring autonomous tasks — schedule presets or custom cron, enable/disable, Run now, per-run history |
 | 🧠 **Memory** | Browse daily logs and workspace files |
-| ⚡ **Skills & Agents** | The main agent, full skills management, and sub-agents in one place |
+| ⚡ **Skills & Agents** | The main agent, full skills management, sub-agents, and the pending queue of skills KOVO proposes to learn |
 | 🔧 **Tools** | All registered tools with status and install commands |
 | 🔌 **Integrations** | MCP servers with connection tests + **Store**: curated catalog and live search of the official MCP registry |
+| 🧩 **Add-ons** | Guided companion setup — Tailscale, Google Workspace, Ollama, Home Assistant — with live status detection and show-commands-first installs |
 | 💓 **Heartbeat** | Scheduled job status, health reports, and full reminders management |
 | 🛡️ **Security** | Latest audit results, history, run/reset from UI |
 | 📜 **Logs** | Live gateway logs |
 | ⚙️ **Settings** | YAML config editor + environment variables |
-| 🧙 **Setup Wizard** | First-time guided configuration with step-by-step credential guides |
+| 🧙 **Setup Wizard** | First-time guided configuration with step-by-step credential guides, finishing at the Add-ons page |
 
 ## 🚀 Quick Start
 
@@ -177,10 +202,26 @@ On first run (or when `.env` is unconfigured), the dashboard automatically redir
 - **Google Workspace** — which APIs to enable, with direct links to each one
 - **Voice Calls** — clear 3-account explanation (your main account, the bot, the caller)
 - **Groq Transcription** — free tier setup at console.groq.com
+- **Add-ons** — optional guided setup for Tailscale, Google Workspace, Ollama, and Home Assistant
 
 Credentials are saved to `config/.env` on your machine — never transmitted.
 
 > **Prefer manual setup?** Copy `config/.env.template` to `config/.env` and fill in your tokens, then restart the service.
+
+### v3.0 Configuration Highlights
+
+```yaml
+backup:
+  offsite:
+    enabled: true        # nightly backup upload to your Google Drive
+    keep: 7              # how many off-site backups to retain
+
+voice:
+  reply_in_kind: true    # voice message in → voice note reply (default on)
+
+experimental:
+  live_call: false       # 🧪 opt in to real-time Live Call conversations
+```
 
 ### Upgrade
 
@@ -198,7 +239,7 @@ Updates only trigger on version bumps, not every commit. Your personal data (wor
 
 ## 📱 Telegram Commands
 
-KOVO uses a persistent reply keyboard with emoji buttons:
+KOVO uses a persistent reply keyboard with emoji buttons, and since v3.0 registers the bot command menu — type `/` and commands autocomplete:
 
 | Button | Command | What It Does |
 |--------|---------|--------------|
@@ -208,8 +249,9 @@ KOVO uses a persistent reply keyboard with emoji buttons:
 | 💾 Storage | `/storage` | File storage usage with gauge |
 | 📚 Skills | `/skills` | List all loaded skills |
 | 🔧 Tools | `/tools` | Tool registry with status |
+| 📞 Live Call | `/livecall` | Start a live voice conversation (🧪 experimental, off by default) |
 
-Plus: `/agents`, `/permissions`, `/purge`, `/reminders`, `/remind cancel <id>`, `/search`, `/call`, `/db`, and natural language for everything else.
+Plus: `/agents`, `/permissions`, `/purge`, `/reminders`, `/remind cancel <id>`, `/search`, `/call`, `/db`, and natural language for everything else — including "remind me tomorrow at 9" (one-time) and "check my email every Sunday" (a Routine).
 
 ## ⚡ Skills
 
@@ -226,10 +268,13 @@ KOVO ships with built-in skills and supports custom ones:
 | 🔍 **web-search** | Auto DuckDuckGo search for current-info questions |
 | ⏰ **reminders** | Smart reminders with message, call, or both delivery |
 
+And since v3.0, KOVO **grows its own skill library**: when a topic keeps recurring with no matching skill, it drafts one and asks for your approval — in Telegram ("🎓 Learn it" / "Not now") or from the dashboard pending queue with a full preview. Approved skills hot-reload immediately and carry a 🎓 learned badge.
+
 ## 🛡️ Security
 
 KOVO includes built-in security features:
 
+- **Owner approval everywhere** — learned skills, Kovo-proposed routines, and sub-agents never activate without your explicit approval
 - **Token masking** — all API keys masked in log output
 - **`.env` validation** — warns if required vars are missing; starts in dashboard-only mode
 - **File permissions** — `.env`, credentials, and DB set to `chmod 600`
@@ -238,9 +283,12 @@ KOVO includes built-in security features:
 - **Pre-push git hook** — blocks personal data, `.env`, credentials, and database files from being committed
 - **Personal data isolation** — repo ships `.template` files only; live workspace files are gitignored
 - **Claude Code sandbox** — pre-approved command allowlist, runtime approval via Telegram
+- **Show-before-run installs** — the Add-ons page displays the exact commands before executing anything
+- **Google sign-in allowlist** — optional dashboard login restricted to one owner account; the button stays hidden until fully configured
 - **Shell metachar blocking** — `;|&$\`><(){}!` blocked in all API command endpoints
-- **Env key whitelist** — dashboard can only write 9 approved KOVO configuration keys
+- **Env key whitelist** — dashboard can only write approved KOVO configuration keys
 - **Backup validation** — tar archives checked for path traversal and source code injection before extraction
+- **Off-site backups to your own Drive** — nightly, pruned, alert on failure; your data never touches third-party storage you don't control
 - **Reminder date validation** — rejects invalid dates that would fire immediately
 
 ## 📁 Project Structure
@@ -251,7 +299,7 @@ KOVO includes built-in security features:
 ├── data/            # SQLite DB, security audit data, temp files
 ├── scripts/         # Helper scripts
 ├── src/
-│   ├── agents/      # Main agent + sub-agent runner
+│   ├── agents/      # Main agent + sub-agent runner + native toolkit
 │   ├── dashboard/   # FastAPI API + React frontend
 │   ├── gateway/     # FastAPI app, startup, config
 │   ├── heartbeat/   # Scheduled tasks (APScheduler)
@@ -260,7 +308,7 @@ KOVO includes built-in security features:
 │   ├── router/      # Smart model router (local LLM / Claude)
 │   ├── skills/      # Skill registry + loader
 │   ├── telegram/    # Bot, commands, formatting
-│   ├── tools/       # Tool registry (Claude CLI, shell, browser, etc.)
+│   ├── tools/       # Tool registry (routines, live call, backups, browser, etc.)
 │   └── utils/       # Cross-platform helpers (platform.py, tz.py)
 ├── workspace/
 │   ├── memory/              # Daily log files (YYYY-MM-DD.md)
@@ -311,6 +359,24 @@ The dashboard is served at `/dashboard`, not the root. Navigate to `http://<IP>:
 - Check authentication: `claude auth status`
 - Ensure you have an active Claude Max or Pro subscription
 - Check the sandbox permissions: `cat .claude/settings.local.json`
+</details>
+
+<details>
+<summary><strong>Live Call does nothing</strong></summary>
+
+- Live Call is 🧪 experimental and **off by default** — set `experimental.live_call: true` in `settings.yaml` and restart
+- It needs the voice-call accounts configured (see the Setup Wizard's Voice Calls step)
+- A `GROQ_API_KEY` is strongly recommended — without it, transcription falls back to slower local CPU Whisper and turns feel sluggish
+- Expect ~3–6 s per turn in v1 — it's a composed pipeline, not a realtime voice API
+</details>
+
+<details>
+<summary><strong>Off-site backup not uploading</strong></summary>
+
+- Requires Google Workspace configured (Drive scope) — use the Add-ons page or `/auth_google` in Telegram
+- Check `backup.offsite.enabled: true` in `settings.yaml`
+- Test manually: `venv/bin/python -m src.tools.offsite_backup`
+- On failure KOVO alerts you in Telegram; on success it's silent by design
 </details>
 
 <details>

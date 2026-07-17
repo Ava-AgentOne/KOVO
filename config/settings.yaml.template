@@ -88,3 +88,9 @@ memory:
     max_db_size_mb: 100
     custom_table_prefix: "user_"
     schema_in_prompt: "on_demand"
+
+# ── Experimental features (off by default) ─────────────────────────────
+experimental:
+  # Live two-way voice calls (/livecall). Works, but turns take several
+  # seconds (transcribe -> think -> speak). Enable at your own patience.
+  live_call: false

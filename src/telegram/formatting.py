@@ -30,6 +30,7 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup(
         [KeyboardButton("📡 Status"), KeyboardButton("🖥 Health")],
         [KeyboardButton("🧠 Memory"), KeyboardButton("💾 Storage")],
         [KeyboardButton("📚 Skills"), KeyboardButton("🔧 Tools")],
+        [KeyboardButton("📞 Live Call")],
     ],
     resize_keyboard=True,
     is_persistent=True,
@@ -43,6 +44,7 @@ BUTTON_TO_COMMAND: dict[str, str] = {
     "💾 Storage": "/storage",
     "📚 Skills":  "/skills",
     "🔧 Tools":   "/tools",
+    "📞 Live Call": "/livecall",
 }
 
 # ── Inline keyboard factories ─────────────────────────────────────────────────
@@ -391,3 +393,23 @@ def format_purge_review(purgeable: dict) -> str:
 
     lines.append(f"Total: {total_count} files, {total_mb:.1f}MB")
     return "\n".join(lines)
+
+
+def speakable(text: str, cap: int = 800) -> str:
+    """Shape a markdown-ish agent reply for TTS (v3.0 Phase 3a) — spoken
+    asterisks and URLs sound terrible."""
+    import re
+    t = re.sub(r"```.*?```", " (code omitted) ", text, flags=re.S)
+    t = re.sub(r"`([^`]+)`", r"\1", t)
+    t = re.sub(r"\*\*?([^*]+)\*\*?", r"\1", t)
+    t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)      # [label](url) -> label
+    t = re.sub(r"https?://\S+", "a link", t)
+    t = re.sub(r"^#+\s*", "", t, flags=re.M)
+    t = re.sub(r"^[\-*•]\s+", "", t, flags=re.M)
+    t = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]", "", t)  # emoji
+    t = re.sub(r"\s+", " ", t).strip()
+    if len(t) > cap:
+        cut = t[:cap]
+        cut = cut[:cut.rfind(" ")] if " " in cut else cut
+        t = cut + " — full details in the text reply."
+    return t

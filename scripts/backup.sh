@@ -41,6 +41,10 @@ OS_TYPE="$(uname -s)"
 BACKUP_DIR="$KOVO_DIR/data/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 STAGE="/tmp/kovo-backup-$DATE"
+# Aborted runs must not leave staged secrets (.env copies) in /tmp —
+# 11 orphaned stages had accumulated by 2026-07-04. EXIT covers success too
+# (the explicit rm at the end then becomes a no-op).
+trap 'rm -rf "$STAGE"' EXIT
 INCLUDE_MEDIA=false
 LIST_ONLY=false
 RETENTION_DAYS=30

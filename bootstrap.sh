@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
-KOVO_VERSION="2.1"
+KOVO_VERSION="3.0"
 # KOVO — Self-Hosted AI Agent Installer v1.0
 # https://github.com/Ava-AgentOne/kovo
 #
@@ -54,8 +54,19 @@ done
 # Detect this and switch to --yes mode so prompts dont silently auto-accept.
 if [[ ! -t 0 ]]; then
     AUTO_YES=true
-    exec 0</dev/tty 2>/dev/null || true
+    [[ -r /dev/tty ]] && exec 0</dev/tty
 fi
+
+# Headless environments (CI, provisioning, containers) often have TERM unset
+# or set to the generic 'unknown', which makes ncurses `clear`/`tput` error
+# out — under `set -e` that killed the install at the welcome screen.
+if [[ -z "${TERM:-}" || "$TERM" == "unknown" || "$TERM" == "dumb" ]]; then
+    export TERM=xterm
+fi
+# Spinner target: animate on the terminal when there is one, else stay quiet.
+SPIN_TTY="/dev/null"
+[[ -w /dev/tty ]] && SPIN_TTY="/dev/tty"
+
 
 # ─── Terminal Colors ──────────────────────────────────────────────
 if [[ -t 1 ]]; then
@@ -83,15 +94,15 @@ spin() {
     local i=0
     while kill -0 "$pid" 2>/dev/null; do
         case $((i % 4)) in
-            0) printf "\r  ${BLUE}-${NC} %s " "$label" > /dev/tty ;;
-            1) printf "\r  ${BLUE}\\${NC} %s " "$label" > /dev/tty ;;
-            2) printf "\r  ${BLUE}|${NC} %s " "$label" > /dev/tty ;;
-            3) printf "\r  ${BLUE}/${NC} %s " "$label" > /dev/tty ;;
+            0) printf "\r  ${BLUE}-${NC} %s " "$label" > "$SPIN_TTY" ;;
+            1) printf "\r  ${BLUE}\\${NC} %s " "$label" > "$SPIN_TTY" ;;
+            2) printf "\r  ${BLUE}|${NC} %s " "$label" > "$SPIN_TTY" ;;
+            3) printf "\r  ${BLUE}/${NC} %s " "$label" > "$SPIN_TTY" ;;
         esac
         i=$((i + 1))
         sleep 0.2
     done
-    printf "\r%*s\r" 70 "" > /dev/tty
+    printf "\r%*s\r" 70 "" > "$SPIN_TTY"
 }
 
 # Run a command with a spinner — usage: run_with_spin "label" command arg1 arg2
@@ -144,7 +155,7 @@ trap trap_handler EXIT
 # Clears terminal, shows logo, shows step indicator dots
 new_screen() {
     local step=${1:-0} total=8
-    clear
+    clear 2>/dev/null || true
     local LB='\033[38;5;117m'
     local KB='\033[38;5;75m'
     local WH='\033[38;5;255m'
@@ -186,6 +197,8 @@ new_screen() {
 # Returns 0 = continue forward, 1 = go back
 wizard_nav() {
     local step=$1
+    # --yes promises "auto-accept all prompts" — never pause for Enter then.
+    if $AUTO_YES; then return 0; fi
     echo ""
     echo -e "  ${BLUE}──────────────────────────────────────────────────────────${NC}"
     if (( step > 1 )); then
@@ -737,38 +750,8 @@ install_python_env() {
         warn "py-tgcalls failed to build (voice calls disabled — other features unaffected)"
     fi
 
-    # Patch py-tgcalls: Groupcall* error imports incompatible with stock Pyrogram.
-    # Generic: wraps EVERY bare "from <client>.errors... import Groupcall*" in
-    # try/except (2.2.x has GroupcallForbidden; newer versions add more).
-    # Same logic as scripts/patch_pytgcalls.py — keep the two in sync.
-    if "$VENV/bin/python" -c "import pytgcalls" 2>/dev/null; then
-        "$VENV/bin/python" << 'GCPATCH'
-import glob, re
-pattern = re.compile(
-    r"^from ((?:pyrogram|hydrogram|telethon)\.errors[\w.]*) import (Groupcall\w+)$"
-)
-for f in glob.glob("venv/**/pytgcalls/mtproto/*.py", recursive=True):
-    with open(f) as fh:
-        original = fh.read()
-    lines = original.splitlines()
-    out = []
-    for i, line in enumerate(lines):
-        m = pattern.match(line)
-        prev = lines[i - 1].strip() if i else ""
-        if m and prev != "try:":
-            out.append(
-                "try:\n    from " + m.group(1) + " import " + m.group(2)
-                + "\nexcept ImportError:\n    " + m.group(2) + " = Exception"
-            )
-        else:
-            out.append(line)
-    patched = "\n".join(out) + ("\n" if original.endswith("\n") else "")
-    if patched != original:
-        with open(f, "w") as fh:
-            fh.write(patched)
-GCPATCH
-        ok "py-tgcalls Groupcall* import patch applied"
-    fi
+    # v3.0: the Groupcall* import patch is retired — pyrofork provides the
+    # Groupcall errors natively (verified against py-tgcalls 2.3.3).
 
     # ── Group 5: PyTorch (optional on macOS) ──────────────────
     progress_bar 5 7
@@ -958,6 +941,17 @@ CLAUDE_CODE_OAUTH_TOKEN=
 GROQ_API_KEY=
 GITHUB_TOKEN=
 GOOGLE_CREDENTIALS_PATH=$KOVO_DIR/config/google-credentials.json
+# Optional "Sign in with Google" for the dashboard (first three required):
+# create a Web-application OAuth client in Google Cloud Console and register
+# your callback (<base-url>/api/auth/google/callback) as an authorized
+# redirect URI. Google only accepts https:// redirect URIs (http://localhost
+# is the one exception) — for remote access serve KOVO over HTTPS (e.g.
+# 'tailscale serve') and set GOOGLE_REDIRECT_URI to that full https callback
+# URL. GOOGLE_ALLOWED_EMAIL is the ONLY account allowed in.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_ALLOWED_EMAIL=
+GOOGLE_REDIRECT_URI=
 ENV_EOF
     if [[ ! -f "$KOVO_DIR/config/.env" ]]; then
         cp "$KOVO_DIR/config/.env.template" "$KOVO_DIR/config/.env"

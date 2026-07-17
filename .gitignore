@@ -71,3 +71,9 @@ config/kovo.env
 # Agent-generated workspace scripts (never commit)
 workspace/*.py
 scripts/*.py
+
+# Runtime secrets & artifacts (v3.0 Phase 3.5 sweep)
+data/*.key
+*.session.*
+workspace/auth_state.json
+workspace/generated/

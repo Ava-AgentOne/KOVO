@@ -183,6 +183,10 @@ class TelegramCaller:
                 await pytgcalls.leave_call(user_id)
             except Exception:
                 pass
+            # Grace period: let pyrofork's pending update handlers drain
+            # before the session DB closes ("Cannot operate on a closed
+            # database" teardown noise otherwise).
+            await asyncio.sleep(1)
             try:
                 await app.stop()
             except Exception:

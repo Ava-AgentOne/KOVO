@@ -86,17 +86,21 @@ def _save_sessions() -> None:
     path.chmod(0o600)
 
 
-def create_session(ip: str) -> str:
-    """Create a session and return the signed cookie value."""
+def create_session(ip: str, ttl: int = SESSION_TTL) -> str:
+    """Create a session and return the signed cookie value.
+
+    Pass a custom *ttl* (seconds) to override the default 30-day expiry —
+    e.g. Google-authenticated sessions use 365 days so they feel permanent.
+    """
     now = int(time.time())
     # Prune expired sessions while we're here
     store = _sessions()
     for sid in [s for s, v in store.items() if v.get("expires", 0) < now]:
         del store[sid]
     sid = secrets.token_hex(16)
-    store[sid] = {"created": now, "expires": now + SESSION_TTL, "ip": ip}
+    store[sid] = {"created": now, "expires": now + ttl, "ip": ip}
     _save_sessions()
-    payload = f"{sid}.{now + SESSION_TTL}"
+    payload = f"{sid}.{now + ttl}"
     return f"{payload}.{_sign(payload)}"
 
 

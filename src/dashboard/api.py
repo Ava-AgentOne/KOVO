@@ -6,13 +6,14 @@ single-file api.py in v2.0). Auth is enforced per sub-router.
 from fastapi import APIRouter
 
 from src.dashboard.routers import (
-    backup, chat, heartbeat, mcp, memory, overview, security, settings,
-    skills, system, tools_agents, updates,
+    addons, backup, chat, heartbeat, mcp, memory, overview, routines,
+    security, settings, skills, system, tools_agents, updates,
 )
 
 router = APIRouter()
 for _module in (
     system, tools_agents, skills, memory, heartbeat,
-    settings, chat, security, backup, updates, mcp, overview,
+    settings, chat, security, backup, updates, mcp, overview, routines,
+    addons,
 ):
     router.include_router(_module.router)

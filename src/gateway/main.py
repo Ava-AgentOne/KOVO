@@ -83,6 +83,8 @@ def _build_deps():
 
     from src.tools.reminders import ReminderManager
     reminder_mgr = ReminderManager(db_path=cfg.data_dir() / "kovo.db")
+    from src.tools.routines import RoutineManager
+    routine_mgr = RoutineManager(db_path=cfg.data_dir() / "kovo.db")
     auto_extractor = AutoMemoryExtractor(memory_manager=memory, structured_store=store)
     skills = SkillRegistry(skills_dir=skills_dir)
     creator = SkillCreator(skills_dir=skills_dir, registry=skills)
@@ -92,6 +94,10 @@ def _build_deps():
 
     sub_agent_runner = SubAgentRunner(workspace_dir=workspace, tool_registry=tool_registry)
 
+    from src.agents.learning import SkillLearner
+    learner = SkillLearner(router=router, skills=skills, creator=creator,
+                           db_path=cfg.data_dir() / "kovo.db")
+
     agent = KovoAgent(
         memory=memory,
         router=router,
@@ -99,6 +105,7 @@ def _build_deps():
         tool_registry=tool_registry,
         sub_agent_runner=sub_agent_runner,
         structured_store=store,
+        learner=learner,
     )
 
     # Wire structured store into claude_cli for permission audit logging
@@ -124,6 +131,8 @@ def _build_deps():
         "sub_agent_runner": sub_agent_runner,
         "transcriber": transcriber,
         "reminders": reminder_mgr,
+        "routines": routine_mgr,
+        "learner": learner,
     }
 
 
@@ -170,6 +179,8 @@ async def lifespan(app: FastAPI):
     storage = StorageManager()
     app.state.storage = storage
     app.state.reminders = deps.get("reminders")
+    app.state.routines = deps.get("routines")
+    app.state.learner = deps.get("learner")
 
     app.state.ollama = deps["ollama"]
     app.state.memory = deps["memory"]
@@ -205,6 +216,27 @@ async def lifespan(app: FastAPI):
     tg_app = telegram_channel.app
     app.state.tg_app = tg_app
 
+    # Skill-learning proposals (v3.0): owner approval via inline buttons
+    tg_app.bot_data["learner"] = deps.get("learner")
+
+    async def _skill_proposal_notify(p: dict) -> None:
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🎓 Learn it", callback_data=f"learn_approve:{p['id']}"),
+            InlineKeyboardButton("Not now", callback_data=f"learn_deny:{p['id']}"),
+        ]])
+        await tg_app.bot.send_message(
+            cfg.allowed_users()[0],
+            f"🎓 *I can learn a skill from this*\n\n"
+            f"*{p['name']}* — {p['description']}\n\n"
+            f"Approve and I'll remember the procedure permanently. "
+            f"You can also review it on the dashboard (Skills & Agents).",
+            parse_mode="Markdown", reply_markup=kb,
+        )
+
+    if deps.get("learner") is not None:
+        deps["learner"].notify = _skill_proposal_notify
+
     # Wire TTS + caller + transcriber into the main agent
     _init_phone_tools(deps["agent"], tg_app, deps["transcriber"])
 
@@ -215,12 +247,19 @@ async def lifespan(app: FastAPI):
         main_loop=_asyncio.get_running_loop(),
         agent=deps["agent"],
         reminders=deps.get("reminders"),
+        routines=deps.get("routines"),
+        transcriber=deps.get("transcriber"),
         owner_chat_id=cfg.allowed_users()[0],
     )
 
     # Start all channels (webhook-vs-polling logic lives in TelegramChannel)
     for _channel in channel_registry.all():
         await _channel.start()
+
+    # Register the Telegram command menu (v3.0 — post_init never fires with
+    # the manual channel lifecycle, so this must be an explicit call)
+    from src.telegram.bot import register_command_menu
+    await register_command_menu(tg_app)
 
     # Heartbeat scheduler
     from src.heartbeat.reporter import HeartbeatReporter
@@ -249,6 +288,7 @@ async def lifespan(app: FastAPI):
     heartbeat._tg_bot = tg_app.bot
     heartbeat._owner_user_id = cfg.allowed_users()[0]
     heartbeat._reminders = deps.get("reminders")
+    heartbeat._routines = deps.get("routines")
     heartbeat._agent = deps["agent"]
 
     # Attach caller to heartbeat for session health monitoring
@@ -306,7 +346,7 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
         log.warning("Phone tools init failed (telegram_call may not be configured): %s", e)
 
 
-app = FastAPI(title="Kovo Gateway", version="2.1", lifespan=lifespan)
+app = FastAPI(title="Kovo Gateway", version="3.0", lifespan=lifespan)
 
 # API routes
 from fastapi import Depends as _Depends
