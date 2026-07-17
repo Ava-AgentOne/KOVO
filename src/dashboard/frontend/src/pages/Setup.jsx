@@ -724,6 +724,13 @@ function SavedScreen({ countdown, botToken }) {
               Open Kovo in Telegram
             </a>
             <p className="text-gray-500 text-xs">Send any message to start the onboarding conversation</p>
+            <p className="text-gray-500 text-xs">
+              Want remote access, Google, or a local model?{' '}
+              <a href="/dashboard/addons" className="text-brand-400 hover:text-brand-300 underline">
+                Add-ons
+              </a>{' '}
+              walks you through each one.
+            </p>
           </div>
         </div>
 

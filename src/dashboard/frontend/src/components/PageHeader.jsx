@@ -3,11 +3,13 @@
 const ACCENTS = {
   brand:   'bg-brand-500/10 text-brand-500',
   violet:  'bg-violet-500/10 text-violet-500',
+  indigo:  'bg-indigo-500/10 text-indigo-500',
   fuchsia: 'bg-fuchsia-500/10 text-fuchsia-500',
   emerald: 'bg-emerald-500/10 text-emerald-500',
   teal:    'bg-teal-500/10 text-teal-500',
   rose:    'bg-rose-500/10 text-rose-500',
   amber:   'bg-amber-500/10 text-amber-500',
+  orange:  'bg-orange-500/10 text-orange-500',
   sky:     'bg-sky-500/10 text-sky-500',
   gray:    'bg-gray-500/10 text-gray-500 dark:text-gray-400',
 }

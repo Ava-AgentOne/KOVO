@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Zap, BarChart2, HeartPulse, HeartCrack, Clock, Brain, Archive, GitBranch, Bell, Loader2, Plus, X, Phone, MessageSquare } from 'lucide-react'
+import { Zap, BarChart2, HeartPulse, HeartCrack, Clock, Brain, Archive, GitBranch, Bell, Loader2, Plus, X, Phone, MessageSquare, Cloud } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 
 const inputCls = 'w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-brand-500'
@@ -142,6 +142,8 @@ const JOB_META = {
   version_check:               { icon: GitBranch, desc: 'Check GitHub for new KOVO releases',                 color: 'text-emerald-500' },
   weekly_memory_consolidation: { icon: Archive,   desc: 'Archive Learnings if >500 lines (never touches Pinned)', color: 'text-amber-500' },
   check_reminders:             { icon: Bell,      desc: 'Fire due reminders via Telegram message or call',    color: 'text-blue-500' },
+  offsite_backup:              { icon: Cloud,     desc: 'Upload a fresh backup to Google Drive (retention-pruned)', color: 'text-teal-500' },
+  check_routines:              { icon: Clock,     desc: 'Run due routines — recurring autonomous tasks', color: 'text-indigo-500' },
 }
 
 function renderReport(text) {
@@ -268,15 +270,6 @@ export default function Heartbeat() {
               </div>
             )
           })}
-          {/* Reminder checker — always-on interval job */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <Bell size={16} className="text-blue-500 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">check reminders</p>
-              <p className="text-xs text-gray-400">Fire due reminders via Telegram message or call</p>
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 font-mono">every 60s</span>
-          </div>
         </div>
       </div>
 

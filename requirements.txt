@@ -8,14 +8,13 @@ PyYAML>=6.0
 
 # Telegram
 python-telegram-bot[webhooks]>=21.0
-# Voice-call stack — pinned as a set. py-tgcalls >= 2.3 requires a pyrogram
-# fork with InputGroupCallSlug (pyrofork); stock pyrogram 2.0.106 lacks it.
-# bootstrap.sh patches the remaining Groupcall* error imports post-install.
-# Revisit when migrating to pyrofork (v2.1 candidate).
-pyrogram==2.0.106
-tgcrypto
-py-tgcalls==2.2.11
-ntgcalls==2.1.0
+# Voice-call stack (v3.0 Phase 3b: migrated to pyrofork — installs as the
+# `pyrogram` namespace, same session format, provides InputGroupCallSlug).
+# Pinned as a tested set; the old Groupcall* patch is retired.
+pyrofork==2.3.69
+tgcrypto-pyrofork==1.2.8
+py-tgcalls==2.3.3
+ntgcalls==2.2.5
 
 # AI / Claude
 # claude-code CLI is installed via npm/native installer, not pip

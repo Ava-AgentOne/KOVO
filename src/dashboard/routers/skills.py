@@ -35,6 +35,8 @@ async def get_skills(request: Request):
     skills_reg = tg_app.bot_data.get("skills") if tg_app else None
     if not skills_reg:
         return {"skills": []}
+    learner = getattr(state, "learner", None)
+    learned = learner.learned_names() if learner else set()
     return {
         "skills": [
             {
@@ -43,6 +45,7 @@ async def get_skills(request: Request):
                 "tools": s.tools,
                 "triggers": s.triggers,
                 "path": str(s.path),
+                "learned": s.name in learned,
             }
             for s in skills_reg.all()
         ]
@@ -101,6 +104,42 @@ async def delete_skill(request: Request, name: str):
 
 
 # ── ClawHub ───────────────────────────────────────────────────────────────────
+
+@router.get("/skills/pending")
+async def pending_skills(request: Request):
+    """Skill proposals awaiting owner approval (v3.0 auto-learning)."""
+    learner = getattr(_app_state(request), "learner", None)
+    if learner is None:
+        return {"pending": []}
+    import json as _json
+    out = []
+    for p in learner.pending():
+        p["triggers"] = _json.loads(p["triggers"])
+        out.append(p)
+    return {"pending": out}
+
+
+@router.post("/skills/pending/{pid}/approve")
+async def approve_pending_skill(request: Request, pid: int):
+    learner = getattr(_app_state(request), "learner", None)
+    if learner is None:
+        raise HTTPException(503, "Skill learning not available")
+    try:
+        skill = learner.approve(pid)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    return {"approved": True, "name": skill.name}
+
+
+@router.post("/skills/pending/{pid}/reject")
+async def reject_pending_skill(request: Request, pid: int):
+    learner = getattr(_app_state(request), "learner", None)
+    if learner is None:
+        raise HTTPException(503, "Skill learning not available")
+    if not learner.reject(pid):
+        raise HTTPException(404, "Proposal not found or already decided")
+    return {"rejected": True}
+
 
 @router.get("/skills/clawhub/search")
 async def clawhub_search(q: str = ""):

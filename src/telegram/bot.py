@@ -226,6 +226,44 @@ def _ffmpeg(args: list[str]) -> None:
         raise RuntimeError(f"ffmpeg failed: {proc.stderr[-300:]}")
 
 
+async def _handle_livecall(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/livecall — Kovo calls the owner for a live two-way conversation (v3.0)."""
+    if not await auth_middleware(update, context, cfg.allowed_users()):
+        return
+    from src.tools import live_call as lc
+    if not lc.is_enabled():
+        await update.message.reply_text(
+            "🧪 *Live Call is experimental and currently disabled.*\n\n"
+            "Turn-based voice conversation works, but turns take several "
+            "seconds. Enable it in settings.yaml:\n"
+            "`experimental:`\n`  live_call: true`\n"
+            "(dashboard → Settings → Configuration), then restart KOVO.",
+            parse_mode="Markdown",
+        )
+        return
+    if lc.is_active():
+        await update.message.reply_text("📞 A live call is already running.")
+        return
+    agent = context.bot_data.get("agent")
+    transcriber = context.bot_data.get("transcriber")
+    if not agent or not getattr(agent, "tts", None) or not transcriber:
+        await update.message.reply_text("⚠️ Live calls need TTS + transcription configured.")
+        return
+    call_cfg = cfg.get().get("telegram_call", {})
+    import os
+    session = lc.LiveCallSession(
+        agent=agent, transcriber=transcriber,
+        owner_id=cfg.allowed_users()[0],
+        api_id=int(call_cfg.get("api_id") or os.environ["TELEGRAM_API_ID"]),
+        api_hash=str(call_cfg.get("api_hash") or os.environ["TELEGRAM_API_HASH"]),
+    )
+    asyncio.create_task(session.run())
+    await update.message.reply_text(
+        "📞 Calling you now — answer and just talk. Say *goodbye* to hang up.",
+        parse_mode="Markdown",
+    )
+
+
 async def _handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Voice-in / voice-out conversation loop:
@@ -290,10 +328,14 @@ async def _handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         # ── 5. Handle any [SEND_IMAGE: ...] tags ─────────────────────────────
         response_text = await _handle_image_tags(update, response_text)
 
-        # ── 6. TTS → MP3 → OGG opus → reply_voice (cap at 800 chars) ─────────
+        # ── 6. TTS → MP3 → OGG opus → reply_voice (v3.0: markdown-stripped,
+        #    config toggle voice.reply_in_kind, default on) ──────────────────
+        from src.telegram.formatting import speakable
+        _voice_cfg = cfg.get().get("voice", {})
+        reply_in_kind = _voice_cfg.get("reply_in_kind", True) is not False
         tts = getattr(agent, "tts", None)
-        tts_text = response_text[:800]
-        if tts and tts_text:
+        tts_text = speakable(response_text)
+        if tts and tts_text and reply_in_kind:
             await _safe_action(msg.chat, ChatAction.RECORD_VOICE)
             try:
                 mp3_out = await tts.speak(
@@ -802,6 +844,37 @@ async def _handle_keyboard_button(update: Update, context: ContextTypes.DEFAULT_
         await handler_fn(update, context)
 
 
+async def register_command_menu(application) -> None:
+    from telegram import BotCommand
+    try:
+        await application.bot.set_my_commands([
+            BotCommand("status", "System status"),
+            BotCommand("health", "Quick health check"),
+            BotCommand("memory", "Today's memory log"),
+            BotCommand("skills", "List skills"),
+            BotCommand("tools", "List tools"),
+            BotCommand("agents", "Main agent + sub-agents"),
+            BotCommand("reminders", "List pending reminders"),
+            BotCommand("remind", "Set a reminder"),
+            BotCommand("call", "One-way voice call (spoken message)"),
+            BotCommand("livecall", "🧪 Live two-way voice call (experimental)"),
+            BotCommand("model", "Model routing info"),
+            BotCommand("storage", "Storage usage"),
+            BotCommand("purge", "Purge generated files"),
+            BotCommand("db", "Structured store stats"),
+            BotCommand("search", "Web search"),
+            BotCommand("newskill", "Create a skill"),
+            BotCommand("flush", "Flush session"),
+            BotCommand("clear", "Clear chat session"),
+            BotCommand("permissions", "Claude permission list"),
+            BotCommand("auth_google", "Connect Google Workspace"),
+            BotCommand("auth_github", "Connect GitHub"),
+            BotCommand("reauth_caller", "Re-auth the caller session"),
+        ])
+    except Exception as e:
+        log.warning("Command menu registration failed: %s", e)
+
+
 def build_application(
     agent,
     ollama,
@@ -846,6 +919,7 @@ def build_application(
     app.add_handler(CommandHandler("newskill", cmd.cmd_newskill))
     app.add_handler(CommandHandler("clear", cmd.cmd_clear))
     app.add_handler(CommandHandler("call", cmd.cmd_call))
+    app.add_handler(CommandHandler("livecall", _handle_livecall))
     app.add_handler(CommandHandler("auth_google", cmd.cmd_auth_google))
     app.add_handler(CommandHandler("auth_github", cmd.cmd_auth_github))
     app.add_handler(CommandHandler("reauth_caller", cmd.cmd_reauth_caller))
@@ -870,12 +944,13 @@ def build_application(
         "💾 Storage": cmd.cmd_storage,
         "📚 Skills":  cmd.cmd_skills,
         "🔧 Tools":   cmd.cmd_tools,
+        "📞 Live Call": _handle_livecall,
     })
 
     # Keyboard button handler — must be registered BEFORE the general text handler
     import re as _re
     _btn_pattern = _re.compile(
-        r"^(📡 Status|🖥 Health|🧠 Memory|💾 Storage|📚 Skills|🔧 Tools)$"
+        r"^(📡 Status|🖥 Health|🧠 Memory|💾 Storage|📚 Skills|🔧 Tools|📞 Live Call)$"
     )
     app.add_handler(MessageHandler(
         filters.TEXT & filters.Regex(_btn_pattern),

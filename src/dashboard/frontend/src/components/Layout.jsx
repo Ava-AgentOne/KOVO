@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquare, Wrench, Brain,
   Zap, HeartPulse, Shield, ScrollText, Settings, Plug,
-  Sun, Moon, Menu, X, LogOut,
+  Sun, Moon, Menu, X, LogOut, Repeat, PackagePlus,
 } from 'lucide-react'
 import KovoLogo from './KovoLogo'
 import { useTheme } from '../context/ThemeContext'
@@ -15,12 +15,14 @@ const NAV = [
   { section: 'Agent', items: [
     { to: '/',        label: 'Overview',        Icon: LayoutDashboard, color: 'text-brand-500' },
     { to: '/chat',    label: 'Chat',            Icon: MessageSquare,   color: 'text-brand-500' },
+    { to: '/routines',label: 'Routines',        Icon: Repeat,          color: 'text-indigo-500' },
     { to: '/memory',  label: 'Memory',          Icon: Brain,           color: 'text-violet-500' },
     { to: '/skills',  label: 'Skills & Agents', Icon: Zap,             color: 'text-fuchsia-500' },
   ]},
   { section: 'Capabilities', items: [
     { to: '/tools',        label: 'Tools',        Icon: Wrench, color: 'text-emerald-500' },
     { to: '/integrations', label: 'Integrations', Icon: Plug,   color: 'text-teal-500' },
+    { to: '/addons',       label: 'Add-ons',      Icon: PackagePlus, color: 'text-orange-500' },
   ]},
   { section: 'System', items: [
     { to: '/heartbeat', label: 'Heartbeat', Icon: HeartPulse, color: 'text-rose-500' },

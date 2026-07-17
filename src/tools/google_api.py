@@ -84,20 +84,39 @@ def start_auth_flow() -> tuple[str, object]:
         )
 
     flow = InstalledAppFlow.from_client_secrets_file(str(_CREDS_FILE), _SCOPES)
-    flow.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
-    auth_url, _ = flow.authorization_url(prompt="consent")
+    # Loopback redirect — Google retired the OOB flow this used before.
+    # The user consents, lands on a dead "localhost refused" page, and
+    # pastes the full URL (or just the code) back; complete_auth_flow()
+    # accepts either form.
+    flow.redirect_uri = "http://localhost:53682/"
+    auth_url, _ = flow.authorization_url(prompt="consent", access_type="offline")
     return auth_url, flow
+
+
+def extract_auth_code(text: str) -> str:
+    """Accept either a bare authorization code or the full localhost
+    redirect URL the user copied from the address bar."""
+    text = text.strip()
+    if "code=" in text:
+        from urllib.parse import parse_qs, urlparse
+        qs = parse_qs(urlparse(text).query)
+        if qs.get("code"):
+            return qs["code"][0]
+    return text
 
 
 def complete_auth_flow(flow, code: str) -> str:
     """
-    Step 2 of headless OAuth: exchange the user-provided code for a token.
-    Returns a status string.
+    Step 2 of headless OAuth: exchange the user-provided code (or pasted
+    redirect URL) for a token. Returns a status string.
     """
+    import os
+    os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
     try:
-        flow.fetch_token(code=code.strip())
+        flow.fetch_token(code=extract_auth_code(code))
         creds = flow.credentials
         _TOKEN_FILE.write_text(creds.to_json())
+        os.chmod(_TOKEN_FILE, 0o600)
         return "✅ Google authentication successful. Token saved."
     except Exception as e:
         return f"❌ Auth failed: {e}"

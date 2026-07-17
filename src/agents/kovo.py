@@ -95,6 +95,7 @@ class KovoAgent:
         tool_registry: "ToolRegistry",
         sub_agent_runner: "SubAgentRunner | None" = None,
         structured_store=None,  # StructuredStore — optional, avoids circular import
+        learner=None,           # SkillLearner (v3.0) — optional
     ):
         self.memory = memory
         self.router = router
@@ -102,6 +103,7 @@ class KovoAgent:
         self.tool_registry = tool_registry
         self.sub_agent_runner = sub_agent_runner
         self.store = structured_store
+        self.learner = learner
 
         # user_id → claude session_id
         self._sessions: dict[int, str] = {}
@@ -358,6 +360,19 @@ class KovoAgent:
 
         self._persist(user_id, message, result)
         self._track_topics(user_id, message)
+
+        # Auto-skill learning (v3.0): observe the exchange; when a topic hits
+        # the threshold with no covering skill, draft a proposal in the
+        # background (owner approval required before anything activates).
+        if self.learner is not None:
+            try:
+                self.learner.remember(message, result.get("text", ""))
+                topic = self.learner.should_propose(self._topic_counts.get(user_id))
+                if topic:
+                    import asyncio
+                    asyncio.create_task(self.learner.propose(topic))
+            except Exception as e:
+                log.debug("Skill learner observe failed: %s", e)
 
         # Append sub-agent recommendation if threshold hit
         rec, rec_topic = self._maybe_recommend_sub_agent(user_id)

@@ -1,0 +1,48 @@
+# KOVO CI — mirrors scripts/check.sh (authored offline during v3.0
+# secret dev; first run happens when the branch is pushed on release day).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (pytest + shell syntax)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: System deps (ffmpeg for the voice pipeline)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Install
+        run: python -m pip install -r requirements.txt
+      - name: Shell syntax (bash -n)
+        run: |
+          bash -n bootstrap.sh
+          for f in scripts/*.sh; do bash -n "$f"; done
+      - name: Tests
+        run: python -m pytest tests/ -q
+      - name: Gateway imports
+        run: python -c "import src.gateway.main"
+
+  frontend:
+    name: Frontend (vite build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/dashboard/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: npm
+          cache-dependency-path: src/dashboard/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build

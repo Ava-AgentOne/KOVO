@@ -4,7 +4,7 @@ import {
   Cpu, MemoryStick, HardDrive, Clock, Shield, MessageSquare,
   RefreshCw, Trash2, Save, RotateCcw, Settings as SettingsIcon,
   ScrollText, Bell, AlertTriangle, Phone, Image as ImageIcon,
-  FileText, Plug, Send, X,
+  FileText, Plug, Send, X, Repeat,
 } from 'lucide-react'
 import StatusCard from '../components/StatusCard'
 import useApi from '../hooks/useApi'
@@ -108,6 +108,32 @@ function ActivityFeed({ entries }) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function RoutinesWidget() {
+  const { data } = useApi('/api/routines', 60000)
+  const upcoming = (data?.routines || []).filter(r => r.enabled).slice(0, 3)
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Routines</h2>
+        <Link to="/routines" className="text-xs text-brand-500 hover:text-brand-600">Manage &rarr;</Link>
+      </div>
+      {upcoming.length === 0 ? (
+        <p className="text-sm text-gray-400">No routines scheduled. Kovo can run recurring tasks for you.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {upcoming.map(r => (
+            <div key={r.id} className="flex items-center gap-2.5 py-1">
+              <Repeat size={13} className="text-indigo-500 flex-shrink-0" />
+              <span className="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">{r.name}</span>
+              <span className="text-[11px] text-gray-400 flex-shrink-0">{fmtDue(r.next_run)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -332,6 +358,7 @@ export default function Overview() {
 
         {/* Right column widgets */}
         <div className="space-y-4">
+          <RoutinesWidget />
           <RemindersWidget />
           <IntegrationsWidget />
 
