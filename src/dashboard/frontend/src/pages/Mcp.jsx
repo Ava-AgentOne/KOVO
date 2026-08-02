@@ -53,7 +53,19 @@ function ServerCard({ srv, onDelete, onToggle, onTest, testState }) {
   )
 }
 
-function StoreCard({ entry, installed, onInstall }) {
+// Things Kovo already does natively — installing an MCP server for these is
+// redundant (and routes data through a third party).
+const NATIVE_HINTS = [
+  { re: /\bgmail\b|google ?mail/i, text: 'Kovo already reads and sends your Gmail natively (Google Workspace).' },
+  { re: /google ?drive|\bgdrive\b/i, text: 'Kovo already uses your Google Drive natively — files and off-site backups.' },
+  { re: /google ?calendar|\bgcal\b/i, text: 'Kovo already manages your Google Calendar natively.' },
+  { re: /google ?(docs|sheets|workspace)/i, text: 'Kovo already works with Google Docs & Sheets natively.' },
+  { re: /web ?search|brave ?search|\bserp\b|duckduckgo/i, text: 'Kovo already has native web search.' },
+]
+const nativeHint = (entry) =>
+  NATIVE_HINTS.find(h => h.re.test(`${entry.id} ${entry.label} ${entry.desc || ''}`))?.text
+
+function StoreCard({ entry, installed, onInstall, probing }) {
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col">
       <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -72,6 +84,11 @@ function StoreCard({ entry, installed, onInstall }) {
       {entry.needs && (
         <p className="text-[11px] text-amber-600 dark:text-amber-400/90 mb-2">Needs: {entry.needs}</p>
       )}
+      {nativeHint(entry) && (
+        <p className="text-[11px] text-emerald-600 dark:text-emerald-400/90 bg-emerald-500/10 rounded-lg px-2 py-1.5 mb-2">
+          ✓ Built into KOVO — {nativeHint(entry)}
+        </p>
+      )}
       <div className="flex flex-wrap gap-1 mb-3">
         {(entry.tags || []).map(t => (
           <span key={t} className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">{t}</span>
@@ -83,9 +100,10 @@ function StoreCard({ entry, installed, onInstall }) {
             <CheckCircle2 size={13} /> Installed
           </span>
         ) : (
-          <button onClick={() => onInstall(entry)}
-            className="flex items-center gap-1.5 text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg transition-colors">
-            <Download size={13} /> Install
+          <button onClick={() => onInstall(entry)} disabled={probing}
+            className="flex items-center gap-1.5 text-xs bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg transition-colors">
+            {probing ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            {probing ? 'Checking…' : 'Install'}
           </button>
         )}
         <a href={entry.docs} target="_blank" rel="noreferrer"
@@ -109,6 +127,8 @@ export default function Mcp() {
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [registry, setRegistry] = useState({ state: 'idle', servers: [] })
+  const [probingId, setProbingId] = useState(null)
+  const [storeWarn, setStoreWarn] = useState(null)   // {entry, status, detail}
   const topRef = useRef(null)
 
   // Live search against the official MCP registry (debounced)
@@ -201,8 +221,31 @@ export default function Mcp() {
     } catch { setTests(t => ({ ...t, [name]: 'fail' })) }
   }
 
-  // Store → Install: prefill the Add form and jump to the Servers tab
-  const installFromStore = (entry) => {
+  // Store → Install. Registry remotes that declare no credentials get probed
+  // first: "no headers listed" can mean open, OR browser-OAuth (which Kovo's
+  // headless MCP client can't complete) — installing those silently fails.
+  const installFromStore = async (entry) => {
+    if (entry.source === 'registry' && entry.auth_undeclared && entry.url) {
+      setProbingId(entry.id)
+      try {
+        const r = await fetch('/api/mcp/registry/probe', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: entry.url, type: entry.type }),
+        })
+        const d = await r.json()
+        setProbingId(null)
+        if (d.status !== 'open') { setStoreWarn({ entry, ...d }); return }
+      } catch {
+        setProbingId(null)
+        setStoreWarn({ entry, status: 'unreachable', detail: 'probe failed' })
+        return
+      }
+    }
+    prefillFromStore(entry)
+  }
+
+  // Prefill the Add form and jump to the Servers tab
+  const prefillFromStore = (entry) => {
     setForm({
       name: entry.id,
       type: entry.type,
@@ -378,7 +421,7 @@ export default function Mcp() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {catalog.map(entry => (
               <StoreCard key={entry.id} entry={entry}
-                installed={installedIds.has(entry.id)} onInstall={installFromStore} />
+                installed={installedIds.has(entry.id)} onInstall={installFromStore} probing={probingId === entry.id} />
             ))}
           </div>
           {catalog.length === 0 && (
@@ -418,7 +461,7 @@ export default function Mcp() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {registry.servers.map(entry => (
                       <StoreCard key={`reg-${entry.id}`} entry={entry}
-                        installed={installedIds.has(entry.id)} onInstall={installFromStore} />
+                        installed={installedIds.has(entry.id)} onInstall={installFromStore} probing={probingId === entry.id} />
                     ))}
                   </div>
                 </>
@@ -435,6 +478,20 @@ export default function Mcp() {
         </>
       )}
 
+      <ConfirmModal
+        open={!!storeWarn}
+        title="This server probably won't work"
+        message={storeWarn && (
+          storeWarn.status === 'needs_oauth'
+            ? `${storeWarn.entry.label} signs users in through a browser (OAuth). Kovo connects to MCP servers headlessly on your machine, so it can't complete that sign-in — the server will reject every request.`
+            : storeWarn.status === 'needs_credentials'
+              ? `${storeWarn.entry.label} rejected unauthenticated access, but its listing doesn't say which credential it needs. Without instructions from its provider it will likely not work.`
+              : `${storeWarn.entry.label} didn't respond — the server may be down or its listing stale.`
+        )}
+        confirmLabel="Add anyway" confirmColor="brand"
+        onConfirm={() => { const e = storeWarn.entry; setStoreWarn(null); prefillFromStore(e) }}
+        onCancel={() => setStoreWarn(null)}
+      />
       <ConfirmModal
         open={!!deleteTarget}
         title="Remove MCP Server"

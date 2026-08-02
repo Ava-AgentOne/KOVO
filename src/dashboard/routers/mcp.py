@@ -126,6 +126,10 @@ def _normalize_registry_entry(item: dict) -> dict | None:
             out["headers"] = headers
         if needs:
             out["needs"] = "; ".join(needs)[:200]
+        # A remote with zero declared headers either needs no auth at all or
+        # authenticates via browser OAuth (which Kovo's headless MCP client
+        # can't do) — the Store probes before installing to tell them apart.
+        out["auth_undeclared"] = not headers
         return out if out["url"] else None
 
     packages = srv.get("packages") or []
@@ -194,6 +198,53 @@ async def search_registry(q: str = "", cursor: str | None = None):
         "servers": servers,
         "next_cursor": (data.get("metadata") or {}).get("nextCursor"),
     }
+
+
+class ProbeBody(BaseModel):
+    url: str
+    type: str | None = None
+
+
+@router.post("/mcp/registry/probe")
+async def probe_registry_remote(body: ProbeBody):
+    """Pre-install probe for registry remotes with no declared credentials.
+
+    Tells apart the three things "no headers in the listing" can mean:
+    open (works as-is), needs_oauth (401/403 WITH a WWW-Authenticate
+    challenge — browser sign-in Kovo can't do headlessly), or
+    needs_credentials (rejected, but the listing never said what to send).
+    """
+    import httpx
+    url = (body.url or "").strip()
+    if not url.lower().startswith(("http://", "https://")):
+        raise HTTPException(400, "Only http(s) URLs can be probed")
+    # streamable-http MCP servers only evaluate auth on a POSTed JSON-RPC
+    # request (a bare GET often just 405s before any auth check) — so probe
+    # with a real `initialize`; SSE endpoints are probed with a GET stream.
+    if body.type == "sse":
+        method, kwargs = "GET", {"headers": {"Accept": "text/event-stream"}}
+    else:
+        method, kwargs = "POST", {
+            "headers": {"Accept": "application/json, text/event-stream"},
+            "json": {"jsonrpc": "2.0", "id": 0, "method": "initialize",
+                     "params": {"protocolVersion": "2025-06-18",
+                                "capabilities": {},
+                                "clientInfo": {"name": "kovo-probe",
+                                               "version": "1.0"}}},
+        }
+    try:
+        async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
+            async with client.stream(method, url, **kwargs) as resp:
+                status = resp.status_code
+                www = resp.headers.get("www-authenticate", "")
+    except Exception as e:
+        return {"status": "unreachable", "detail": str(e)[:200]}
+    if status in (401, 403):
+        if www:
+            return {"status": "needs_oauth", "detail": www[:200]}
+        return {"status": "needs_credentials",
+                "detail": f"HTTP {status} with no declared credential"}
+    return {"status": "open", "detail": f"HTTP {status}"}
 
 
 @router.post("/mcp/servers/{name}/test")
