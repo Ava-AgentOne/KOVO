@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from src.agents import mcp_config
@@ -57,6 +57,8 @@ async def add_mcp_server(body: McpServerBody):
 
 @router.delete("/mcp/servers/{name}")
 async def delete_mcp_server(name: str):
+    from src.tools import mcp_oauth
+    mcp_oauth.forget(name)   # tokens must not outlive the server entry
     if not mcp_config.remove_server(name):
         raise HTTPException(404, f"MCP server not found: {name}")
     return {"removed": True, "name": name}
@@ -200,6 +202,71 @@ async def search_registry(q: str = "", cursor: str | None = None):
     }
 
 
+class OAuthStartBody(BaseModel):
+    name: str
+    url: str
+    type: str | None = None
+
+
+@router.post("/mcp/oauth/start")
+async def mcp_oauth_start(body: OAuthStartBody, request: Request):
+    """Begin the browser sign-in for an OAuth MCP server.
+
+    Saves the server entry (auth: oauth — skipped by the brain until a
+    token exists), runs discovery + dynamic client registration, and
+    returns the provider's consent URL for the browser to visit.
+    """
+    import asyncio
+    from src.tools import mcp_oauth
+    name = body.name.strip()
+    typ = (body.type or "http").strip().lower()
+    if typ not in ("http", "sse"):
+        raise HTTPException(400, "OAuth sign-in applies to remote (http/sse) servers")
+    base = str(request.base_url).rstrip("/")
+    redirect_uri = f"{base}/api/mcp/oauth/callback"
+    try:
+        authorize_url = await asyncio.to_thread(
+            mcp_oauth.start_connect, name, body.url, redirect_uri)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        log.error("mcp oauth start failed for %r: %s", name, e)
+        raise HTTPException(502, "Sign-in setup failed — see logs")
+    mcp_config.add_server(name, {"enabled": True, "type": typ,
+                                 "url": body.url, "auth": "oauth"})
+    return {"authorize_url": authorize_url}
+
+
+@router.get("/mcp/oauth/callback")
+async def mcp_oauth_callback(state: str = "", code: str = "", error: str = ""):
+    """Provider redirects the browser here after consent (same session)."""
+    import asyncio
+    from fastapi.responses import RedirectResponse
+    from src.tools import mcp_oauth
+    page = "/dashboard/integrations"
+    if error:
+        log.warning("mcp oauth: provider returned an error on callback")
+        return RedirectResponse(f"{page}?oauth_error=denied", status_code=302)
+    try:
+        server = await asyncio.to_thread(mcp_oauth.complete_connect, state, code)
+    except ValueError:
+        return RedirectResponse(f"{page}?oauth_error=failed", status_code=302)
+    except Exception as e:
+        # This is a top-level browser navigation — a raw 500 would strand
+        # the owner outside the SPA. Network blips to the token endpoint
+        # land here; a retry usually works.
+        log.error("mcp oauth callback error: %s", e)
+        return RedirectResponse(f"{page}?oauth_error=failed", status_code=302)
+    return RedirectResponse(f"{page}?oauth_ok={server}", status_code=302)
+
+
+@router.post("/mcp/servers/{name}/oauth/disconnect")
+async def mcp_oauth_disconnect(name: str):
+    """Forget a server's OAuth tokens (the entry itself stays)."""
+    from src.tools import mcp_oauth
+    return {"forgotten": mcp_oauth.forget(name)}
+
+
 class ProbeBody(BaseModel):
     url: str
     type: str | None = None
@@ -263,8 +330,12 @@ async def test_mcp_server(name: str):
     entry = (cfg.get().get("mcp") or {}).get(name)
     if not entry:
         raise HTTPException(404, f"MCP server not found: {name}")
-    sdk = mcp_config._to_sdk_config(name, entry)
+    import asyncio
+    sdk = await asyncio.to_thread(mcp_config.sdk_config_with_auth, name, entry)
     if sdk is None:
+        if entry.get("auth") == "oauth":
+            return {"name": name, "reachable": False,
+                    "error": "sign-in needed — use Connect on this card"}
         raise HTTPException(400, "Invalid server config")
 
     typ = sdk.get("type", "stdio")

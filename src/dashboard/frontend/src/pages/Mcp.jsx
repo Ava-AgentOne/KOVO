@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, RefreshCw, Plug, X, CheckCircle2, XCircle, Loader2, Store, Search, ExternalLink, Download, Globe, ShieldAlert } from 'lucide-react'
 import ConfirmModal from '../components/ConfirmModal'
 import PageHeader from '../components/PageHeader'
@@ -13,7 +14,7 @@ const EMPTY_FORM = {
   command: '', args: '', env: '',
 }
 
-function ServerCard({ srv, onDelete, onToggle, onTest, testState }) {
+function ServerCard({ srv, onDelete, onToggle, onTest, testState, onOAuth }) {
   const headerKeys = Object.keys(srv.headers || {})
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
@@ -22,6 +23,13 @@ function ServerCard({ srv, onDelete, onToggle, onTest, testState }) {
           <Plug size={14} className={srv.enabled ? 'text-teal-500' : 'text-gray-400'} />
           <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{srv.name}</h3>
           <span className="text-[10px] uppercase bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded">{srv.type}</span>
+          {srv.auth === 'oauth' && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${srv.connected
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>
+              {srv.connected ? 'signed in' : 'sign-in needed'}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <button onClick={() => onTest(srv.name)} className="text-gray-300 hover:text-brand-500 p-1" title="Test connection">
@@ -45,10 +53,20 @@ function ServerCard({ srv, onDelete, onToggle, onTest, testState }) {
           ))}
         </div>
       )}
-      <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-        <input type="checkbox" checked={srv.enabled} onChange={e => onToggle(srv.name, e.target.checked)} className="accent-brand-500" />
-        {srv.enabled ? 'Enabled' : 'Disabled'}
-      </label>
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+          <input type="checkbox" checked={srv.enabled} onChange={e => onToggle(srv.name, e.target.checked)} className="accent-brand-500" />
+          {srv.enabled ? 'Enabled' : 'Disabled'}
+        </label>
+        {srv.auth === 'oauth' && (
+          <button onClick={() => onOAuth(srv)}
+            className={srv.connected
+              ? 'text-xs text-gray-400 hover:text-brand-500 px-2.5 py-1'
+              : 'text-xs bg-brand-500 hover:bg-brand-600 text-white px-2.5 py-1 rounded-lg'}>
+            {srv.connected ? 'Re-sign in' : 'Sign in'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -129,6 +147,33 @@ export default function Mcp() {
   const [registry, setRegistry] = useState({ state: 'idle', servers: [] })
   const [probingId, setProbingId] = useState(null)
   const [storeWarn, setStoreWarn] = useState(null)   // {entry, status, detail}
+  const [oauthMsg, setOauthMsg] = useState(null)     // {ok, text} after callback
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Returning from a provider consent screen?
+  useEffect(() => {
+    const ok = searchParams.get('oauth_ok')
+    const err = searchParams.get('oauth_error')
+    if (!ok && !err) return
+    setOauthMsg(ok
+      ? { ok: true, text: `${ok} is signed in and ready — Kovo can use its tools now.` }
+      : { ok: false, text: err === 'denied' ? 'Sign-in was cancelled at the provider.' : 'Sign-in failed — please try again.' })
+    setSearchParams({}, { replace: true })
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Start the browser sign-in for an OAuth MCP server
+  const connectOAuth = async (name, url, type) => {
+    setError('')
+    try {
+      const r = await fetch('/api/mcp/oauth/start', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, url, type }),
+      })
+      const d = await r.json()
+      if (d.authorize_url) { window.location.href = d.authorize_url; return }
+      setError(d.detail || 'Sign-in setup failed')
+    } catch { setError('Sign-in setup failed') }
+  }
   const topRef = useRef(null)
 
   // Live search against the official MCP registry (debounced)
@@ -286,6 +331,14 @@ export default function Mcp() {
         </div>
       </div>
 
+      {oauthMsg && (
+        <p className={`text-sm rounded-lg px-3 py-2 ${oauthMsg.ok
+          ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10'
+          : 'text-red-600 dark:text-red-400 bg-red-500/10'}`}>
+          {oauthMsg.text}
+        </p>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200 dark:border-gray-800">
         {[
@@ -382,7 +435,7 @@ export default function Mcp() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {servers.map(s => (
                 <ServerCard key={s.name} srv={s} testState={tests[s.name]}
-                  onDelete={setDeleteTarget} onToggle={toggleServer} onTest={testServer} />
+                  onDelete={setDeleteTarget} onToggle={toggleServer} onTest={testServer} onOAuth={(srv) => connectOAuth(srv.name, srv.url, srv.type)} />
               ))}
             </div>
           )}
@@ -480,16 +533,21 @@ export default function Mcp() {
 
       <ConfirmModal
         open={!!storeWarn}
-        title="This server probably won't work"
+        title={storeWarn?.status === 'needs_oauth' ? 'This server uses browser sign-in' : 'This server probably won\u2019t work'}
         message={storeWarn && (
           storeWarn.status === 'needs_oauth'
-            ? `${storeWarn.entry.label} signs users in through a browser (OAuth). Kovo connects to MCP servers headlessly on your machine, so it can't complete that sign-in — the server will reject every request.`
+            ? `${storeWarn.entry.label} authenticates through your browser. Kovo can handle that: you'll be sent to the provider to approve access, then land right back here — connected.`
             : storeWarn.status === 'needs_credentials'
               ? `${storeWarn.entry.label} rejected unauthenticated access, but its listing doesn't say which credential it needs. Without instructions from its provider it will likely not work.`
               : `${storeWarn.entry.label} didn't respond — the server may be down or its listing stale.`
         )}
-        confirmLabel="Add anyway" confirmColor="brand"
-        onConfirm={() => { const e = storeWarn.entry; setStoreWarn(null); prefillFromStore(e) }}
+        confirmLabel={storeWarn?.status === 'needs_oauth' ? 'Connect with sign-in' : 'Add anyway'}
+        confirmColor="brand"
+        onConfirm={() => {
+          const w = storeWarn; setStoreWarn(null)
+          if (w.status === 'needs_oauth') connectOAuth(w.entry.id, w.entry.url, w.entry.type)
+          else prefillFromStore(w.entry)
+        }}
         onCancel={() => setStoreWarn(null)}
       />
       <ConfirmModal

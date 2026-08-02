@@ -83,7 +83,10 @@ class ClaudeAgentSDKBrain(Brain):
 
         # External MCP servers (Phase 3d): Home Assistant, GitHub, etc.
         try:
-            external = mcp_config.external_servers()
+            # May refresh OAuth tokens over the network (mcp_oauth) —
+            # keep that off the event loop.
+            import asyncio as _asyncio
+            external = await _asyncio.to_thread(mcp_config.external_servers)
         except Exception as e:
             log.error("MCP config error: %s", e)
             external = {}

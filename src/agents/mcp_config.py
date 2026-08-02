@@ -78,6 +78,28 @@ def _to_sdk_config(name: str, entry: dict) -> dict | None:
     return cfg
 
 
+def sdk_config_with_auth(name: str, entry: dict) -> dict | None:
+    """SDK config with OAuth token injection for `auth: oauth` servers.
+
+    Servers connected through the Store's browser sign-in carry
+    `auth: oauth` and no stored headers — the Bearer token lives in the
+    mcp_oauth token store and is injected (refreshed if stale) here.
+    Returns None when the server can't run (incl. oauth without a token,
+    so the SDK never spams a server that will just 401)."""
+    sdk = _to_sdk_config(name, entry)
+    if sdk is None or entry.get("auth") != "oauth":
+        return sdk
+    from src.tools import mcp_oauth
+    token = mcp_oauth.get_access_token(name, mcp_url=entry.get("url"))
+    if not token:
+        log.warning("MCP server %r needs sign-in (dashboard → Integrations) — skipped", name)
+        return None
+    headers = dict(sdk.get("headers") or {})
+    headers["Authorization"] = f"Bearer {token}"
+    sdk["headers"] = headers
+    return sdk
+
+
 def external_servers() -> dict:
     """Return {name: sdk_config} for enabled external MCP servers (expanded)."""
     from src.gateway import config as cfg
@@ -88,7 +110,7 @@ def external_servers() -> dict:
     for name, entry in raw.items():
         if not isinstance(entry, dict) or entry.get("enabled") is False:
             continue
-        sdk = _to_sdk_config(name, entry)
+        sdk = sdk_config_with_auth(name, entry)
         if sdk is not None:
             out[name] = sdk
     return out
@@ -141,7 +163,7 @@ def list_servers() -> list[dict]:
     for name, entry in raw.items():
         if not isinstance(entry, dict):
             continue
-        servers.append({
+        row = {
             "name": name,
             "type": _server_type(entry) or "?",
             "enabled": entry.get("enabled", True) is not False,
@@ -149,7 +171,12 @@ def list_servers() -> list[dict]:
             "command": entry.get("command"),
             "args": entry.get("args"),
             "headers": _mask_headers(entry.get("headers", {})),
-        })
+        }
+        if entry.get("auth") == "oauth":
+            from src.tools import mcp_oauth
+            row["auth"] = "oauth"
+            row["connected"] = mcp_oauth.has_token(name)
+        servers.append(row)
     return servers
 
 
