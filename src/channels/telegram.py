@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 
 from src.channels.base import BUTTONS, CALLS, PHOTOS, STREAMING, VOICE, Channel
 
@@ -21,6 +22,8 @@ _MAX_LEN = 4096
 class TelegramChannel(Channel):
     name = "telegram"
     capabilities = frozenset({STREAMING, PHOTOS, VOICE, BUTTONS, CALLS})
+    # Set by start() in webhook mode; /webhook only accepts requests carrying it
+    webhook_secret: str | None = None
 
     def __init__(self, **build_kwargs):
         """build_kwargs are forwarded to src.telegram.bot.build_application."""
@@ -37,9 +40,15 @@ class TelegramChannel(Channel):
         webhook_url = os.environ.get("WEBHOOK_URL", "").strip()
         await self.app.initialize()
         if webhook_url:
+            # Telegram echoes this secret in the X-Telegram-Bot-Api-Secret-Token
+            # header of every update it delivers, which is how /webhook tells
+            # its requests from forged ones. A fresh one per start is fine:
+            # set_webhook re-registers it every time.
+            self.webhook_secret = secrets.token_urlsafe(32)
             await self.app.bot.set_webhook(
                 url=f"{webhook_url}/webhook",
                 allowed_updates=["message", "callback_query"],
+                secret_token=self.webhook_secret,
             )
             await self.app.start()
             log.info("Telegram webhook registered at %s/webhook", webhook_url)
