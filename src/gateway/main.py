@@ -152,6 +152,10 @@ async def lifespan(app: FastAPI):
         _telegram_ok = False
     check_env_permissions()
 
+    # v3.0.3: stop pre-approving commands that can run anything (once per install)
+    from src.tools.claude_cli import drop_unrestricted_defaults
+    drop_unrestricted_defaults()
+
     # First-run onboarding (no-op for already-configured systems)
     from src.onboarding.flow import OnboardingFlow
     workspace = cfg.workspace_dir()
@@ -346,7 +350,7 @@ def _init_phone_tools(agent, tg_app, transcriber=None):
         log.warning("Phone tools init failed (telegram_call may not be configured): %s", e)
 
 
-app = FastAPI(title="Kovo Gateway", version="3.0.2", lifespan=lifespan)
+app = FastAPI(title="Kovo Gateway", version="3.0.3", lifespan=lifespan)
 
 # API routes
 from fastapi import Depends as _Depends
