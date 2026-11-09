@@ -9,7 +9,7 @@ import signal
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from src.utils.platform import kovo_dir, workspace_path
+from src.utils.platform import data_path, kovo_dir, workspace_path
 from src.utils.tz import get_tz as _get_tz
 
 # Set when our own process receives SIGTERM — used to skip the 143 retry
@@ -106,6 +106,51 @@ def add_permission(pattern: str) -> bool:
     except Exception as e:
         log.error("Failed to add permission %s: %s", pattern, e)
         return False
+
+
+# bootstrap.sh pre-approved these before v3.0.3. Each one runs any other
+# command (as root with sudo, in a container with docker), so the owner never
+# saw an Approve/Deny prompt for what the agent actually ran.
+UNRESTRICTED_DEFAULTS = (
+    "Bash(sudo *)",
+    "Bash(env *)",
+    "Bash(xargs *)",
+    "Bash(source *)",
+    "Bash(docker *)",
+)
+_UNRESTRICTED_CLEANUP_MARKER = data_path() / "allowlist-cleanup-v3.0.3"
+
+
+def drop_unrestricted_defaults() -> list[str]:
+    """Remove UNRESTRICTED_DEFAULTS from an existing install's allowlist, once.
+
+    Runs at gateway startup. A marker file records that it ran, so if the
+    owner approves one of these again on Telegram, later updates keep it.
+    Returns the entries removed.
+    """
+    marker = _UNRESTRICTED_CLEANUP_MARKER
+    if marker.exists():
+        return []
+    removed: list[str] = []
+    try:
+        if _SETTINGS_FILE.exists():
+            data = json.loads(_SETTINGS_FILE.read_text())
+            allow = data.get("permissions", {}).get("allow", [])
+            removed = [p for p in allow if p in UNRESTRICTED_DEFAULTS]
+            if removed:
+                data["permissions"]["allow"] = [p for p in allow if p not in UNRESTRICTED_DEFAULTS]
+                _SETTINGS_FILE.write_text(json.dumps(data, indent=2) + "\n")
+                log.warning(
+                    "Removed pre-approved commands that can run anything: %s. "
+                    "The owner is asked on Telegram the first time one is needed.",
+                    ", ".join(removed),
+                )
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(json.dumps({"removed": removed}) + "\n")
+    except Exception as e:
+        # No marker: try again at the next start
+        log.error("Allowlist cleanup failed: %s", e)
+    return removed
 
 
 def deny_permission(pattern: str) -> None:

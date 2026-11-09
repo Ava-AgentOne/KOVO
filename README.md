@@ -282,7 +282,7 @@ KOVO includes built-in security features:
 - **Security audits** — automated port scan, user check, ClamAV, chkrootkit
 - **Pre-push git hook** — blocks personal data, `.env`, credentials, and database files from being committed
 - **Personal data isolation** — repo ships `.template` files only; live workspace files are gitignored
-- **Claude Code sandbox** — pre-approved command allowlist, runtime approval via Telegram
+- **Claude Code sandbox** — pre-approved command allowlist, runtime approval via Telegram. Commands that can run anything else (`sudo`, `env`, `xargs`, `source`, `docker`) are not pre-approved, so the first use of each asks you
 - **Show-before-run installs** — the Add-ons page displays the exact commands before executing anything
 - **Google sign-in allowlist** — optional dashboard login restricted to one owner account; the button stays hidden until fully configured
 - **Shell metachar blocking** — `;|&$\`><(){}!` blocked in all API command endpoints
