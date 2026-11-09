@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
-KOVO_VERSION="3.0.2"
+KOVO_VERSION="3.0.3"
 # KOVO — Self-Hosted AI Agent Installer v1.0
 # https://github.com/Ava-AgentOne/kovo
 #
@@ -828,23 +828,23 @@ install_configs_and_finish() {
       "Bash($KOVO_DIR/venv/bin/python *)", "Bash(apt *)", "Bash(cat *)",
       "Bash(cd *)", "Bash(chmod *)", "Bash(chown *)", "Bash(cp *)",
       "Bash(curl *)", "Bash(cut *)", "Bash(date *)", "Bash(df *)",
-      "Bash(diff *)", "Bash(dirname *)", "Bash(docker *)", "Bash(du *)",
-      "Bash(echo *)", "Bash(env *)", "Bash(ffmpeg *)", "Bash(find *)",
+      "Bash(diff *)", "Bash(dirname *)", "Bash(du *)",
+      "Bash(echo *)", "Bash(ffmpeg *)", "Bash(find *)",
       "Bash(free *)", "Bash(gh *)", "Bash(grep *)", "Bash(head *)",
       "Bash(hostname *)", "Bash(id *)", "Bash(journalctl *)", "Bash(kill *)",
       "Bash(ln *)", "Bash(ls *)", "Bash(lsof *)", "Bash(mkdir *)",
       "Bash(mv *)", "Bash(node *)", "Bash(npm *)", "Bash(npx *)",
       "Bash(ps *)", "Bash(pwd)", "Bash(readlink *)", "Bash(redis-cli *)",
-      "Bash(rm *)", "Bash(sed *)", "Bash(sort *)", "Bash(source *)",
-      "Bash(sudo *)", "Bash(systemctl *)", "Bash(tail *)", "Bash(tar *)",
+      "Bash(rm *)", "Bash(sed *)", "Bash(sort *)",
+      "Bash(systemctl *)", "Bash(tail *)", "Bash(tar *)",
       "Bash(tee *)", "Bash(test *)", "Bash(touch *)", "Bash(tr *)",
       "Bash(uname *)", "Bash(uniq *)", "Bash(wc *)", "Bash(wget *)",
-      "Bash(which *)", "Bash(whoami)", "Bash(xargs *)", "Edit(*)"
+      "Bash(which *)", "Bash(whoami)", "Edit(*)"
     ]
   }
 }
 EOF
-    ok "Claude Code permissions (61 entries)"
+    ok "Claude Code permissions (56 entries)"
 
     # ── settings.yaml ────────────────────────────────────────────
     info "settings.yaml..."
