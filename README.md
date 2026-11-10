@@ -23,13 +23,13 @@
 
 **KOVO** is a self-hosted AI agent powered by **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** that runs on a Linux VM or macOS machine and communicates with you through **Telegram**. It can manage your server, run security audits, browse the web, make phone calls, read your Google Drive, run recurring **Routines** on a schedule, and **learn new skills with your approval** — all while keeping your data private on your own hardware.
 
-Inspired by **[OpenClaw](https://github.com/openclaw)**, KOVO takes a different approach to the AI backbone — since v2.0 it runs on the **[Claude Agent SDK](https://docs.anthropic.com/en/api/agent-sdk/overview)** (in-process, streaming, native tool use), powered by your Claude Max subscription. This gives it Claude Sonnet and Opus for real multi-step reasoning at a flat rate, not pay-per-token API calls. The classic `claude -p` subprocess remains as a config-selectable fallback, and an optional **local LLM** (like [Ollama](https://ollama.com)) handles cheap tasks like heartbeat summaries.
+Inspired by **[OpenClaw](https://github.com/openclaw)**, KOVO takes a different approach to the AI backbone — since v2.0 it can run on the **[Claude Agent SDK](https://docs.anthropic.com/en/api/agent-sdk/overview)** (in-process, streaming, native tool use), powered by your Claude Max subscription. This gives it Claude Sonnet and Opus for real multi-step reasoning at a flat rate, not pay-per-token API calls. New installs start on the classic `claude -p` subprocess; set `brains: claude: sdk` in `config/settings.yaml` to switch to the SDK. An optional **local LLM** (like [Ollama](https://ollama.com)) handles cheap tasks like heartbeat summaries.
 
 **v3.0 is the Autonomy Release.** Everything through v2.1 made KOVO an agent you *talk to*. v3.0 makes it an agent that **runs your day** (Routines), **speaks with you** (voice-note conversations, plus an experimental Live Call mode), and **gets smarter on its own** (owner-approved skill learning) — with off-site backups and a guided Add-ons page rounding out the self-hosting story.
 
 ### 🧠 Why the Claude Agent SDK?
 
-Most self-hosted agents rely on basic API calls to an LLM. KOVO runs Claude through the **Agent SDK**, which means:
+Most self-hosted agents rely on basic API calls to an LLM. With the **Agent SDK** backend (`brains: claude: sdk`), KOVO gets:
 
 - **Full Claude reasoning** — Sonnet for medium tasks, Opus for complex ones
 - **Live streaming replies** — watch answers appear in Telegram (message edits) and the dashboard
@@ -211,6 +211,9 @@ Credentials are saved to `config/.env` on your machine — never transmitted.
 ### v3.0 Configuration Highlights
 
 ```yaml
+brains:
+  claude: sdk          # Claude Agent SDK: streaming replies and native tools (default: cli)
+
 backup:
   offsite:
     enabled: true        # nightly backup upload to your Google Drive
@@ -251,7 +254,18 @@ KOVO uses a persistent reply keyboard with emoji buttons, and since v3.0 registe
 | 🔧 Tools | `/tools` | Tool registry with status |
 | 📞 Live Call | `/livecall` | Start a live voice conversation (🧪 experimental, off by default) |
 
-Plus: `/agents`, `/permissions`, `/purge`, `/reminders`, `/remind cancel <id>`, `/search`, `/call`, `/db`, and natural language for everything else — including "remind me tomorrow at 9" (one-time) and "check my email every Sunday" (a Routine).
+Plus these, grouped the way `/start` lists them:
+
+- **Core:** `/agents` sub-agents · `/model` force a model (sonnet/opus) · `/clear` clear the session
+- **Memory & skills:** `/memory extracted`, `/memory search <query>`, `/memory stats` · `/flush` extract and save to MEMORY.md · `/newskill` create a skill
+- **Database:** `/db` show the schema · `/db query <question>` ask in plain language
+- **Storage:** `/purge <all|photos|documents|images>` clean old files
+- **Reminders:** `/reminders` · `/remind cancel <id>`
+- **Phone:** `/call <text>` voice call or voice message · `/reauth_caller` re-authorise the caller account
+- **Permissions:** `/permissions` view the allowlist · `/approve` / `/deny` answer a pending permission request
+- **Other:** `/search <query>` web search · `/auth_google` Google sign-in setup · `/auth_github` GitHub token check
+
+And natural language for everything else — including "remind me tomorrow at 9" (one-time) and "check my email every Sunday" (a Routine).
 
 ## ⚡ Skills
 
@@ -278,10 +292,10 @@ KOVO includes built-in security features:
 - **Token masking** — all API keys masked in log output
 - **`.env` validation** — warns if required vars are missing; starts in dashboard-only mode
 - **File permissions** — `.env`, credentials, and DB set to `chmod 600`
-- **Shell blocklist** — dangerous commands blocked or require confirmation
 - **Security audits** — automated port scan, user check, ClamAV, chkrootkit
 - **Pre-push git hook** — blocks personal data, `.env`, credentials, and database files from being committed
 - **Personal data isolation** — repo ships `.template` files only; live workspace files are gitignored
+- **Telegram webhook secret** — in webhook mode, `/webhook` only accepts updates carrying the secret token KOVO registers with Telegram; in polling mode the endpoint doesn't exist
 - **Claude Code sandbox** — pre-approved command allowlist, runtime approval via Telegram. Commands that can run anything else (`sudo`, `env`, `xargs`, `source`, `docker`) are not pre-approved, so the first use of each asks you
 - **Show-before-run installs** — the Add-ons page displays the exact commands before executing anything
 - **Google sign-in allowlist** — optional dashboard login restricted to one owner account; the button stays hidden until fully configured
@@ -300,6 +314,8 @@ KOVO includes built-in security features:
 ├── scripts/         # Helper scripts
 ├── src/
 │   ├── agents/      # Main agent + sub-agent runner + native toolkit
+│   ├── brains/      # AI backends (Claude Agent SDK; the CLI path is in tools/claude_cli.py)
+│   ├── channels/    # Chat surfaces: Telegram and the dashboard chat
 │   ├── dashboard/   # FastAPI API + React frontend
 │   ├── gateway/     # FastAPI app, startup, config
 │   ├── heartbeat/   # Scheduled tasks (APScheduler)
